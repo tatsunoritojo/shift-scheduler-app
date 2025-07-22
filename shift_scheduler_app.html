@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汎用シフト可能日計算アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #2196F3;
+        }
+
+        .settings-panel h3 {
+            color: #1976D2;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+
+        .form-control-small {
+            width: 120px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-item:hover {
+            border-color: #2196F3;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #2196F3;
+        }
+
+        .checkbox-item.checked {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: #e3f2fd;
+            color: #1976D2;
+            border: 2px solid #2196F3;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .preset-btn:hover {
+            background: #2196F3;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .advanced-settings {
+            background: #fff3e0;
+            border-left: 5px solid #FF9800;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .advanced-settings h4 {
+            color: #F57F17;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #FF9800;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .shift-result {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .shift-result:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .shift-result.available {
+            border-left: 5px solid #4CAF50;
+            background: linear-gradient(90deg, #e8f5e8 0%, white 100%);
+        }
+
+        .shift-result.partial {
+            border-left: 5px solid #FF9800;
+            background: linear-gradient(90deg, #fff3e0 0%, white 100%);
+        }
+
+        .shift-result.unavailable {
+            border-left: 5px solid #f44336;
+            background: linear-gradient(90deg, #ffebee 0%, white 100%);
+        }
+
+        .date-info {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .time-badge {
+            background: #2196F3;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .time-badge.partial {
+            background: #FF9800;
+        }
+
+        .time-badge.unavailable {
+            background: #f44336;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2196F3;
+            display: block;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .current-settings {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #4CAF50;
+        }
+
+        .current-settings h4 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .setting-item {
+            display: inline-block;
+            background: white;
+            padding: 5px 10px;
+            margin: 3px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            border: 1px solid #c8e6c9;
+        }
+
+        @media (max-width: 768px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .preset-buttons {
+                justify-content: center;
+            }
+        }
+
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #555;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px; /* border-bottomと重ならないように */
+        }
+
+        .tab-button:hover {
+            color: #2196F3;
+        }
+
+        .tab-button.active {
+            color: #2196F3;
+            border-bottom-color: #2196F3;
+            font-weight: 600;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 汎用シフト可能日計算アプリ</h1>
+            <p>あらゆる勤務条件に対応できる柔軟なシフト計算ツール</p>
+        </div>
+
+        <div class="content">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('settings-tab')">設定</button>
+                <button class="tab-button" onclick="showTab('results-tab')">結果</button>
+            </div>
+
+            <div class="tab-content">
+                <div id="settings-tab" class="tab-pane active">
+                    <!-- プリセットボタン -->
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="loadPreset('student')">👨‍🎓 学生バイト</button>
+                <button class="preset-btn" onclick="loadPreset('office')">🏢 オフィス勤務</button>
+                <button class="preset-btn" onclick="loadPreset('retail')">🛒 小売店</button>
+                <button class="preset-btn" onclick="loadPreset('restaurant')">🍽️ 飲食店</button>
+                <button class="preset-btn" onclick="loadPreset('flexible')">⚡ フレックス</button>
+                <button class="preset-btn" onclick="resetSettings()">🔄 リセット</button>
+            </div>
+
+            <!-- 現在の設定表示 -->
+            <div class="current-settings" id="currentSettings">
+                <h4>📋 現在の設定</h4>
+                <div id="settingsDisplay"></div>
+            </div>
+
+            <!-- 設定パネル -->
+            <div class="settings-grid">
+                <!-- 基本設定 -->
+                <div class="settings-panel">
+                    <h3>⏰ 基本勤務条件</h3>
+                    
+                    <div class="form-group">
+                        <label>営業時間</label>
+                        <div class="time-range">
+                            <input type="time" id="startTime" class="form-control form-control-small" value="10:00">
+                            <span>〜</span>
+                            <input type="time" id="endTime" class="form-control form-control-small" value="18:00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="tooltip" data-tooltip="連続して勤務できる最低時間">
+                            最低勤務時間 ⓘ
+                        </label>
+                        <div class="time-range">
+                            <input type="number" id="minHours" class="form-control form-control-small" value="2" min="0.5" step="0.5">
+                            <span>時間</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="tooltip" data-tooltip="予定の前後に確保する移動・準備時間">
+                            移動時間 ⓘ
+                        </label>
+                        <div class="time-range">
+                            <input type="number" id="bufferTime" class="form-control form-control-small" value="30" min="0" step="15">
+                            <span>分</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>除外する曜日</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude0" onchange="updateCheckboxUI(this)">
+                                <label for="exclude0">日</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude1" onchange="updateCheckboxUI(this)">
+                                <label for="exclude1">月</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude2" onchange="updateCheckboxUI(this)">
+                                <label for="exclude2">火</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude3" onchange="updateCheckboxUI(this)">
+                                <label for="exclude3">水</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude4" onchange="updateCheckboxUI(this)">
+                                <label for="exclude4">木</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude5" onchange="updateCheckboxUI(this)">
+                                <label for="exclude5">金</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="exclude6" onchange="updateCheckboxUI(this)">
+                                <label for="exclude6">土</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 期間・カレンダー設定 -->
+                <div class="settings-panel">
+                    <h3>📅 期間・カレンダー設定</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">開始日</label>
+                            <input type="date" id="startDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endDate">終了日</label>
+                            <input type="date" id="endDate" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="calendarId" class="tooltip" data-tooltip="空欄の場合はメインカレンダーを使用">
+                            カレンダーID ⓘ
+                        </label>
+                        <input type="text" id="calendarId" class="form-control" placeholder="primary" value="primary">
+                    </div>
+
+                    <!-- 高度な設定 -->
+                    <div class="advanced-settings">
+                        <h4>⚙️ 高度な設定</h4>
+                        
+                        <div class="form-group">
+                            <label class="tooltip" data-tooltip="この時間未満の空き時間は無視">
+                                最小空き時間 ⓘ
+                            </label>
+                            <div class="time-range">
+                                <input type="number" id="minGapTime" class="form-control form-control-small" value="30" min="0" step="15">
+                                <span>分</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="tooltip" data-tooltip="1日の最大勤務時間制限">
+                                最大勤務時間 ⓘ
+                            </label>
+                            <div class="time-range">
+                                <input type="number" id="maxHours" class="form-control form-control-small" value="8" min="1" max="12" step="0.5">
+                                <span>時間</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="allowSplitShifts" onchange="updateCheckboxUI(this)">
+                                <label for="allowSplitShifts" class="tooltip" data-tooltip="1日に複数の時間帯で勤務可能">
+                                    分割シフト許可 ⓘ
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="excludeHolidays" onchange="updateCheckboxUI(this)">
+                                <label for="excludeHolidays" class="tooltip" data-tooltip="日本の祝日を出勤不可にする">
+                                    祝日を出勤不可にする ⓘ
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 認証・実行ボタン -->
+            <div style="text-align: center; margin: 30px 0;">
+                <button class="btn btn-success" onclick="authenticateGoogle()" id="authButton">
+                    🔐 Googleアカウント認証
+                </button>
+                <button class="btn" onclick="calculateShifts()" id="calculateButton" disabled>
+                    🔄 シフト可能日を計算
+                </button>
+                <button class="btn btn-secondary" onclick="saveSettings()">
+                    💾 設定を保存
+                </button>
+                <button class="btn btn-secondary" onclick="loadSettings()">
+                    📂 設定を読込
+                </button>
+            </div>
+                </div>
+
+                <div id="results-tab" class="tab-pane">
+                    <!-- 結果表示エリア -->
+                    <div id="resultsSection" class="results-section">
+                        <div id="loadingDiv" class="loading">
+                            <div class="spinner"></div>
+                            <p>カレンダー情報を取得中...</p>
+                        </div>
+                        
+                        <div id="resultsContent" style="display: none;">
+                            <h3>📊 計算結果</h3>
+                            <div id="summaryStats" class="summary-stats"></div>
+                            <div id="shiftResults"></div>
+                            
+                            <div style="text-align: center; margin-top: 30px;">
+                                <button class="btn btn-success" onclick="exportToPDF()">
+                                    📄 PDF出力
+                                </button>
+                                <button class="btn btn-secondary" onclick="exportToCSV()">
+                                    📊 CSV出力
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google認証
+        function authenticateGoogle() {
+            window.location.href = 'http://localhost:5000/auth/google/login';
+        }
+
+        // 認証状態確認
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('http://localhost:5000/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
+                const authButton = document.getElementById('authButton');
+                const calculateButton = document.getElementById('calculateButton');
+                
+                if (response.status === 401) {
+                    // 未認証
+                    authButton.style.display = 'inline-flex';
+                    authButton.textContent = '🔐 Googleアカウント認証';
+                    calculateButton.disabled = true;
+                } else {
+                    // 認証済み
+                    authButton.style.display = 'none';
+                    calculateButton.disabled = false;
+                }
+            } catch (error) {
+                console.log('認証状態確認エラー:', error);
+                // エラー時は認証が必要と仮定
+                document.getElementById('authButton').style.display = 'inline-flex';
+                document.getElementById('calculateButton').disabled = true;
+            }
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 今日の日付を設定
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            
+            // 2週間後を終了日に設定
+            const twoWeeksLater = new Date();
+            twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
+            document.getElementById('endDate').value = twoWeeksLater.toISOString().split('T')[0];
+
+            // デフォルトで水曜と日曜を除外
+            document.getElementById('exclude0').checked = true;
+            document.getElementById('exclude3').checked = true;
+            updateAllCheckboxUI();
+            
+            updateSettingsDisplay();
+            
+            // 設定変更時のリアルタイム更新
+            document.addEventListener('input', updateSettingsDisplay);
+            document.addEventListener('change', updateSettingsDisplay);
+
+            // 初期表示は設定タブ
+            showTab('settings-tab');
+
+            // 認証状態を確認
+            checkAuthStatus();
+        });
+
+        // タブ切り替え関数
+        function showTab(tabId) {
+            // すべてのタブコンテンツを非表示にし、activeクラスを削除
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // 指定されたタブコンテンツを表示し、activeクラスを追加
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-button[onclick="showTab('${tabId}')"]`).classList.add('active');
+
+            // 結果タブに切り替わった際にresultsSectionを表示
+            if (tabId === 'results-tab') {
+                document.getElementById('resultsSection').classList.add('show');
+            } else {
+                document.getElementById('resultsSection').classList.remove('show');
+            }
+        }
+
+        // プリセット設定
+        const presets = {
+            student: {
+                startTime: '10:00',
+                endTime: '18:00',
+                minHours: 2,
+                bufferTime: 30,
+                excludeDays: [0, 3], // 日曜、水曜
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: false,
+                excludeHolidays: false
+            },
+            office: {
+                startTime: '09:00',
+                endTime: '18:00',
+                minHours: 4,
+                bufferTime: 15,
+                excludeDays: [0, 6], // 日曜、土曜
+                maxHours: 8,
+                minGapTime: 60,
+                allowSplitShifts: false,
+                excludeHolidays: false
+            },
+            retail: {
+                startTime: '10:00',
+                endTime: '20:00',
+                minHours: 3,
+                bufferTime: 15,
+                excludeDays: [],
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            },
+            restaurant: {
+                startTime: '11:00',
+                endTime: '22:00',
+                minHours: 2,
+                bufferTime: 30,
+                excludeDays: [],
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            },
+            flexible: {
+                startTime: '08:00',
+                endTime: '20:00',
+                minHours: 1,
+                bufferTime: 0,
+                excludeDays: [],
+                maxHours: 12,
+                minGapTime: 0,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            }
+        };
+
+        // プリセット読み込み
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            document.getElementById('startTime').value = preset.startTime;
+            document.getElementById('endTime').value = preset.endTime;
+            document.getElementById('minHours').value = preset.minHours;
+            document.getElementById('bufferTime').value = preset.bufferTime;
+            document.getElementById('maxHours').value = preset.maxHours;
+            document.getElementById('minGapTime').value = preset.minGapTime;
+            document.getElementById('allowSplitShifts').checked = preset.allowSplitShifts;
+            document.getElementById('excludeHolidays').checked = preset.excludeHolidays;
+
+            // 曜日除外設定をリセット
+            for (let i = 0; i < 7; i++) {
+                document.getElementById(`exclude${i}`).checked = preset.excludeDays.includes(i);
+            }
+
+            updateAllCheckboxUI();
+            updateSettingsDisplay();
+        }
+
+        // 設定リセット
+        function resetSettings() {
+            document.getElementById('startTime').value = '09:00';
+            document.getElementById('endTime').value = '17:00';
+            document.getElementById('minHours').value = '2';
+            document.getElementById('bufferTime').value = '30';
+            document.getElementById('maxHours').value = '8';
+            document.getElementById('minGapTime').value = '30';
+            document.getElementById('allowSplitShifts').checked = false;
+            document.getElementById('excludeHolidays').checked = false;
+
+            for (let i = 0; i < 7; i++) {
+                document.getElementById(`exclude${i}`).checked = false;
+            }
+
+            updateAllCheckboxUI();
+            updateSettingsDisplay();
+        }
+
+        // チェックボックスのUI更新
+        function updateCheckboxUI(checkbox) {
+            const item = checkbox.closest('.checkbox-item');
+            if (checkbox.checked) {
+                item.classList.add('checked');
+            } else {
+                item.classList.remove('checked');
+            }
+        }
+
+        function updateAllCheckboxUI() {
+            for (let i = 0; i < 7; i++) {
+                updateCheckboxUI(document.getElementById(`exclude${i}`));
+            }
+            updateCheckboxUI(document.getElementById('allowSplitShifts'));
+            updateCheckboxUI(document.getElementById('excludeHolidays'));
+        }
+
+        // 現在の設定表示を更新
+        function updateSettingsDisplay() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const minHours = document.getElementById('minHours').value;
+            const bufferTime = document.getElementById('bufferTime').value;
+            const maxHours = document.getElementById('maxHours').value;
+            const minGapTime = document.getElementById('minGapTime').value;
+            const allowSplitShifts = document.getElementById('allowSplitShifts').checked;
+            const excludeHolidays = document.getElementById('excludeHolidays').checked;
+
+            const excludedDays = [];
+            const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+            for (let i = 0; i < 7; i++) {
+                if (document.getElementById(`exclude${i}`).checked) {
+                    excludedDays.push(dayNames[i]);
+                }
+            }
+
+            const displayHTML = `
+                <span class="setting-item">⏰ ${startTime}〜${endTime}</span>
+                <span class="setting-item">⏱️ 最低${minHours}時間</span>
+                <span class="setting-item">🚶 移動${bufferTime}分</span>
+                <span class="setting-item">📊 最大${maxHours}時間</span>
+                <span class="setting-item">⚡ 最小空き${minGapTime}分</span>
+                ${excludedDays.length > 0 ? `<span class="setting-item">🚫 ${excludedDays.join('・')}曜日除外</span>` : ''}
+                ${allowSplitShifts ? '<span class="setting-item">✂️ 分割シフト可</span>' : ''}
+                ${excludeHolidays ? '<span class="setting-item">🎌 祝日除外</span>' : ''}
+            `;
+
+            document.getElementById('settingsDisplay').innerHTML = displayHTML;
+        }
+
+        // 設定の保存
+        function saveSettings() {
+            const settings = {
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                minHours: document.getElementById('minHours').value,
+                bufferTime: document.getElementById('bufferTime').value,
+                maxHours: document.getElementById('maxHours').value,
+                minGapTime: document.getElementById('minGapTime').value,
+                allowSplitShifts: document.getElementById('allowSplitShifts').checked,
+                excludeHolidays: document.getElementById('excludeHolidays').checked,
+                excludedDays: []
+            };
+
+            for (let i = 0; i < 7; i++) {
+                if (document.getElementById(`exclude${i}`).checked) {
+                    settings.excludedDays.push(i);
+                }
+            }
+
+            localStorage.setItem('shiftCalculatorSettings', JSON.stringify(settings));
+            alert('設定を保存しました！');
+        }
+
+        // 設定の読み込み
+        function loadSettings() {
+            const saved = localStorage.getItem('shiftCalculatorSettings');
+            if (!saved) {
+                alert('保存された設定が見つかりません。');
+                return;
+            }
+
+            const settings = JSON.parse(saved);
+            
+            document.getElementById('startTime').value = settings.startTime;
+            document.getElementById('endTime').value = settings.endTime;
+            document.getElementById('minHours').value = settings.minHours;
+            document.getElementById('bufferTime').value = settings.bufferTime;
+            document.getElementById('maxHours').value = settings.maxHours;
+            document.getElementById('minGapTime').value = settings.minGapTime;
+            document.getElementById('allowSplitShifts').checked = settings.allowSplitShifts;
+            document.getElementById('excludeHolidays').checked = settings.excludeHolidays;
+
+            for (let i = 0; i < 7; i++) {
+                document.getElementById(`exclude${i}`).checked = settings.excludedDays.includes(i);
+            }
+
+            updateAllCheckboxUI();
+            updateSettingsDisplay();
+            alert('設定を読み込みました！');
+        }
+
+        // 現在の設定を取得
+        function getCurrentSettings() {
+            const excludedDays = [];
+            for (let i = 0; i < 7; i++) {
+                if (document.getElementById(`exclude${i}`).checked) {
+                    excludedDays.push(i);
+                }
+            }
+
+            return {
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                minHours: parseFloat(document.getElementById('minHours').value),
+                bufferTime: parseInt(document.getElementById('bufferTime').value),
+                maxHours: parseFloat(document.getElementById('maxHours').value),
+                minGapTime: parseInt(document.getElementById('minGapTime').value),
+                allowSplitShifts: document.getElementById('allowSplitShifts').checked,
+                excludeHolidays: document.getElementById('excludeHolidays').checked,
+                excludedDays: excludedDays
+            };
+        }
+
+        // シフト計算のメイン関数
+        async function calculateShifts() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const calendarId = document.getElementById('calendarId').value || 'primary';
+            const settings = getCurrentSettings();
+
+            if (!startDate || !endDate) {
+                alert('開始日と終了日を入力してください。');
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                alert('開始日は終了日より前の日付を選択してください。');
+                return;
+            }
+
+            // 結果タブに切り替え
+            showTab('results-tab');
+            
+            // 結果セクションを表示
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.add('show');
+            
+            // ローディング表示
+            document.getElementById('loadingDiv').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+
+            try {
+                // バックエンドからカレンダー情報を取得
+                await fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings);
+            } catch (error) {
+                console.error('エラー:', error);
+                alert('カレンダー情報の取得に失敗しました。認証が必要な可能性があります。');
+                document.getElementById('loadingDiv').style.display = 'none';
+            }
+        }
+
+        // バックエンドからカレンダー情報を取得
+        async function fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings) {
+            try {
+                // バックエンドAPIを呼び出してカレンダーイベントを取得
+                const response = await fetch(`http://localhost:5000/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
+                
+                if (response.status === 401) {
+                    // 認証が必要な場合
+                    const authConfirm = confirm('Googleアカウントでの認証が必要です。認証ページに移動しますか？');
+                    if (authConfirm) {
+                        window.location.href = 'http://localhost:5000/auth/google/login';
+                    }
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const events = await response.json();
+                console.log('取得したイベント:', events);
+                
+                // 取得したイベントを使ってシフトを計算
+                await calculateShiftsWithRealData(startDate, endDate, events, settings);
+                
+            } catch (error) {
+                console.error('バックエンドAPI呼び出しエラー:', error);
+                throw error;
+            }
+        }
+
+        // 実際のカレンダーデータを使用したシフト計算
+        async function calculateShiftsWithRealData(startDate, endDate, events, settings) {
+            let holidays = {};
+            if (settings.excludeHolidays) {
+                try {
+                    const startYear = new Date(startDate).getFullYear();
+                    const endYear = new Date(endDate).getFullYear();
+                    for (let year = startYear; year <= endYear; year++) {
+                        const response = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+                        if (response.ok) {
+                            const yearHolidays = await response.json();
+                            holidays = { ...holidays, ...yearHolidays };
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching holidays:", error);
+                }
+            }
+
+            // イベントを日付ごとにグループ化
+            const eventsByDate = {};
+            events.forEach(event => {
+                const eventDate = event.start.includes('T') ? 
+                    event.start.split('T')[0] : event.start;
+                
+                if (!eventsByDate[eventDate]) {
+                    eventsByDate[eventDate] = [];
+                }
+                
+                // 終日イベントかどうかをチェック
+                if (event.start.includes('T') && event.end.includes('T')) {
+                    eventsByDate[eventDate].push({
+                        start: event.start.split('T')[1].substring(0, 5),
+                        end: event.end.split('T')[1].substring(0, 5),
+                        summary: event.summary
+                    });
+                }
+            });
+
+            // 設定に基づいてシフトを計算
+            const shifts = calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, settings, holidays);
+            displayResults(shifts, settings);
+        }
+
+        // 実際のイベントデータを使用したシフト計算
+        function calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, settings, holidays) {
+            const shifts = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dayOfWeek = date.getDay();
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+
+                // 除外曜日チェック
+                if (settings.excludedDays.includes(dayOfWeek)) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `${dayName}曜日のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+
+                // 祝日除外チェック
+                if (settings.excludeHolidays && holidays[dateStr]) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `祝日（${holidays[dateStr]}）のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+
+                // その日のイベントを取得
+                const dayEvents = eventsByDate[dateStr] || [];
+                
+                // 営業時間内の利用可能時間を計算
+                const availableSlots = calculateAvailableSlots(
+                    settings.startTime,
+                    settings.endTime,
+                    dayEvents,
+                    settings
+                );
+
+                // 最低勤務時間を満たすスロットをフィルタリング
+                const validSlots = availableSlots.filter(slot => slot.duration >= settings.minHours);
+
+                if (validSlots.length > 0) {
+                    const totalDuration = validSlots.reduce((sum, slot) => sum + slot.duration, 0);
+                    const maxDuration = Math.min(totalDuration, settings.maxHours);
+
+                    if (settings.allowSplitShifts && validSlots.length > 1) {
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '複数時間帯で勤務可能',
+                            availableTime: validSlots.map(slot => `${slot.start}-${slot.end}`).join(', '),
+                            duration: maxDuration,
+                            shifts: validSlots
+                        });
+                    } else {
+                        const bestSlot = validSlots[0];
+                        const adjustedEnd = maxDuration < bestSlot.duration ? 
+                            addHours(bestSlot.start, maxDuration) : bestSlot.end;
+                        
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '勤務可能',
+                            availableTime: `${bestSlot.start}-${adjustedEnd}`,
+                            duration: Math.min(bestSlot.duration, maxDuration),
+                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }]
+                        });
+                    }
+                } else {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'unavailable',
+                        reason: dayEvents.length > 0 ? '予定により最低勤務時間確保不可' : '勤務時間確保不可',
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                }
+            }
+
+            return shifts;
+        }
+
+        // カレンダー取得とシフト計算のシミュレーション（デモ用）
+        async function simulateCalendarFetch(startDate, endDate, calendarId, settings) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            let holidays = {};
+            if (settings.excludeHolidays) {
+                try {
+                    const startYear = new Date(startDate).getFullYear();
+                    const endYear = new Date(endDate).getFullYear();
+                    for (let year = startYear; year <= endYear; year++) {
+                        const response = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch holidays for ${year}: ${response.statusText}`);
+                        }
+                        const yearHolidays = await response.json();
+                        holidays = { ...holidays, ...yearHolidays };
+                    }
+                    console.log("Fetched holidays:", holidays);
+                } catch (error) {
+                    console.error("Error fetching holidays:", error);
+                    alert("祝日情報の取得に失敗しました。祝日除外設定は適用されません。");
+                }
+            }
+
+            // 設定に基づいてシフトを計算
+            const shifts = calculateShiftsWithSettings(startDate, endDate, settings, holidays);
+            displayResults(shifts, settings);
+        }
+
+        // 設定に基づくシフト計算
+        function calculateShiftsWithSettings(startDate, endDate, settings, holidays) {
+            const shifts = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dayOfWeek = date.getDay();
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+
+                // 除外曜日チェック
+                if (settings.excludedDays.includes(dayOfWeek)) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `${dayName}曜日のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+
+                // 祝日除外チェック
+                if (settings.excludeHolidays && holidays[dateStr]) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `祝日（${holidays[dateStr]}）のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+
+                // ランダムに予定を生成（デモ用）
+                const hasEvent = Math.random() < 0.4; // 40%の確率で予定あり
+                let availableSlots = [];
+
+                if (hasEvent) {
+                    // 予定がある場合のシミュレーション
+                    const eventStart = randomTime(settings.startTime, settings.endTime);
+                    const eventDuration = Math.random() * 4 + 1; // 1-5時間の予定
+                    const eventEnd = addHours(eventStart, eventDuration);
+
+                    // 営業時間内の利用可能時間を計算
+                    availableSlots = calculateAvailableSlots(
+                        settings.startTime,
+                        settings.endTime,
+                        [{start: eventStart, end: eventEnd}],
+                        settings
+                    );
+                } else {
+                    // 予定がない場合は全時間利用可能
+                    availableSlots = [{
+                        start: settings.startTime,
+                        end: settings.endTime,
+                        duration: calculateDuration(settings.startTime, settings.endTime)
+                    }];
+                }
+
+                // 最低勤務時間を満たすスロットをフィルタリング
+                const validSlots = availableSlots.filter(slot => slot.duration >= settings.minHours);
+
+                if (validSlots.length > 0) {
+                    const totalDuration = validSlots.reduce((sum, slot) => sum + slot.duration, 0);
+                    const maxDuration = Math.min(totalDuration, settings.maxHours);
+
+                    if (settings.allowSplitShifts && validSlots.length > 1) {
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '複数時間帯で勤務可能',
+                            availableTime: validSlots.map(slot => `${slot.start}-${slot.end}`).join(', '),
+                            duration: maxDuration,
+                            shifts: validSlots
+                        });
+                    } else {
+                        const bestSlot = validSlots[0];
+                        const adjustedEnd = maxDuration < bestSlot.duration ? 
+                            addHours(bestSlot.start, maxDuration) : bestSlot.end;
+                        
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '勤務可能',
+                            availableTime: `${bestSlot.start}-${adjustedEnd}`,
+                            duration: Math.min(bestSlot.duration, maxDuration),
+                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }]
+                        });
+                    }
+                } else {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'unavailable',
+                        reason: hasEvent ? '予定により最低勤務時間確保不可' : '勤務時間確保不可',
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                }
+            }
+
+            return shifts;
+        }
+
+        // 利用可能時間スロット計算
+        function calculateAvailableSlots(startTime, endTime, events, settings) {
+            const slots = [];
+            const workStart = timeToMinutes(startTime);
+            const workEnd = timeToMinutes(endTime);
+
+            // イベントを時間順にソート
+            events.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+
+            let currentStart = workStart;
+
+            for (const event of events) {
+                const eventStart = Math.max(workStart, timeToMinutes(event.start) - settings.bufferTime);
+                const eventEnd = Math.min(workEnd, timeToMinutes(event.end) + settings.bufferTime);
+
+                if (currentStart < eventStart) {
+                    const slotDuration = (eventStart - currentStart) / 60;
+                    if (slotDuration >= settings.minGapTime / 60) {
+                        slots.push({
+                            start: minutesToTime(currentStart),
+                            end: minutesToTime(eventStart),
+                            duration: slotDuration
+                        });
+                    }
+                }
+
+                currentStart = Math.max(currentStart, eventEnd);
+            }
+
+            // 最後のスロット
+            if (currentStart < workEnd) {
+                const slotDuration = (workEnd - currentStart) / 60;
+                if (slotDuration >= settings.minGapTime / 60) {
+                    slots.push({
+                        start: minutesToTime(currentStart),
+                        end: minutesToTime(workEnd),
+                        duration: slotDuration
+                    });
+                }
+            }
+
+            return slots;
+        }
+
+        // ユーティリティ関数
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function minutesToTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        function calculateDuration(startTime, endTime) {
+            return (timeToMinutes(endTime) - timeToMinutes(startTime)) / 60;
+        }
+
+        function addHours(timeStr, hours) {
+            const startMinutes = timeToMinutes(timeStr);
+            const endMinutes = startMinutes + (hours * 60);
+            return minutesToTime(Math.round(endMinutes));
+        }
+
+        function randomTime(startTime, endTime) {
+            const startMinutes = timeToMinutes(startTime);
+            const endMinutes = timeToMinutes(endTime);
+            const randomMinutes = startMinutes + Math.random() * (endMinutes - startMinutes);
+            return minutesToTime(Math.round(randomMinutes));
+        }
+
+        // 結果表示
+        function displayResults(shifts, settings) {
+            document.getElementById('loadingDiv').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
+
+            // 統計計算
+            const availableShifts = shifts.filter(s => s.status === 'available');
+            const partialShifts = shifts.filter(s => s.status === 'partial');
+            const unavailableShifts = shifts.filter(s => s.status === 'unavailable');
+            const excludedShifts = shifts.filter(s => s.status === 'excluded');
+            const totalHours = availableShifts.reduce((sum, s) => sum + s.duration, 0);
+            const avgHoursPerDay = availableShifts.length > 0 ? (totalHours / availableShifts.length) : 0;
+
+            // 統計表示
+            const statsHtml = `
+                <div class="stat-card">
+                    <span class="stat-number">${availableShifts.length}</span>
+                    <div class="stat-label">出勤可能日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${totalHours.toFixed(1)}</span>
+                    <div class="stat-label">合計勤務時間</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${avgHoursPerDay.toFixed(1)}</span>
+                    <div class="stat-label">平均勤務時間/日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${unavailableShifts.length}</span>
+                    <div class="stat-label">出勤不可日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${excludedShifts.length}</span>
+                    <div class="stat-label">除外日</div>
+                </div>
+            `;
+            document.getElementById('summaryStats').innerHTML = statsHtml;
+
+            // シフト結果表示
+            const resultsHtml = shifts.map(shift => {
+                const statusClass = shift.status === 'excluded' ? 'unavailable' : shift.status;
+                const statusIcon = {
+                    'available': '✅',
+                    'partial': '⚠️',
+                    'unavailable': '❌',
+                    'excluded': '🚫'
+                }[shift.status];
+
+                const timeDisplay = shift.availableTime ? 
+                    `<span class="time-badge ${statusClass}">${shift.availableTime} (${shift.duration.toFixed(1)}h)</span>` :
+                    `<span class="time-badge unavailable">${shift.reason}</span>`;
+
+                return `
+                    <div class="shift-result ${statusClass}">
+                        <div class="date-info">
+                            ${statusIcon} ${shift.date} (${shift.dayName})
+                        </div>
+                        ${timeDisplay}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('shiftResults').innerHTML = resultsHtml;
+        }
+
+        // PDF出力
+        function exportToPDF() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const settings = getCurrentSettings();
+            
+            alert(`${startDate}〜${endDate}のシフト可能日をPDF出力します。\n設定: ${settings.startTime}〜${settings.endTime}, 最低${settings.minHours}時間勤務\n（実装予定機能）`);
+        }
+
+        // CSV出力
+        function exportToCSV() {
+            const shifts = Array.from(document.querySelectorAll('.shift-result')).map(el => {
+                const dateInfo = el.querySelector('.date-info').textContent.trim();
+                const timeInfo = el.querySelector('.time-badge').textContent.trim();
+                return { date: dateInfo, time: timeInfo };
+            });
+
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                "日付,時間帯\n" +
+                shifts.map(row => `"${row.date}","${row.time}"`).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "shift_schedule.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

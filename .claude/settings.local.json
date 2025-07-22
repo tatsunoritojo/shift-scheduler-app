@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python.exe app.py)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git config:*)",
+      "Bash(del NUL)",
+      "Bash(rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": []
+  }
+}

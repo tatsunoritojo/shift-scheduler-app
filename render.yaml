@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: shift-scheduler-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app_production.py
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+    autoDeploy: true
+    region: oregon
+    plan: free
+    healthCheckPath: /health
