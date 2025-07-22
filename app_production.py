@@ -24,6 +24,11 @@ CORS(app)
 # 本番環境用のセッションキー設定
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
+# セッション設定（本番環境用）
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS必須
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # XSS対策
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF対策
+
 # データベース設定（本番環境用）
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
@@ -157,9 +162,14 @@ def callback():
 # Google Calendar APIイベント取得エンドポイント
 @app.route('/api/calendar/events')
 def get_calendar_events():
+    print(f"[DEBUG] API endpoint called: /api/calendar/events")
+    print(f"[DEBUG] Session: {dict(session)}")
+    
     user_id = session.get('user_id')
+    print(f"[DEBUG] User ID: {user_id}")
     
     if not user_id:
+        print("[DEBUG] User not authenticated - returning 401")
         return jsonify({"error": "User not authenticated"}), 401
 
     user_token = UserToken.query.filter_by(user_id=user_id).first()
@@ -244,6 +254,27 @@ def get_calendar_events():
         return jsonify({"error": f"Google Calendar API error: {error.content.decode()}"}), error.resp.status
     except Exception as e:
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+# デバッグ用エンドポイント
+@app.route('/debug/routes')
+def debug_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'rule': str(rule)
+        })
+    return jsonify(routes)
+
+# セッション確認エンドポイント
+@app.route('/debug/session')
+def debug_session():
+    return jsonify({
+        'user_id': session.get('user_id'),
+        'has_credentials': 'credentials' in session,
+        'session_keys': list(session.keys())
+    })
 
 # ヘルスチェックエンドポイント
 @app.route('/health')
