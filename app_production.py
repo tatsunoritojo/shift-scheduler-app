@@ -1,4 +1,5 @@
 from flask import Flask, redirect, request, url_for, session, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 app = Flask(__name__)
+CORS(app)
 
 # 本番環境用のセッションキー設定
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))

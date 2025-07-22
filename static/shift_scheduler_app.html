@@ -797,13 +797,13 @@
     <script>
         // Google認証
         function authenticateGoogle() {
-            window.location.href = 'http://localhost:5000/auth/google/login';
+            window.location.href = '/auth/google/login';
         }
 
         // 認証状態確認
         async function checkAuthStatus() {
             try {
-                const response = await fetch('http://localhost:5000/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
+                const response = await fetch('/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
                 const authButton = document.getElementById('authButton');
                 const calculateButton = document.getElementById('calculateButton');
                 const authStatus = document.getElementById('authStatus');
@@ -1066,13 +1066,13 @@
         async function fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings) {
             try {
                 // バックエンドAPIを呼び出してカレンダーイベントを取得
-                const response = await fetch(`http://localhost:5000/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
+                const response = await fetch(`/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
                 
                 if (response.status === 401) {
                     // 認証が必要な場合
                     const authConfirm = confirm('Googleアカウントでの認証が必要です。認証ページに移動しますか？');
                     if (authConfirm) {
-                        window.location.href = 'http://localhost:5000/auth/google/login';
+                        window.location.href = '/auth/google/login';
                     }
                     return;
                 }
