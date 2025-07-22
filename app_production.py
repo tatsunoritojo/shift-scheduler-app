@@ -249,6 +249,7 @@ def health():
     return jsonify({"status": "healthy", "version": "1.0.0"})
 
 if __name__ == '__main__':
-    # 本番環境での起動
+    # 本番環境ではGunicornが使用されるため、この部分は開発時のみ実行される
+    # 開発時の起動: python app_production.py
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
