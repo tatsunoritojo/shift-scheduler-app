@@ -7,10 +7,11 @@ from pathlib import Path
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# 開発環境でHTTPを許可（本番環境では削除すること）
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# 本番環境では OAUTHLIB_INSECURE_TRANSPORT を設定しない
+# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from datetime import datetime, timedelta
 import json
 import requests
@@ -22,10 +23,23 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24) # セッション管理のためのシークレットキー
+CORS(app)
 
-# データベース設定
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tokens.db'
+# 本番環境用のセッションキー設定
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+
+# セッション設定（本番環境用）
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS必須
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # XSS対策
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF対策
+# セッションのタイムアウト設定
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+
+# データベース設定（本番環境用）
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://')
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///tokens.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -33,16 +47,14 @@ db = SQLAlchemy(app)
 # 本番環境では、これらの情報は安全な方法で管理する必要があります
 CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
 
-# 本番環境では環境変数が必須
-if not CLIENT_ID or not CLIENT_SECRET:
+if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
     raise ValueError("Google OAuth認証情報が設定されていません。環境変数を確認してください。")
 
 # OAuth 2.0 スコープ
 SCOPES = [
     'https://www.googleapis.com/auth/calendar.events.readonly',
-    # 将来的なシフト書き込みのために 'https://www.googleapis.com/auth/calendar.events' を追加する可能性あり
 ]
 
 # ユーザーのrefresh_tokenを保存するモデル
@@ -62,7 +74,7 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    return "シフト計算アプリのバックエンドです。/auth/google/login から認証を開始してください。"
+    return redirect(url_for('app_page'))
 
 @app.route('/app')
 def app_page():
@@ -81,6 +93,48 @@ def debug_config():
         'REDIRECT_URI': REDIRECT_URI,
         'all_env_vars': {k: v for k, v in os.environ.items() if 'GOOGLE' in k}
     })
+
+# 追加のデバッグエンドポイント
+@app.route('/api/debug/routes')
+def debug_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'rule': str(rule)
+        })
+    return jsonify(routes)
+
+@app.route('/api/debug/session')
+def debug_session():
+    return jsonify({
+        'user_id': session.get('user_id'),
+        'has_credentials': 'credentials' in session,
+        'session_keys': list(session.keys())
+    })
+
+@app.route('/api/debug/auth-check')
+def auth_check():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({
+            'authenticated': False,
+            'error': 'No user_id in session',
+            'session_keys': list(session.keys())
+        })
+    
+    user_token = UserToken.query.filter_by(user_id=user_id).first()
+    return jsonify({
+        'authenticated': bool(user_token),
+        'user_id': user_id,
+        'has_refresh_token': bool(user_token.refresh_token if user_token else False),
+        'token_created': user_token.created_at.isoformat() if user_token else None
+    })
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy", "version": "1.0.0"})
 
 # Google認証開始エンドポイント
 @app.route('/auth/google/login')
@@ -143,10 +197,7 @@ def callback():
 
     # refresh_tokenをデータベースに保存
     if credentials.refresh_token:
-        # ここでは仮にuser_idをcredentials.id_token['sub']とする
-        # 実際には、アプリケーションのユーザー管理システムと連携させる
         user_id = credentials.id_token.get('sub') if credentials.id_token else 'default_user'
-        print(f"Saving user_id: {user_id}")  # デバッグ用
         user_token = UserToken.query.filter_by(user_id=user_id).first()
         if user_token:
             user_token.refresh_token = credentials.refresh_token
@@ -154,12 +205,9 @@ def callback():
             user_token = UserToken(user_id=user_id, refresh_token=credentials.refresh_token)
         db.session.add(user_token)
         db.session.commit()
-        session['user_id'] = user_id # セッションにuser_idを保存
-        print(f"Session after setting user_id: {dict(session)}")  # デバッグ用
+        session['user_id'] = user_id
     else:
-        # refresh_tokenがない場合でも、既存のトークンがあれば使用する
         user_id = credentials.id_token.get('sub') if credentials.id_token else 'default_user'
-        print(f"No refresh_token, but setting user_id: {user_id}")  # デバッグ用
         session['user_id'] = user_id
 
     # access_tokenをセッションに保存 (短期間有効なので、refresh_tokenで更新する)
@@ -178,23 +226,23 @@ def callback():
 # Google Calendar APIイベント取得エンドポイント
 @app.route('/api/calendar/events')
 def get_calendar_events():
-    print(f"Session contents: {dict(session)}")  # デバッグ用
+    print(f"[DEBUG] API endpoint called: /api/calendar/events")
+    print(f"[DEBUG] Session: {dict(session)}")
+    
     user_id = session.get('user_id')
-    print(f"User ID from session: {user_id}")  # デバッグ用
+    print(f"[DEBUG] User ID: {user_id}")
     
     if not user_id:
-        print("No user_id in session")  # デバッグ用
-        return jsonify({"error": "User not authenticated", "session_keys": list(session.keys())}), 401
+        print("[DEBUG] User not authenticated - returning 401")
+        return jsonify({"error": "User not authenticated"}), 401
 
     user_token = UserToken.query.filter_by(user_id=user_id).first()
     if not user_token:
-        print(f"No refresh token found for user: {user_id}")  # デバッグ用
         return jsonify({"error": "Refresh token not found for user"}), 404
 
     # 保存されたrefresh_tokenからCredentialsオブジェクトを再構築
     creds_data = session.get('credentials')
     if not creds_data:
-        print("No credentials in session, creating new from refresh_token")  # デバッグ用
         # セッションにcredentialsがない場合、refresh_tokenから新たに作成
         creds_data = {
             'token': None,  # 初期状態では無効
@@ -274,6 +322,7 @@ def get_calendar_events():
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    # 開発サーバーの起動
-    # 本番環境ではGunicornなどのWSGIサーバーを使用します
-    app.run(debug=True)
+    # 本番環境ではGunicornが使用されるため、この部分は開発時のみ実行される
+    # 開発時の起動: python app.py
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

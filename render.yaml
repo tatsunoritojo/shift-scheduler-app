@@ -3,7 +3,7 @@ services:
     name: shift-scheduler-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -c gunicorn.conf.py app_production:app
+    startCommand: gunicorn -c gunicorn.conf.py app:app
     envVars:
       - key: GOOGLE_CLIENT_ID
         sync: false
