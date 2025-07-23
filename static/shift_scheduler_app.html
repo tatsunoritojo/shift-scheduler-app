@@ -800,32 +800,69 @@
             window.location.href = '/auth/google/login';
         }
 
-        // 認証状態確認
+        // 認証状態確認（アプリ起動時とAPI失敗時に呼び出される）
         async function checkAuthStatus() {
+            console.log('認証状態を確認中...');
+            
+            const authButton = document.getElementById('authButton');
+            const calculateButton = document.getElementById('calculateButton');
+            const authStatus = document.getElementById('authStatus');
+            
+            // 初期状態：認証状態不明
+            authStatus.style.display = 'none';
+            authButton.style.display = 'inline-flex';
+            calculateButton.disabled = true;
+            
             try {
-                const response = await fetch('/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
-                const authButton = document.getElementById('authButton');
-                const calculateButton = document.getElementById('calculateButton');
-                const authStatus = document.getElementById('authStatus');
+                // 実際にカレンダーAPIを呼び出して認証状態を確認
+                const testDate = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/calendar/events?startDate=${testDate}&endDate=${testDate}&calendarId=primary`);
                 
-                if (response.status === 401) {
+                console.log('API応答ステータス:', response.status);
+                
+                if (response.ok) {
+                    // 認証済み：カレンダーデータ取得成功
+                    const data = await response.json();
+                    console.log('認証成功：カレンダーデータ取得完了', data.length + '件のイベント');
+                    
+                    authButton.style.display = 'none';
+                    calculateButton.disabled = false;
+                    authStatus.style.display = 'block';
+                    
+                    return true;
+                } else if (response.status === 401) {
                     // 未認証
+                    console.log('未認証：認証が必要です');
+                    
                     authButton.style.display = 'inline-flex';
                     authButton.textContent = '🔐 Googleアカウント認証';
                     calculateButton.disabled = true;
                     authStatus.style.display = 'none';
+                    
+                    return false;
                 } else {
-                    // 認証済み
-                    authButton.style.display = 'none';
-                    calculateButton.disabled = false;
-                    authStatus.style.display = 'block';
+                    // その他のエラー
+                    console.log('API エラー:', response.status);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.log('エラー詳細:', errorData);
+                    
+                    authButton.style.display = 'inline-flex';
+                    authButton.textContent = '🔐 再認証が必要';
+                    calculateButton.disabled = true;
+                    authStatus.style.display = 'none';
+                    
+                    return false;
                 }
             } catch (error) {
-                console.log('認証状態確認エラー:', error);
-                // エラー時は認証が必要と仮定
-                document.getElementById('authButton').style.display = 'inline-flex';
-                document.getElementById('calculateButton').disabled = true;
-                document.getElementById('authStatus').style.display = 'none';
+                console.error('認証状態確認エラー:', error);
+                
+                // ネットワークエラーなどの場合
+                authButton.style.display = 'inline-flex';
+                authButton.textContent = '🔐 認証状態確認失敗';
+                calculateButton.disabled = true;
+                authStatus.style.display = 'none';
+                
+                return false;
             }
         }
 
@@ -854,7 +891,8 @@
             // 初期表示は設定タブ
             showTab('settings-tab');
 
-            // 認証状態を確認
+            // アプリ起動時に認証状態を自動確認
+            console.log('アプリケーション起動：認証状態を確認します');
             checkAuthStatus();
         });
 
@@ -1057,7 +1095,14 @@
                 await fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings);
             } catch (error) {
                 console.error('エラー:', error);
-                alert('カレンダー情報の取得に失敗しました。認証が必要な可能性があります。');
+                
+                // エラー時は認証状態を再確認して適切なUIを表示
+                const isAuthenticated = await checkAuthStatus();
+                if (!isAuthenticated) {
+                    alert('カレンダー情報の取得に失敗しました。認証ボタンをクリックしてGoogleアカウントで認証してください。');
+                } else {
+                    alert('カレンダー情報の取得に失敗しました。しばらく待ってから再試行してください。');
+                }
                 document.getElementById('loadingDiv').style.display = 'none';
             }
         }
@@ -1069,16 +1114,25 @@
                 const response = await fetch(`/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
                 
                 if (response.status === 401) {
-                    // 認証が必要な場合
-                    const authConfirm = confirm('Googleアカウントでの認証が必要です。認証ページに移動しますか？');
-                    if (authConfirm) {
-                        window.location.href = '/auth/google/login';
-                    }
+                    // 認証が必要な場合：認証状態を更新してボタンを表示
+                    console.log('認証エラー：認証状態を更新します');
+                    await checkAuthStatus(); // 認証状態を更新
+                    
+                    alert('カレンダー情報の取得に失敗しました。Googleアカウントでの認証が必要です。');
+                    document.getElementById('loadingDiv').style.display = 'none';
                     return;
                 }
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // その他のAPIエラー
+                    console.log('APIエラー:', response.status);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.log('エラー詳細:', errorData);
+                    
+                    // 認証状態を再確認
+                    await checkAuthStatus();
+                    
+                    throw new Error(`カレンダーAPI error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`);
                 }
                 
                 const events = await response.json();
@@ -1089,6 +1143,9 @@
                 
             } catch (error) {
                 console.error('バックエンドAPI呼び出しエラー:', error);
+                
+                // エラー時は認証状態を再確認
+                await checkAuthStatus();
                 throw error;
             }
         }
