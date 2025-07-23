@@ -28,6 +28,8 @@ app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS必須
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # XSS対策
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF対策
+# セッションのタイムアウト設定
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 # データベース設定（本番環境用）
 database_url = os.environ.get('DATABASE_URL')
@@ -256,7 +258,7 @@ def get_calendar_events():
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 # デバッグ用エンドポイント
-@app.route('/debug/routes')
+@app.route('/api/debug/routes')
 def debug_routes():
     routes = []
     for rule in app.url_map.iter_rules():
@@ -268,12 +270,31 @@ def debug_routes():
     return jsonify(routes)
 
 # セッション確認エンドポイント
-@app.route('/debug/session')
+@app.route('/api/debug/session')
 def debug_session():
     return jsonify({
         'user_id': session.get('user_id'),
         'has_credentials': 'credentials' in session,
         'session_keys': list(session.keys())
+    })
+
+# カレンダー認証状態確認エンドポイント
+@app.route('/api/debug/auth-check')
+def auth_check():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({
+            'authenticated': False,
+            'error': 'No user_id in session',
+            'session_keys': list(session.keys())
+        })
+    
+    user_token = UserToken.query.filter_by(user_id=user_id).first()
+    return jsonify({
+        'authenticated': bool(user_token),
+        'user_id': user_id,
+        'has_refresh_token': bool(user_token.refresh_token if user_token else False),
+        'token_created': user_token.created_at.isoformat() if user_token else None
     })
 
 # ヘルスチェックエンドポイント
