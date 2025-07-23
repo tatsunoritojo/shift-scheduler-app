@@ -136,39 +136,79 @@ def auth_check():
 def health():
     return jsonify({"status": "healthy", "version": "1.0.0"})
 
+# 環境変数確認エンドポイント（デバッグ用）
+@app.route('/api/debug/config')
+def debug_config():
+    return jsonify({
+        'CLIENT_ID_set': bool(CLIENT_ID),
+        'CLIENT_ID_preview': CLIENT_ID[:20] + '...' if CLIENT_ID else None,
+        'CLIENT_SECRET_set': bool(CLIENT_SECRET),
+        'REDIRECT_URI': REDIRECT_URI,
+        'SCOPES': SCOPES,
+        'app_url': request.url_root
+    })
+
 # Google認証開始エンドポイント
 @app.route('/auth/google/login')
 def login():
-    client_config = {
-        "web": {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "redirect_uris": [REDIRECT_URI]
-        }
-    }
+    print(f"[AUTH] Starting Google OAuth flow")
+    print(f"[AUTH] CLIENT_ID: {CLIENT_ID[:20]}...")
+    print(f"[AUTH] REDIRECT_URI: {REDIRECT_URI}")
+    print(f"[AUTH] SCOPES: {SCOPES}")
     
-    flow = Flow.from_client_config(
-        client_config,
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI
-    )
+    try:
+        client_config = {
+            "web": {
+                "client_id": CLIENT_ID,
+                "client_secret": CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [REDIRECT_URI]
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
+        )
 
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true'
-    )
-    session['state'] = state
-    return redirect(authorization_url)
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'  # 強制的に同意画面を表示
+        )
+        
+        print(f"[AUTH] Generated authorization URL: {authorization_url}")
+        print(f"[AUTH] State: {state}")
+        
+        session['state'] = state
+        return redirect(authorization_url)
+        
+    except Exception as e:
+        print(f"[AUTH ERROR] Failed to create authorization URL: {str(e)}")
+        return jsonify({"error": f"Failed to start OAuth flow: {str(e)}"}), 500
 
 # Google認証コールバックエンドポイント
 @app.route('/auth/google/callback')
 def callback():
+    print(f"[CALLBACK] OAuth callback received")
+    print(f"[CALLBACK] Request args: {dict(request.args)}")
+    print(f"[CALLBACK] Session state: {session.get('state')}")
+    
     state = session.get('state')
-    if not state or state != request.args.get('state'):
+    request_state = request.args.get('state')
+    
+    if not state:
+        print(f"[CALLBACK ERROR] No state in session")
+        return jsonify({"error": "No state in session"}), 400
+        
+    if state != request_state:
+        print(f"[CALLBACK ERROR] State mismatch: session={state}, request={request_state}")
         return jsonify({"error": "State mismatch"}), 400
+        
+    print(f"[CALLBACK] State validation passed")
 
     client_config = {
         "web": {
