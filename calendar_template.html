@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カレンダー視覚表示</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .month-container {
+            margin-bottom: 40px;
+        }
+
+        .month-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .calendar-header {
+            background: #1976D2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .calendar-day {
+            background: white;
+            padding: 15px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day:hover {
+            background: #f5f5f5;
+        }
+
+        .calendar-day.empty {
+            background: #f8f9fa;
+            color: #ccc;
+        }
+
+        .calendar-day.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .calendar-day.unavailable {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #e57373;
+        }
+
+        .calendar-day.excluded {
+            background: #f5f5f5;
+            color: #999;
+            border: 1px solid #e0e0e0;
+        }
+
+        .time-slot {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 4px;
+            line-height: 1.2;
+        }
+
+        .calendar-day.unavailable .time-slot,
+        .calendar-day.excluded .time-slot {
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .legend-available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .legend-unavailable {
+            background: #c62828;
+        }
+
+        .legend-excluded {
+            background: #999;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .calendar-grid {
+                padding: 10px;
+            }
+            
+            .calendar-day {
+                padding: 10px;
+                min-height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 カレンダー視覚表示</h1>
+            <p id="date-range"></p>
+        </div>
+        
+        <div class="content">
+            <!-- 凡例 -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color legend-available"></div>
+                    <span>出勤可能</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-unavailable"></div>
+                    <span>出勤不可</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-excluded"></div>
+                    <span>除外日</span>
+                </div>
+            </div>
+            
+            <!-- カレンダーグリッドコンテナ -->
+            <div id="calendar-container"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * =====================================
+         * カレンダーテンプレート設定
+         * =====================================
+         * 
+         * 【メイン関数】
+         * renderCalendar(startDate, endDate, shiftData)
+         * 
+         * 【パラメータ仕様】
+         * - startDate: 開始日（YYYY-MM-DD形式）例："2025-01-23"
+         * - endDate: 終了日（YYYY-MM-DD形式）例："2025-02-28"
+         * - shiftData: シフトデータ配列（以下の形式）
+         * 
+         * 【シフトデータ形式】
+         * [
+         *   {
+         *     date: "2025-01-23",           // 日付（YYYY-MM-DD形式）
+         *     dayName: "木",                // 曜日名
+         *     status: "available",          // ステータス（available/unavailable/excluded）
+         *     reason: "勤務可能",           // 理由・説明文
+         *     availableTime: "10:00-18:00", // 利用可能時間帯（文字列）
+         *     duration: 8.0,                // 勤務可能時間数（数値）
+         *     shifts: [                     // 詳細な時間スロット配列
+         *       {
+         *         start: "10:00",
+         *         end: "18:00",
+         *         duration: 8.0
+         *       }
+         *     ]
+         *   }
+         * ]
+         * 
+         * 【ステータス種別と表示】
+         * - available: 出勤可能（緑色、時間帯表示あり）
+         * - unavailable: 出勤不可（赤系）
+         * - excluded: 除外日（グレー）
+         * 
+         * 【使用例】
+         * renderCalendar("2025-01-01", "2025-02-28", shiftDataArray);
+         * 
+         * 【注意事項】
+         * - 複数月対応：月をまたぐ期間は月ごとに分けて表示
+         * - 関数名・呼び出し方法は後ほど修正予定
+         * - 他アプリケーションからの呼び出しを前提とした設計
+         * =====================================
+         */
+
+        /**
+         * カレンダーを描画する関数
+         * @param {string} startDate - 開始日（YYYY-MM-DD形式）
+         * @param {string} endDate - 終了日（YYYY-MM-DD形式）
+         * @param {Array} shiftData - シフトデータ配列
+         */
+        function renderCalendar(startDate, endDate, shiftData) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            // 日付範囲をヘッダーに表示
+            document.getElementById('date-range').textContent = 
+                `${formatDateJa(start)} 〜 ${formatDateJa(end)}`;
+            
+            // シフトデータをMapに変換（高速検索用）
+            const shiftMap = new Map();
+            shiftData.forEach(shift => {
+                shiftMap.set(shift.date, shift);
+            });
+            
+            // 月ごとのカレンダーを生成
+            const container = document.getElementById('calendar-container');
+            container.innerHTML = '';
+            
+            const months = getMonthsInRange(start, end);
+            months.forEach(month => {
+                const monthContainer = createMonthCalendar(month, shiftMap);
+                container.appendChild(monthContainer);
+            });
+        }
+
+        /**
+         * 指定された期間に含まれる月のリストを取得
+         * @param {Date} start - 開始日
+         * @param {Date} end - 終了日
+         * @returns {Array} 月のリスト
+         */
+        function getMonthsInRange(start, end) {
+            const months = [];
+            const current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+            
+            while (current <= endMonth) {
+                months.push(new Date(current));
+                current.setMonth(current.getMonth() + 1);
+            }
+            
+            return months;
+        }
+
+        /**
+         * 月カレンダーを生成
+         * @param {Date} month - 対象月
+         * @param {Map} shiftMap - シフトデータMap
+         * @returns {HTMLElement} 月カレンダー要素
+         */
+        function createMonthCalendar(month, shiftMap) {
+            const monthContainer = document.createElement('div');
+            monthContainer.className = 'month-container';
+            
+            // 月タイトル
+            const monthTitle = document.createElement('div');
+            monthTitle.className = 'month-title';
+            monthTitle.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+            monthContainer.appendChild(monthTitle);
+            
+            // カレンダーグリッド
+            const grid = document.createElement('div');
+            grid.className = 'calendar-grid';
+            
+            // 曜日ヘッダー
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+            
+            // 月の最初の日の曜日を取得
+            const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+            const startDayOfWeek = firstDay.getDay();
+            
+            // 月の最後の日を取得
+            const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // 最初の週の空のセルを追加
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day empty';
+                grid.appendChild(emptyCell);
+            }
+            
+            // 日付セルを追加
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = createDayCell(month.getFullYear(), month.getMonth(), day, shiftMap);
+                grid.appendChild(dayCell);
+            }
+            
+            monthContainer.appendChild(grid);
+            return monthContainer;
+        }
+
+        /**
+         * 日付セルを生成
+         * @param {number} year - 年
+         * @param {number} month - 月（0ベース）
+         * @param {number} day - 日
+         * @param {Map} shiftMap - シフトデータMap
+         * @returns {HTMLElement} 日付セル要素
+         */
+        function createDayCell(year, month, day, shiftMap) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const shiftData = shiftMap.get(dateStr);
+            
+            // 日付番号
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'day-number';
+            dayNumber.textContent = day;
+            cell.appendChild(dayNumber);
+            
+            // シフトデータに基づいてスタイルを適用
+            if (shiftData) {
+                cell.classList.add(shiftData.status);
+                
+                // 利用可能時間を表示（availableの場合のみ）
+                if (shiftData.status === 'available' && shiftData.availableTime) {
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = shiftData.availableTime;
+                    cell.appendChild(timeSlot);
+                }
+            }
+            
+            return cell;
+        }
+
+        /**
+         * 日付を日本語形式でフォーマット
+         * @param {Date} date - 日付オブジェクト
+         * @returns {string} フォーマットされた日付文字列
+         */
+        function formatDateJa(date) {
+            return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+        }
+
+        // 使用例（テスト用）
+        // const sampleData = [
+        //     {
+        //         date: "2025-08-03",
+        //         dayName: "日",
+        //         status: "available",
+        //         reason: "勤務可能",
+        //         availableTime: "13:00-15:00",
+        //         duration: 2.0,
+        //         shifts: [{ start: "13:00", end: "15:00", duration: 2.0 }]
+        //     },
+        //     {
+        //         date: "2025-08-04",
+        //         dayName: "月",
+        //         status: "excluded",
+        //         reason: "祝日（山の日）のため対象外",
+        //         availableTime: null,
+        //         duration: 0,
+        //         shifts: []
+        //     }
+        // ];
+        // 
+        // renderCalendar("2025-08-01", "2025-09-30", sampleData);
+    </script>
+</body>
+</html>

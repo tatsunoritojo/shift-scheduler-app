@@ -137,8 +137,8 @@ def health():
     return jsonify({"status": "healthy", "version": "1.0.0"})
 
 # 環境変数確認エンドポイント（デバッグ用）
-@app.route('/api/debug/config')
-def debug_config():
+@app.route('/api/debug/config2')
+def debug_config2():
     return jsonify({
         'CLIENT_ID_set': bool(CLIENT_ID),
         'CLIENT_ID_preview': CLIENT_ID[:20] + '...' if CLIENT_ID else None,

@@ -186,6 +186,30 @@
             box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
         }
 
+        .preset-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: #e3f2fd;
+            color: #1976D2;
+            border: 2px solid #2196F3;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .preset-btn:hover {
+            background: #2196F3;
+            color: white;
+            transform: translateY(-1px);
+        }
 
         .advanced-settings {
             background: #fff3e0;
@@ -378,6 +402,9 @@
                 padding: 20px;
             }
             
+            .preset-buttons {
+                justify-content: center;
+            }
         }
 
         .tooltip {
@@ -388,65 +415,16 @@
         .tooltip:hover::after {
             content: attr(data-tooltip);
             position: absolute;
-            top: -45px;
+            top: -35px;
             left: 50%;
             transform: translateX(-50%);
-            background: #2c3e50;
+            background: #333;
             color: white;
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            white-space: normal;
-            max-width: 300px;
-            width: max-content;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            line-height: 1.4;
-        }
-
-        .tooltip:hover::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid #2c3e50;
-            z-index: 1001;
-        }
-
-        /* ボタンのツールチップスタイル */
-        button[title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2c3e50;
-            color: white;
-            padding: 8px 10px;
-            border-radius: 6px;
+            padding: 5px 10px;
+            border-radius: 5px;
             font-size: 12px;
             white-space: nowrap;
             z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        /* 入力フィールドのツールチップ */
-        input[title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            top: -35px;
-            left: 0;
-            background: #2c3e50;
-            color: white;
-            padding: 6px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
         .tab-buttons {
@@ -485,81 +463,140 @@
             display: block;
         }
 
-        .events-info {
-            margin-top: 8px;
-            padding: 5px 10px;
-            background: #f0f8ff;
-            border-radius: 5px;
-            border-left: 3px solid #2196F3;
+        /* カレンダー表示スタイル */
+        .month-container {
+            margin-bottom: 40px;
         }
 
-        .shift-result {
+        .month-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .calendar-header {
+            background: #1976D2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .calendar-day {
+            background: white;
+            padding: 15px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
             transition: all 0.3s ease;
         }
 
-        .shift-result:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        .calendar-day:hover {
+            background: #f5f5f5;
         }
 
-        /* イベント詳細ツールチップのスタイル */
-        .event-tooltip {
-            position: absolute;
-            background: rgba(44, 62, 80, 0.95);
+        .calendar-day.empty {
+            background: #f8f9fa;
+            color: #ccc;
+        }
+
+        .calendar-day.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.5;
-            max-width: 300px;
-            z-index: 2000;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            display: none;
-        }
-
-        .event-tooltip h4 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            color: #74c0fc;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 6px;
-        }
-
-        .event-tooltip .event-item {
-            margin: 8px 0;
-            padding: 6px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 6px;
-        }
-
-        .event-tooltip .event-title {
             font-weight: bold;
-            color: #ffd43b;
-            margin-bottom: 4px;
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
         }
 
-        .event-tooltip .event-time {
-            color: #a5d8ff;
-            font-size: 12px;
-            margin-bottom: 3px;
+        .calendar-day.unavailable {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #e57373;
         }
 
-        .event-tooltip .event-location {
-            color: #b2f2bb;
-            font-size: 12px;
-            margin-bottom: 3px;
+        .calendar-day.excluded {
+            background: #f5f5f5;
+            color: #999;
+            border: 1px solid #e0e0e0;
         }
 
-        .event-tooltip .event-description {
-            color: #f8f9fa;
-            font-size: 12px;
+        .time-slot {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 4px;
+            line-height: 1.2;
         }
 
-        .event-tooltip .no-events {
-            color: #adb5bd;
-            font-style: italic;
+        .calendar-day.unavailable .time-slot,
+        .calendar-day.excluded .time-slot {
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .legend-available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .legend-unavailable {
+            background: #c62828;
+        }
+
+        .legend-excluded {
+            background: #999;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                padding: 10px;
+            }
+            
+            .calendar-day {
+                padding: 10px;
+                min-height: 40px;
+            }
         }
     </style>
 </head>
@@ -578,6 +615,15 @@
 
             <div class="tab-content">
                 <div id="settings-tab" class="tab-pane active">
+                    <!-- プリセットボタン -->
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="loadPreset('student')">👨‍🎓 学生バイト</button>
+                <button class="preset-btn" onclick="loadPreset('office')">🏢 オフィス勤務</button>
+                <button class="preset-btn" onclick="loadPreset('retail')">🛒 小売店</button>
+                <button class="preset-btn" onclick="loadPreset('restaurant')">🍽️ 飲食店</button>
+                <button class="preset-btn" onclick="loadPreset('flexible')">⚡ フレックス</button>
+                <button class="preset-btn" onclick="resetSettings()">🔄 リセット</button>
+            </div>
 
             <!-- 現在の設定表示 -->
             <div class="current-settings" id="currentSettings">
@@ -592,15 +638,11 @@
                     <h3>⏰ 基本勤務条件</h3>
                     
                     <div class="form-group">
-                        <label class="tooltip" data-tooltip="シフトで働くことができる時間帯を設定します。この時間外の予定は計算に影響しません。">
-                            営業時間 ⓘ
-                        </label>
+                        <label>営業時間</label>
                         <div class="time-range">
-                            <input type="time" id="startTime" class="form-control form-control-small" value="10:00"
-                                title="勤務開始可能な時刻">
+                            <input type="time" id="startTime" class="form-control form-control-small" value="10:00">
                             <span>〜</span>
-                            <input type="time" id="endTime" class="form-control form-control-small" value="18:00"
-                                title="勤務終了時刻">
+                            <input type="time" id="endTime" class="form-control form-control-small" value="18:00">
                         </div>
                     </div>
 
@@ -665,27 +707,31 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="startDate" class="tooltip" data-tooltip="シフト計算を行う期間の開始日を設定します">
-                                開始日 ⓘ
-                            </label>
-                            <input type="date" id="startDate" class="form-control" required
-                                title="シフト計算開始日">
+                            <label for="startDate">開始日</label>
+                            <input type="date" id="startDate" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="endDate" class="tooltip" data-tooltip="シフト計算を行う期間の終了日を設定します">
-                                終了日 ⓘ
-                            </label>
-                            <input type="date" id="endDate" class="form-control" required
-                                title="シフト計算終了日">
+                            <label for="endDate">終了日</label>
+                            <input type="date" id="endDate" class="form-control" required>
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="calendarId" class="tooltip" data-tooltip="Googleカレンダーの特定のカレンダーを指定できます。「primary」はメインカレンダーを意味します。他のカレンダーを使用する場合は、Googleカレンダーの設定からカレンダーIDを取得してください。">
+                        <label for="calendarId" class="tooltip" data-tooltip="空欄の場合はメインカレンダーを使用">
                             カレンダーID ⓘ
                         </label>
-                        <input type="text" id="calendarId" class="form-control" placeholder="primary" value="primary"
-                            title="使用するGoogleカレンダーのID（primary = メインカレンダー）">
+                        <input type="text" id="calendarId" class="form-control" placeholder="primary" value="primary">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="submitterName">提出者氏名</label>
+                            <input type="text" id="submitterName" class="form-control" placeholder="例：田中 太郎" value="">
+                        </div>
+                        <div class="form-group">
+                            <label for="submitterDepartment">所属部署</label>
+                            <input type="text" id="submitterDepartment" class="form-control" placeholder="例：アルバイトスタッフ" value="">
+                        </div>
                     </div>
 
                     <!-- 高度な設定 -->
@@ -693,23 +739,21 @@
                         <h4>⚙️ 高度な設定</h4>
                         
                         <div class="form-group">
-                            <label class="tooltip" data-tooltip="この時間未満の空き時間は勤務不可として扱います。短すぎる空き時間を除外できます。">
+                            <label class="tooltip" data-tooltip="この時間未満の空き時間は無視">
                                 最小空き時間 ⓘ
                             </label>
                             <div class="time-range">
-                                <input type="number" id="minGapTime" class="form-control form-control-small" value="30" min="0" step="15"
-                                    title="勤務可能とする最小の空き時間（分）">
+                                <input type="number" id="minGapTime" class="form-control form-control-small" value="30" min="0" step="15">
                                 <span>分</span>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="tooltip" data-tooltip="1日あたりの最大勤務時間です。長時間の勤務を制限できます。">
+                            <label class="tooltip" data-tooltip="1日の最大勤務時間制限">
                                 最大勤務時間 ⓘ
                             </label>
                             <div class="time-range">
-                                <input type="number" id="maxHours" class="form-control form-control-small" value="8" min="1" max="12" step="0.5"
-                                    title="1日の最大勤務時間（時間）">
+                                <input type="number" id="maxHours" class="form-control form-control-small" value="8" min="1" max="12" step="0.5">
                                 <span>時間</span>
                             </div>
                         </div>
@@ -735,32 +779,18 @@
                 </div>
             </div>
 
-            <!-- 認証状態表示 -->
-            <div id="authStatus" style="text-align: center; margin: 20px 0; padding: 15px; background: #e8f5e8; border-radius: 10px; border-left: 5px solid #4CAF50; display: none;">
-                <span style="color: #2e7d32; font-weight: bold;">
-                    ✅ Googleアカウント認証済み
-                </span>
-                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #555;">
-                    カレンダー情報の取得が可能です
-                </p>
-            </div>
-
             <!-- 認証・実行ボタン -->
             <div style="text-align: center; margin: 30px 0;">
-                <button class="btn btn-success" onclick="authenticateGoogle()" id="authButton" 
-                    title="Googleカレンダーにアクセスするための認証を行います">
+                <button class="btn btn-success" onclick="authenticateGoogle()" id="authButton">
                     🔐 Googleアカウント認証
                 </button>
-                <button class="btn" onclick="calculateShifts()" id="calculateButton" disabled
-                    title="設定した条件でシフト可能日を計算します">
+                <button class="btn" onclick="calculateShifts()" id="calculateButton" disabled>
                     🔄 シフト可能日を計算
                 </button>
-                <button class="btn btn-secondary" onclick="saveSettings()"
-                    title="現在の設定をブラウザに保存します">
+                <button class="btn btn-secondary" onclick="saveSettings()">
                     💾 設定を保存
                 </button>
-                <button class="btn btn-secondary" onclick="loadSettings()"
-                    title="保存した設定を読み込みます">
+                <button class="btn btn-secondary" onclick="loadSettings()">
                     📂 設定を読込
                 </button>
             </div>
@@ -777,7 +807,66 @@
                         <div id="resultsContent" style="display: none;">
                             <h3>📊 計算結果</h3>
                             <div id="summaryStats" class="summary-stats"></div>
-                            <div id="shiftResults"></div>
+                            
+                            <!-- 表示切り替えボタン -->
+                            <div style="text-align: center; margin: 20px 0;">
+                                <button class="preset-btn" onclick="showResultView('calendar')" id="calendarViewBtn">
+                                    📅 カレンダー表示
+                                </button>
+                                <button class="preset-btn" onclick="showResultView('list')" id="listViewBtn">
+                                    📋 リスト表示
+                                </button>
+                            </div>
+                            
+                            <!-- カレンダー表示エリア -->
+                            <div id="calendarView" style="display: none;">
+                                <!-- 提出者情報ヘッダー -->
+                                <div id="submitterHeader" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #2196F3;">
+                                    <h3 style="margin: 0 0 15px 0; color: #1976D2;">📅 シフト希望提出書</h3>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="text-align: left;">
+                                            <div style="font-size: 1.1em; margin-bottom: 5px;">
+                                                <strong>氏名：</strong> <span id="displaySubmitterName">未入力</span>
+                                            </div>
+                                            <div style="font-size: 1em; opacity: 0.8;">
+                                                <strong>所属：</strong> <span id="displaySubmitterDepartment">未入力</span>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 1em; opacity: 0.8;">
+                                                <strong>提出日：</strong> <span id="displaySubmissionDate"></span>
+                                            </div>
+                                            <div style="font-size: 1em; opacity: 0.8; margin-top: 5px;">
+                                                <strong>対象期間：</strong> <span id="displayDateRange"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 凡例 -->
+                                <div class="legend">
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-available"></div>
+                                        <span>出勤可能</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-unavailable"></div>
+                                        <span>出勤不可</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-excluded"></div>
+                                        <span>除外日</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- カレンダーグリッドコンテナ -->
+                                <div id="calendar-container"></div>
+                            </div>
+                            
+                            <!-- リスト表示エリア -->
+                            <div id="listView">
+                                <div id="shiftResults"></div>
+                            </div>
                             
                             <div style="text-align: center; margin-top: 30px;">
                                 <button class="btn btn-success" onclick="exportToPDF()">
@@ -785,6 +874,9 @@
                                 </button>
                                 <button class="btn btn-secondary" onclick="exportToCSV()">
                                     📊 CSV出力
+                                </button>
+                                <button class="btn" onclick="testWithDummyData()" style="background: #FF9800; margin-left: 10px;">
+                                    🧪 ダミーデータでテスト
                                 </button>
                             </div>
                         </div>
@@ -797,72 +889,31 @@
     <script>
         // Google認証
         function authenticateGoogle() {
-            window.location.href = '/auth/google/login';
+            window.location.href = 'http://localhost:5000/auth/google/login';
         }
 
-        // 認証状態確認（アプリ起動時とAPI失敗時に呼び出される）
+        // 認証状態確認
         async function checkAuthStatus() {
-            console.log('認証状態を確認中...');
-            
-            const authButton = document.getElementById('authButton');
-            const calculateButton = document.getElementById('calculateButton');
-            const authStatus = document.getElementById('authStatus');
-            
-            // 初期状態：認証状態不明
-            authStatus.style.display = 'none';
-            authButton.style.display = 'inline-flex';
-            calculateButton.disabled = true;
-            
             try {
-                // 実際にカレンダーAPIを呼び出して認証状態を確認
-                const testDate = new Date().toISOString().split('T')[0];
-                const response = await fetch(`/api/calendar/events?startDate=${testDate}&endDate=${testDate}&calendarId=primary`);
+                const response = await fetch('http://localhost:5000/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
+                const authButton = document.getElementById('authButton');
+                const calculateButton = document.getElementById('calculateButton');
                 
-                console.log('API応答ステータス:', response.status);
-                
-                if (response.ok) {
-                    // 認証済み：カレンダーデータ取得成功
-                    const data = await response.json();
-                    console.log('認証成功：カレンダーデータ取得完了', data.length + '件のイベント');
-                    
-                    authButton.style.display = 'none';
-                    calculateButton.disabled = false;
-                    authStatus.style.display = 'block';
-                    
-                    return true;
-                } else if (response.status === 401) {
+                if (response.status === 401) {
                     // 未認証
-                    console.log('未認証：認証が必要です');
-                    
                     authButton.style.display = 'inline-flex';
                     authButton.textContent = '🔐 Googleアカウント認証';
                     calculateButton.disabled = true;
-                    authStatus.style.display = 'none';
-                    
-                    return false;
                 } else {
-                    // その他のエラー
-                    console.log('API エラー:', response.status);
-                    const errorData = await response.json().catch(() => ({}));
-                    console.log('エラー詳細:', errorData);
-                    
-                    authButton.style.display = 'inline-flex';
-                    authButton.textContent = '🔐 再認証が必要';
-                    calculateButton.disabled = true;
-                    authStatus.style.display = 'none';
-                    
-                    return false;
+                    // 認証済み
+                    authButton.style.display = 'none';
+                    calculateButton.disabled = false;
                 }
             } catch (error) {
-                console.error('認証状態確認エラー:', error);
-                
-                // ネットワークエラーなどの場合
-                authButton.style.display = 'inline-flex';
-                authButton.textContent = '🔐 認証状態確認失敗';
-                calculateButton.disabled = true;
-                authStatus.style.display = 'none';
-                
-                return false;
+                console.log('認証状態確認エラー:', error);
+                // エラー時は認証が必要と仮定
+                document.getElementById('authButton').style.display = 'inline-flex';
+                document.getElementById('calculateButton').disabled = true;
             }
         }
 
@@ -891,8 +942,7 @@
             // 初期表示は設定タブ
             showTab('settings-tab');
 
-            // アプリ起動時に認証状態を自動確認
-            console.log('アプリケーション起動：認証状態を確認します');
+            // 認証状態を確認
             checkAuthStatus();
         });
 
@@ -916,6 +966,88 @@
             } else {
                 document.getElementById('resultsSection').classList.remove('show');
             }
+        }
+
+        // プリセット設定
+        const presets = {
+            student: {
+                startTime: '10:00',
+                endTime: '18:00',
+                minHours: 2,
+                bufferTime: 30,
+                excludeDays: [0, 3], // 日曜、水曜
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: false,
+                excludeHolidays: false
+            },
+            office: {
+                startTime: '09:00',
+                endTime: '18:00',
+                minHours: 4,
+                bufferTime: 15,
+                excludeDays: [0, 6], // 日曜、土曜
+                maxHours: 8,
+                minGapTime: 60,
+                allowSplitShifts: false,
+                excludeHolidays: false
+            },
+            retail: {
+                startTime: '10:00',
+                endTime: '20:00',
+                minHours: 3,
+                bufferTime: 15,
+                excludeDays: [],
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            },
+            restaurant: {
+                startTime: '11:00',
+                endTime: '22:00',
+                minHours: 2,
+                bufferTime: 30,
+                excludeDays: [],
+                maxHours: 8,
+                minGapTime: 30,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            },
+            flexible: {
+                startTime: '08:00',
+                endTime: '20:00',
+                minHours: 1,
+                bufferTime: 0,
+                excludeDays: [],
+                maxHours: 12,
+                minGapTime: 0,
+                allowSplitShifts: true,
+                excludeHolidays: false
+            }
+        };
+
+        // プリセット読み込み
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            document.getElementById('startTime').value = preset.startTime;
+            document.getElementById('endTime').value = preset.endTime;
+            document.getElementById('minHours').value = preset.minHours;
+            document.getElementById('bufferTime').value = preset.bufferTime;
+            document.getElementById('maxHours').value = preset.maxHours;
+            document.getElementById('minGapTime').value = preset.minGapTime;
+            document.getElementById('allowSplitShifts').checked = preset.allowSplitShifts;
+            document.getElementById('excludeHolidays').checked = preset.excludeHolidays;
+
+            // 曜日除外設定をリセット
+            for (let i = 0; i < 7; i++) {
+                document.getElementById(`exclude${i}`).checked = preset.excludeDays.includes(i);
+            }
+
+            updateAllCheckboxUI();
+            updateSettingsDisplay();
         }
 
         // 設定リセット
@@ -1095,14 +1227,7 @@
                 await fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings);
             } catch (error) {
                 console.error('エラー:', error);
-                
-                // エラー時は認証状態を再確認して適切なUIを表示
-                const isAuthenticated = await checkAuthStatus();
-                if (!isAuthenticated) {
-                    alert('カレンダー情報の取得に失敗しました。認証ボタンをクリックしてGoogleアカウントで認証してください。');
-                } else {
-                    alert('カレンダー情報の取得に失敗しました。しばらく待ってから再試行してください。');
-                }
+                alert('カレンダー情報の取得に失敗しました。認証が必要な可能性があります。');
                 document.getElementById('loadingDiv').style.display = 'none';
             }
         }
@@ -1111,28 +1236,19 @@
         async function fetchCalendarDataFromBackend(startDate, endDate, calendarId, settings) {
             try {
                 // バックエンドAPIを呼び出してカレンダーイベントを取得
-                const response = await fetch(`/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
+                const response = await fetch(`http://localhost:5000/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
                 
                 if (response.status === 401) {
-                    // 認証が必要な場合：認証状態を更新してボタンを表示
-                    console.log('認証エラー：認証状態を更新します');
-                    await checkAuthStatus(); // 認証状態を更新
-                    
-                    alert('カレンダー情報の取得に失敗しました。Googleアカウントでの認証が必要です。');
-                    document.getElementById('loadingDiv').style.display = 'none';
+                    // 認証が必要な場合
+                    const authConfirm = confirm('Googleアカウントでの認証が必要です。認証ページに移動しますか？');
+                    if (authConfirm) {
+                        window.location.href = 'http://localhost:5000/auth/google/login';
+                    }
                     return;
                 }
                 
                 if (!response.ok) {
-                    // その他のAPIエラー
-                    console.log('APIエラー:', response.status);
-                    const errorData = await response.json().catch(() => ({}));
-                    console.log('エラー詳細:', errorData);
-                    
-                    // 認証状態を再確認
-                    await checkAuthStatus();
-                    
-                    throw new Error(`カレンダーAPI error! status: ${response.status}, message: ${errorData.error || 'Unknown error'}`);
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const events = await response.json();
@@ -1143,9 +1259,6 @@
                 
             } catch (error) {
                 console.error('バックエンドAPI呼び出しエラー:', error);
-                
-                // エラー時は認証状態を再確認
-                await checkAuthStatus();
                 throw error;
             }
         }
@@ -1169,71 +1282,33 @@
                 }
             }
 
-            // イベントを日付ごとにグループ化（計算用と表示用を分離）
-            const eventsByDate = {}; // 時間指定のあるイベント（計算用）
-            const allDayEventsByDate = {}; // 終日イベント（表示専用）
-            
+            // イベントを日付ごとにグループ化
+            const eventsByDate = {};
             events.forEach(event => {
+                const eventDate = event.start.includes('T') ? 
+                    event.start.split('T')[0] : event.start;
+                
+                if (!eventsByDate[eventDate]) {
+                    eventsByDate[eventDate] = [];
+                }
+                
                 // 終日イベントかどうかをチェック
                 if (event.start.includes('T') && event.end.includes('T')) {
-                    // 時間指定のあるイベント（計算に使用）
-                    const eventDate = event.start.split('T')[0];
-                    if (!eventsByDate[eventDate]) {
-                        eventsByDate[eventDate] = [];
-                    }
                     eventsByDate[eventDate].push({
                         start: event.start.split('T')[1].substring(0, 5),
                         end: event.end.split('T')[1].substring(0, 5),
-                        summary: event.summary,
-                        location: event.location,
-                        description: event.description,
-                        isAllDay: false
+                        summary: event.summary
                     });
-                } else {
-                    // 終日イベント（表示のみ）- 複数日対応
-                    const startDate = new Date(event.start);
-                    const endDate = new Date(event.end);
-                    
-                    // 終了日から1日引く（Googleカレンダーの終日イベントは翌日の00:00が終了時刻）
-                    endDate.setDate(endDate.getDate() - 1);
-                    
-                    // 開始日から終了日まで各日に追加
-                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                        const dateStr = d.toISOString().split('T')[0];
-                        
-                        if (!allDayEventsByDate[dateStr]) {
-                            allDayEventsByDate[dateStr] = [];
-                        }
-                        
-                        // 複数日の場合は日数情報を追加
-                        const isMultiDay = startDate.getTime() !== endDate.getTime();
-                        const dayInfo = isMultiDay ? 
-                            ` (${startDate.toLocaleDateString('ja-JP', {month: 'short', day: 'numeric'})}〜${endDate.toLocaleDateString('ja-JP', {month: 'short', day: 'numeric'})})` : '';
-                        
-                        allDayEventsByDate[dateStr].push({
-                            start: '終日',
-                            end: '終日',
-                            summary: event.summary + dayInfo,
-                            originalSummary: event.summary,
-                            location: event.location,
-                            description: event.description,
-                            isAllDay: true,
-                            isMultiDay: isMultiDay,
-                            eventStartDate: startDate.toISOString().split('T')[0],
-                            eventEndDate: endDate.toISOString().split('T')[0],
-                            currentDate: dateStr
-                        });
-                    }
                 }
             });
 
             // 設定に基づいてシフトを計算
-            const shifts = calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, allDayEventsByDate, settings, holidays);
+            const shifts = calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, settings, holidays);
             displayResults(shifts, settings);
         }
 
         // 実際のイベントデータを使用したシフト計算
-        function calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, allDayEventsByDate, settings, holidays) {
+        function calculateShiftsWithRealEvents(startDate, endDate, eventsByDate, settings, holidays) {
             const shifts = [];
             const start = new Date(startDate);
             const end = new Date(endDate);
@@ -1252,9 +1327,7 @@
                         reason: `${dayName}曜日のため対象外`,
                         availableTime: null,
                         duration: 0,
-                        shifts: [],
-                        events: [...(eventsByDate[dateStr] || []), ...(allDayEventsByDate[dateStr] || [])],
-                        selected: false
+                        shifts: []
                     });
                     continue;
                 }
@@ -1268,21 +1341,13 @@
                         reason: `祝日（${holidays[dateStr]}）のため対象外`,
                         availableTime: null,
                         duration: 0,
-                        shifts: [],
-                        events: [...(eventsByDate[dateStr] || []), ...(allDayEventsByDate[dateStr] || [])],
-                        selected: false
+                        shifts: []
                     });
                     continue;
                 }
 
-                // その日のイベントを取得（計算用：時間指定のみ）
+                // その日のイベントを取得
                 const dayEvents = eventsByDate[dateStr] || [];
-                
-                // その日の終日イベントを取得（表示用）
-                const allDayEvents = allDayEventsByDate[dateStr] || [];
-                
-                // 表示用に全イベントを結合
-                const allEventsForDisplay = [...dayEvents, ...allDayEvents];
                 
                 // 営業時間内の利用可能時間を計算
                 const availableSlots = calculateAvailableSlots(
@@ -1292,8 +1357,8 @@
                     settings
                 );
 
-                // 利用可能スロット（既に最低勤務時間チェック済み）
-                const validSlots = availableSlots;
+                // 最低勤務時間を満たすスロットをフィルタリング
+                const validSlots = availableSlots.filter(slot => slot.duration >= settings.minHours);
 
                 if (validSlots.length > 0) {
                     const totalDuration = validSlots.reduce((sum, slot) => sum + slot.duration, 0);
@@ -1307,9 +1372,7 @@
                             reason: '複数時間帯で勤務可能',
                             availableTime: validSlots.map(slot => `${slot.start}-${slot.end}`).join(', '),
                             duration: maxDuration,
-                            shifts: validSlots,
-                            events: allEventsForDisplay,
-                            selected: true  // デフォルトで選択状態
+                            shifts: validSlots
                         });
                     } else {
                         const bestSlot = validSlots[0];
@@ -1323,9 +1386,7 @@
                             reason: '勤務可能',
                             availableTime: `${bestSlot.start}-${adjustedEnd}`,
                             duration: Math.min(bestSlot.duration, maxDuration),
-                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }],
-                            events: allEventsForDisplay,
-                            selected: true  // デフォルトで選択状態
+                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }]
                         });
                     }
                 } else {
@@ -1336,9 +1397,7 @@
                         reason: dayEvents.length > 0 ? '予定により最低勤務時間確保不可' : '勤務時間確保不可',
                         availableTime: null,
                         duration: 0,
-                        shifts: [],
-                        events: dayEvents,
-                        selected: false
+                        shifts: []
                     });
                 }
             }
@@ -1395,9 +1454,7 @@
                         reason: `${dayName}曜日のため対象外`,
                         availableTime: null,
                         duration: 0,
-                        shifts: [],
-                        events: [...(eventsByDate[dateStr] || []), ...(allDayEventsByDate[dateStr] || [])],
-                        selected: false
+                        shifts: []
                     });
                     continue;
                 }
@@ -1411,9 +1468,7 @@
                         reason: `祝日（${holidays[dateStr]}）のため対象外`,
                         availableTime: null,
                         duration: 0,
-                        shifts: [],
-                        events: [...(eventsByDate[dateStr] || []), ...(allDayEventsByDate[dateStr] || [])],
-                        selected: false
+                        shifts: []
                     });
                     continue;
                 }
@@ -1459,9 +1514,7 @@
                             reason: '複数時間帯で勤務可能',
                             availableTime: validSlots.map(slot => `${slot.start}-${slot.end}`).join(', '),
                             duration: maxDuration,
-                            shifts: validSlots,
-                            events: allEventsForDisplay,
-                            selected: true  // デフォルトで選択状態
+                            shifts: validSlots
                         });
                     } else {
                         const bestSlot = validSlots[0];
@@ -1475,9 +1528,7 @@
                             reason: '勤務可能',
                             availableTime: `${bestSlot.start}-${adjustedEnd}`,
                             duration: Math.min(bestSlot.duration, maxDuration),
-                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }],
-                            events: allEventsForDisplay,
-                            selected: true  // デフォルトで選択状態
+                            shifts: [{ start: bestSlot.start, end: adjustedEnd, duration: Math.min(bestSlot.duration, maxDuration) }]
                         });
                     }
                 } else {
@@ -1508,41 +1559,27 @@
             let currentStart = workStart;
 
             for (const event of events) {
-                // イベントの時間を分に変換し、移動時間を考慮
-                const eventStartMinutes = timeToMinutes(event.start);
-                const eventEndMinutes = timeToMinutes(event.end);
-                
-                // 営業時間外のイベントは無視
-                if (eventEndMinutes <= workStart || eventStartMinutes >= workEnd) {
-                    continue;
-                }
-                
-                // 移動時間を考慮したイベントの開始・終了時間
-                const blockedStart = Math.max(workStart, eventStartMinutes - settings.bufferTime);
-                const blockedEnd = Math.min(workEnd, eventEndMinutes + settings.bufferTime);
+                const eventStart = Math.max(workStart, timeToMinutes(event.start) - settings.bufferTime);
+                const eventEnd = Math.min(workEnd, timeToMinutes(event.end) + settings.bufferTime);
 
-                // 現在位置からブロックされた開始時間までに利用可能な時間があるか
-                if (currentStart < blockedStart) {
-                    const slotDuration = (blockedStart - currentStart) / 60;
-                    // 最小空き時間と最低勤務時間の両方をチェック
-                    if (slotDuration >= Math.max(settings.minGapTime / 60, settings.minHours)) {
+                if (currentStart < eventStart) {
+                    const slotDuration = (eventStart - currentStart) / 60;
+                    if (slotDuration >= settings.minGapTime / 60) {
                         slots.push({
                             start: minutesToTime(currentStart),
-                            end: minutesToTime(blockedStart),
+                            end: minutesToTime(eventStart),
                             duration: slotDuration
                         });
                     }
                 }
 
-                // 次の開始可能時間を更新
-                currentStart = Math.max(currentStart, blockedEnd);
+                currentStart = Math.max(currentStart, eventEnd);
             }
 
-            // 最後のスロット（最後のイベント後から営業時間終了まで）
+            // 最後のスロット
             if (currentStart < workEnd) {
                 const slotDuration = (workEnd - currentStart) / 60;
-                // 最小空き時間と最低勤務時間の両方をチェック
-                if (slotDuration >= Math.max(settings.minGapTime / 60, settings.minHours)) {
+                if (slotDuration >= settings.minGapTime / 60) {
                     slots.push({
                         start: minutesToTime(currentStart),
                         end: minutesToTime(workEnd),
@@ -1583,12 +1620,8 @@
             return minutesToTime(Math.round(randomMinutes));
         }
 
-        // グローバル変数でシフトデータを保存
-        let globalShifts = [];
-
         // 結果表示
         function displayResults(shifts, settings) {
-            globalShifts = shifts; // グローバル変数に保存
             document.getElementById('loadingDiv').style.display = 'none';
             document.getElementById('resultsContent').style.display = 'block';
 
@@ -1597,9 +1630,7 @@
             const partialShifts = shifts.filter(s => s.status === 'partial');
             const unavailableShifts = shifts.filter(s => s.status === 'unavailable');
             const excludedShifts = shifts.filter(s => s.status === 'excluded');
-            const selectedShifts = availableShifts.filter(s => s.selected);
             const totalHours = availableShifts.reduce((sum, s) => sum + s.duration, 0);
-            const selectedHours = selectedShifts.reduce((sum, s) => sum + s.duration, 0);
             const avgHoursPerDay = availableShifts.length > 0 ? (totalHours / availableShifts.length) : 0;
 
             // 統計表示
@@ -1609,37 +1640,26 @@
                     <div class="stat-label">出勤可能日</div>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-number" style="color: #4CAF50;">${selectedShifts.length}</span>
-                    <div class="stat-label">選択済み出勤日</div>
-                </div>
-                <div class="stat-card">
                     <span class="stat-number">${totalHours.toFixed(1)}</span>
                     <div class="stat-label">合計勤務時間</div>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-number" style="color: #4CAF50;">${selectedHours.toFixed(1)}</span>
-                    <div class="stat-label">選択済み勤務時間</div>
+                    <span class="stat-number">${avgHoursPerDay.toFixed(1)}</span>
+                    <div class="stat-label">平均勤務時間/日</div>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-number">${unavailableShifts.length + excludedShifts.length}</span>
-                    <div class="stat-label">出勤不可・除外日</div>
+                    <span class="stat-number">${unavailableShifts.length}</span>
+                    <div class="stat-label">出勤不可日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${excludedShifts.length}</span>
+                    <div class="stat-label">除外日</div>
                 </div>
             `;
             document.getElementById('summaryStats').innerHTML = statsHtml;
 
-            // 詳細な結果表示
-            displayDetailedResults(shifts);
-            
-            // 選択機能ボタンを表示
-            displaySelectionControls();
-            
-            // シフト表生成ボタンを表示
-            displayShiftTableButton();
-        }
-
-        // 詳細な結果表示
-        function displayDetailedResults(shifts) {
-            const resultsHtml = shifts.map((shift, index) => {
+            // シフト結果表示
+            const resultsHtml = shifts.map(shift => {
                 const statusClass = shift.status === 'excluded' ? 'unavailable' : shift.status;
                 const statusIcon = {
                     'available': '✅',
@@ -1648,93 +1668,195 @@
                     'excluded': '🚫'
                 }[shift.status];
 
-                // イベント情報の表示（終日予定と時間指定予定を分けて表示）
-                let eventsDisplay = '';
-                if (shift.events && shift.events.length > 0) {
-                    const timeBasedEvents = shift.events.filter(event => !event.isAllDay);
-                    const allDayEvents = shift.events.filter(event => event.isAllDay);
-                    
-                    let eventTexts = [];
-                    
-                    // 時間指定の予定
-                    if (timeBasedEvents.length > 0) {
-                        eventTexts.push(`⏰ 時間指定: ${timeBasedEvents.map(event => 
-                            `${event.summary} (${event.start}-${event.end})`
-                        ).join(', ')}`);
-                    }
-                    
-                    // 終日予定
-                    if (allDayEvents.length > 0) {
-                        eventTexts.push(`📅 終日の予定: ${allDayEvents.map(event => 
-                            event.summary
-                        ).join(', ')}`);
-                    }
-                    
-                    if (eventTexts.length > 0) {
-                        eventsDisplay = `<div class="events-info">
-                            <small>${eventTexts.join(' | ')}</small>
-                        </div>`;
-                    }
-                }
-
-                // チェックボックス（出勤可能日のみ）
-                const checkbox = shift.status === 'available' ? 
-                    `<input type="checkbox" id="shift-${index}" ${shift.selected ? 'checked' : ''} 
-                     onchange="toggleShiftSelection(${index})" style="margin-right: 10px;">` : '';
-
-                // ツールチップ用のイベント情報を準備
-                const tooltipData = shift.events ? JSON.stringify(shift.events).replace(/"/g, '&quot;') : '[]';
-
                 const timeDisplay = shift.availableTime ? 
                     `<span class="time-badge ${statusClass}">${shift.availableTime} (${shift.duration.toFixed(1)}h)</span>` :
                     `<span class="time-badge unavailable">${shift.reason}</span>`;
 
                 return `
-                    <div class="shift-result ${statusClass}" id="shift-row-${index}" 
-                         data-events='${tooltipData}'
-                         onmouseenter="showEventTooltip(event, ${index})" 
-                         onmouseleave="hideEventTooltip()">
+                    <div class="shift-result ${statusClass}">
                         <div class="date-info">
-                            ${checkbox}${statusIcon} ${shift.date} (${shift.dayName})
+                            ${statusIcon} ${shift.date} (${shift.dayName})
                         </div>
-                        <div>
-                            ${timeDisplay}
-                            ${eventsDisplay}
-                        </div>
+                        ${timeDisplay}
                     </div>
                 `;
             }).join('');
 
             document.getElementById('shiftResults').innerHTML = resultsHtml;
+
+            // カレンダー表示用にデータを保存
+            window.currentShiftsData = shifts;
+            window.currentStartDate = document.getElementById('startDate').value;
+            window.currentEndDate = document.getElementById('endDate').value;
+
+            // デフォルトでリスト表示を選択
+            showResultView('list');
         }
 
-        // 選択機能コントロール表示
-        function displaySelectionControls() {
-            const controlsHtml = `
-                <div style="text-align: center; margin: 20px 0; padding: 15px; background: #f0f8ff; border-radius: 10px;">
-                    <h4 style="margin-bottom: 15px;">🎯 出勤日選択</h4>
-                    <button class="btn btn-secondary" onclick="selectAllShifts()">📋 全て選択</button>
-                    <button class="btn btn-secondary" onclick="deselectAllShifts()">❌ 全て解除</button>
-                    <button class="btn btn-secondary" onclick="updateStatistics()">📊 統計更新</button>
-                </div>
-            `;
-            
-            // 結果の上に挿入
-            const resultsSection = document.getElementById('shiftResults');
-            resultsSection.insertAdjacentHTML('beforebegin', controlsHtml);
+        // 表示切り替え機能
+        function showResultView(viewType) {
+            const calendarView = document.getElementById('calendarView');
+            const listView = document.getElementById('listView');
+            const calendarBtn = document.getElementById('calendarViewBtn');
+            const listBtn = document.getElementById('listViewBtn');
+
+            if (viewType === 'calendar') {
+                calendarView.style.display = 'block';
+                listView.style.display = 'none';
+                calendarBtn.style.background = '#2196F3';
+                calendarBtn.style.color = 'white';
+                listBtn.style.background = '#e3f2fd';
+                listBtn.style.color = '#1976D2';
+
+                // カレンダーを描画
+                if (window.currentShiftsData) {
+                    updateSubmitterInfo();
+                    renderCalendar(window.currentStartDate, window.currentEndDate, window.currentShiftsData);
+                }
+            } else {
+                calendarView.style.display = 'none';
+                listView.style.display = 'block';
+                listBtn.style.background = '#2196F3';
+                listBtn.style.color = 'white';
+                calendarBtn.style.background = '#e3f2fd';
+                calendarBtn.style.color = '#1976D2';
+            }
         }
 
-        // シフト表ボタン表示
-        function displayShiftTableButton() {
-            const buttonHtml = `
-                <div style="text-align: center; margin-top: 30px;">
-                    <button class="btn btn-success" onclick="generateShiftTable()">
-                        📋 シフト表を生成
-                    </button>
-                </div>
-            `;
+        // カレンダー描画関数
+        function renderCalendar(startDate, endDate, shiftData) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
             
-            document.getElementById('shiftResults').insertAdjacentHTML('afterend', buttonHtml);
+            // シフトデータをMapに変換（高速検索用）
+            const shiftMap = new Map();
+            shiftData.forEach(shift => {
+                shiftMap.set(shift.date, shift);
+            });
+            
+            // 月ごとのカレンダーを生成
+            const container = document.getElementById('calendar-container');
+            container.innerHTML = '';
+            
+            const months = getMonthsInRange(start, end);
+            months.forEach(month => {
+                const monthContainer = createMonthCalendar(month, shiftMap);
+                container.appendChild(monthContainer);
+            });
+        }
+
+        // 指定された期間に含まれる月のリストを取得
+        function getMonthsInRange(start, end) {
+            const months = [];
+            const current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+            
+            while (current <= endMonth) {
+                months.push(new Date(current));
+                current.setMonth(current.getMonth() + 1);
+            }
+            
+            return months;
+        }
+
+        // 月カレンダーを生成
+        function createMonthCalendar(month, shiftMap) {
+            const monthContainer = document.createElement('div');
+            monthContainer.className = 'month-container';
+            
+            // 月タイトル
+            const monthTitle = document.createElement('div');
+            monthTitle.className = 'month-title';
+            monthTitle.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+            monthContainer.appendChild(monthTitle);
+            
+            // カレンダーグリッド
+            const grid = document.createElement('div');
+            grid.className = 'calendar-grid';
+            
+            // 曜日ヘッダー
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+            
+            // 月の最初の日の曜日を取得
+            const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+            const startDayOfWeek = firstDay.getDay();
+            
+            // 月の最後の日を取得
+            const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // 最初の週の空のセルを追加
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day empty';
+                grid.appendChild(emptyCell);
+            }
+            
+            // 日付セルを追加
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = createDayCell(month.getFullYear(), month.getMonth(), day, shiftMap);
+                grid.appendChild(dayCell);
+            }
+            
+            monthContainer.appendChild(grid);
+            return monthContainer;
+        }
+
+        // 日付セルを生成
+        function createDayCell(year, month, day, shiftMap) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const shiftData = shiftMap.get(dateStr);
+            
+            // 日付番号
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'day-number';
+            dayNumber.textContent = day;
+            cell.appendChild(dayNumber);
+            
+            // シフトデータに基づいてスタイルを適用
+            if (shiftData) {
+                cell.classList.add(shiftData.status);
+                
+                // 利用可能時間を表示（availableの場合のみ）
+                if (shiftData.status === 'available' && shiftData.availableTime) {
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = shiftData.availableTime;
+                    cell.appendChild(timeSlot);
+                }
+            }
+            
+            return cell;
+        }
+
+        // 提出者情報を更新
+        function updateSubmitterInfo() {
+            const submitterName = document.getElementById('submitterName').value || '未入力';
+            const submitterDepartment = document.getElementById('submitterDepartment').value || '未入力';
+            const today = new Date().toLocaleDateString('ja-JP');
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // 日付をフォーマット
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('ja-JP');
+            };
+            
+            document.getElementById('displaySubmitterName').textContent = submitterName;
+            document.getElementById('displaySubmitterDepartment').textContent = submitterDepartment;
+            document.getElementById('displaySubmissionDate').textContent = today;
+            document.getElementById('displayDateRange').textContent = `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
         }
 
         // PDF出力
@@ -1746,383 +1868,17 @@
             alert(`${startDate}〜${endDate}のシフト可能日をPDF出力します。\n設定: ${settings.startTime}〜${settings.endTime}, 最低${settings.minHours}時間勤務\n（実装予定機能）`);
         }
 
-        // チェックボックス関連の機能
-        function toggleShiftSelection(index) {
-            if (globalShifts[index]) {
-                globalShifts[index].selected = !globalShifts[index].selected;
-                updateStatistics();
-            }
-        }
-
-        function selectAllShifts() {
-            globalShifts.forEach(shift => {
-                if (shift.status === 'available') {
-                    shift.selected = true;
-                    const checkbox = document.getElementById(`shift-${globalShifts.indexOf(shift)}`);
-                    if (checkbox) checkbox.checked = true;
-                }
-            });
-            updateStatistics();
-        }
-
-        function deselectAllShifts() {
-            globalShifts.forEach(shift => {
-                if (shift.status === 'available') {
-                    shift.selected = false;
-                    const checkbox = document.getElementById(`shift-${globalShifts.indexOf(shift)}`);
-                    if (checkbox) checkbox.checked = false;
-                }
-            });
-            updateStatistics();
-        }
-
-        function updateStatistics() {
-            const availableShifts = globalShifts.filter(s => s.status === 'available');
-            const selectedShifts = availableShifts.filter(s => s.selected);
-            const totalHours = availableShifts.reduce((sum, s) => sum + s.duration, 0);
-            const selectedHours = selectedShifts.reduce((sum, s) => sum + s.duration, 0);
-
-            // 統計を更新
-            document.querySelector('.stat-card:nth-child(2) .stat-number').textContent = selectedShifts.length;
-            document.querySelector('.stat-card:nth-child(4) .stat-number').textContent = selectedHours.toFixed(1);
-        }
-
-        // シフト表生成
-        function generateShiftTable() {
-            const selectedShifts = globalShifts.filter(s => s.status === 'available' && s.selected);
-            if (selectedShifts.length === 0) {
-                alert('出勤日を選択してください。');
-                return;
-            }
-
-            const userName = prompt('お名前を入力してください:', 'シフト希望者');
-            if (!userName) return;
-
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-
-            // 新しいウィンドウでシフト表を開く
-            const newWindow = window.open('', '_blank', 'width=800,height=600');
-            
-            const tableHtml = generateShiftTableHTML(selectedShifts, userName, startDate, endDate);
-            
-            newWindow.document.write(tableHtml);
-            newWindow.document.close();
-        }
-
-        // シフト表HTMLの生成
-        function generateShiftTableHTML(selectedShifts, userName, startDate, endDate) {
-            const startDateObj = new Date(startDate);
-            const endDateObj = new Date(endDate);
-            
-            // 対象となる月を特定
-            const months = [];
-            for (let d = new Date(startDateObj); d <= endDateObj; d.setMonth(d.getMonth() + 1)) {
-                months.push({
-                    year: d.getFullYear(),
-                    month: d.getMonth() + 1
-                });
-                d.setDate(1); // 月の1日に設定して次の月へ
-            }
-            const tableStyle = `
-                <style>
-                    body { font-family: 'Yu Gothic', sans-serif; margin: 20px; }
-                    .shift-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-                    .shift-table th, .shift-table td { border: 2px solid #333; padding: 12px; text-align: center; }
-                    .shift-table th { background-color: #4CAF50; color: white; font-weight: bold; }
-                    .available-day { background-color: #e8f5e8; font-weight: bold; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .info-section { margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px; }
-                    @media print { 
-                        body { margin: 0; } 
-                        .no-print { display: none; }
-                    }
-                </style>
-            `;
-
-            const period = months.length === 1 ? 
-                `${months[0].year}年${months[0].month}月` : 
-                `${months[0].year}年${months[0].month}月〜${months[months.length-1].year}年${months[months.length-1].month}月`;
-                
-            const headerSection = `
-                <div class="header">
-                    <h1>🗓️ ${period} シフト希望表</h1>
-                    <h2>👤 ${userName} 様</h2>
-                    <p>作成日: ${new Date().toLocaleDateString('ja-JP')}</p>
-                </div>
-            `;
-
-            const infoSection = `
-                <div class="info-section">
-                    <h3>📋 シフト希望詳細</h3>
-                    <p><strong>希望者名:</strong> ${userName}</p>
-                    <p><strong>対象期間:</strong> ${period}</p>
-                    <p><strong>出勤可能日数:</strong> ${selectedShifts.length}日</p>
-                    <p><strong>合計勤務時間:</strong> ${selectedShifts.reduce((sum, s) => sum + s.duration, 0).toFixed(1)}時間</p>
-                </div>
-            `;
-
-            // 各月のカレンダーテーブルを生成
-            let allCalendarTables = '';
-            
-            months.forEach((monthData, index) => {
-                const { year, month } = monthData;
-                const firstDay = new Date(year, month - 1, 1);
-                const lastDay = new Date(year, month, 0);
-                const daysInMonth = lastDay.getDate();
-                const startDayOfWeek = firstDay.getDay();
-
-                let tableRows = '';
-                let currentWeek = [];
-                
-                // 空のセルで月の最初を埋める
-                for (let i = 0; i < startDayOfWeek; i++) {
-                    currentWeek.push('<td></td>');
-                }
-
-                // 各日のセルを生成
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const currentDate = new Date(year, month - 1, day);
-                    const dateStr = currentDate.toISOString().split('T')[0];
-                    const dayName = ['日', '月', '火', '水', '木', '金', '土'][currentDate.getDay()];
-                    
-                    const selectedShift = selectedShifts.find(s => s.date === dateStr);
-                    
-                    if (selectedShift) {
-                        currentWeek.push(`
-                            <td class="available-day">
-                                <div><strong>${day}</strong></div>
-                                <div style="font-size: 0.9em;">(${dayName})</div>
-                                <div style="font-size: 0.8em; color: #2e7d32;">
-                                    ${selectedShift.availableTime}
-                                </div>
-                                <div style="font-size: 0.7em; color: #666;">
-                                    ${selectedShift.duration.toFixed(1)}h
-                                </div>
-                            </td>
-                        `);
-                    } else {
-                        currentWeek.push(`
-                            <td>
-                                <div>${day}</div>
-                                <div style="font-size: 0.9em;">(${dayName})</div>
-                            </td>
-                        `);
-                    }
-
-                    // 週末（土曜日）で行を終了
-                    if (currentDate.getDay() === 6) {
-                        tableRows += '<tr>' + currentWeek.join('') + '</tr>';
-                        currentWeek = [];
-                    }
-                }
-
-                // 最後の週を完成させる
-                if (currentWeek.length > 0) {
-                    while (currentWeek.length < 7) {
-                        currentWeek.push('<td></td>');
-                    }
-                    tableRows += '<tr>' + currentWeek.join('') + '</tr>';
-                }
-
-                // 各月のテーブル
-                const monthTable = `
-                    <div style="${index > 0 ? 'page-break-before: always; margin-top: 40px;' : ''}">
-                        <h2 style="text-align: center; color: #1976D2; margin-bottom: 20px;">${year}年${month}月</h2>
-                        <table class="shift-table">
-                            <thead>
-                                <tr>
-                                    <th style="background-color: #ffcdd2;">日</th>
-                                    <th>月</th>
-                                    <th>火</th>
-                                    <th>水</th>
-                                    <th>木</th>
-                                    <th>金</th>
-                                    <th style="background-color: #c3e0ff;">土</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRows}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                allCalendarTables += monthTable;
-            });
-            
-            const calendarTables = allCalendarTables;
-
-            const detailTable = `
-                <div style="margin-top: 30px;">
-                    <h3>📝 出勤希望日一覧</h3>
-                    <table class="shift-table">
-                        <thead>
-                            <tr>
-                                <th>日付</th>
-                                <th>曜日</th>
-                                <th>出勤時間帯</th>
-                                <th>勤務時間</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${selectedShifts.map(shift => `
-                                <tr>
-                                    <td>${shift.date}</td>
-                                    <td>${shift.dayName}</td>
-                                    <td>${shift.availableTime}</td>
-                                    <td>${shift.duration.toFixed(1)}時間</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            const printButton = `
-                <div class="no-print" style="text-align: center; margin-top: 30px;">
-                    <button onclick="window.print()" style="
-                        background: #4CAF50; color: white; border: none; 
-                        padding: 15px 30px; border-radius: 5px; cursor: pointer;
-                        font-size: 16px;">
-                        🖨️ 印刷する
-                    </button>
-                    <button onclick="window.close()" style="
-                        background: #f44336; color: white; border: none; 
-                        padding: 15px 30px; border-radius: 5px; cursor: pointer;
-                        font-size: 16px; margin-left: 10px;">
-                        ❌ 閉じる
-                    </button>
-                </div>
-            `;
-
-            return `
-                <!DOCTYPE html>
-                <html lang="ja">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>シフト希望表 - ${userName}</title>
-                    ${tableStyle}
-                </head>
-                <body>
-                    ${headerSection}
-                    ${infoSection}
-                    ${calendarTables}
-                    ${detailTable}
-                    ${printButton}
-                </body>
-                </html>
-            `;
-        }
-
-        // イベント詳細ツールチップ機能
-        let eventTooltip = null;
-
-        function showEventTooltip(event, shiftIndex) {
-            const shift = globalShifts[shiftIndex];
-            if (!shift || !shift.events || shift.events.length === 0) {
-                return;
-            }
-
-            // 既存のツールチップを削除
-            hideEventTooltip();
-
-            // 新しいツールチップを作成
-            eventTooltip = document.createElement('div');
-            eventTooltip.className = 'event-tooltip';
-            
-            // ツールチップの内容を構築
-            let tooltipContent = `<h4>📅 ${shift.date} の予定</h4>`;
-            
-            // 時間指定の予定
-            const timeBasedEvents = shift.events.filter(e => !e.isAllDay);
-            if (timeBasedEvents.length > 0) {
-                timeBasedEvents.forEach(eventItem => {
-                    tooltipContent += `
-                        <div class="event-item">
-                            <div class="event-title">⏰ ${eventItem.summary || 'タイトルなし'}</div>
-                            <div class="event-time">${eventItem.start} - ${eventItem.end}</div>
-                            ${eventItem.location ? `<div class="event-location">📍 ${eventItem.location}</div>` : ''}
-                            ${eventItem.description ? `<div class="event-description">📝 ${eventItem.description}</div>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            // 終日の予定
-            const allDayEvents = shift.events.filter(e => e.isAllDay);
-            if (allDayEvents.length > 0) {
-                allDayEvents.forEach(eventItem => {
-                    tooltipContent += `
-                        <div class="event-item">
-                            <div class="event-title">📅 ${eventItem.originalSummary || eventItem.summary || 'タイトルなし'}</div>
-                            <div class="event-time">終日の予定</div>
-                            ${eventItem.location ? `<div class="event-location">📍 ${eventItem.location}</div>` : ''}
-                            ${eventItem.description ? `<div class="event-description">📝 ${eventItem.description}</div>` : ''}
-                            ${eventItem.isMultiDay ? `<div class="event-time">期間: ${eventItem.eventStartDate} 〜 ${eventItem.eventEndDate}</div>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            if (timeBasedEvents.length === 0 && allDayEvents.length === 0) {
-                tooltipContent += '<div class="no-events">この日には予定がありません</div>';
-            }
-            
-            eventTooltip.innerHTML = tooltipContent;
-            document.body.appendChild(eventTooltip);
-            
-            // ツールチップの位置を設定
-            const rect = event.target.closest('.shift-result').getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-            
-            eventTooltip.style.left = (rect.left + scrollLeft + 20) + 'px';
-            eventTooltip.style.top = (rect.top + scrollTop - eventTooltip.offsetHeight - 10) + 'px';
-            
-            // 画面外にはみ出す場合の調整
-            const tooltipRect = eventTooltip.getBoundingClientRect();
-            if (tooltipRect.right > window.innerWidth) {
-                eventTooltip.style.left = (window.innerWidth - tooltipRect.width - 20 + scrollLeft) + 'px';
-            }
-            if (tooltipRect.top < 0) {
-                eventTooltip.style.top = (rect.bottom + scrollTop + 10) + 'px';
-            }
-            
-            eventTooltip.style.display = 'block';
-        }
-
-        function hideEventTooltip() {
-            if (eventTooltip) {
-                document.body.removeChild(eventTooltip);
-                eventTooltip = null;
-            }
-        }
-
         // CSV出力
         function exportToCSV() {
-            const selectedShifts = globalShifts.filter(s => s.status === 'available' && s.selected);
-            if (selectedShifts.length === 0) {
-                alert('出勤日を選択してください。');
-                return;
-            }
+            const shifts = Array.from(document.querySelectorAll('.shift-result')).map(el => {
+                const dateInfo = el.querySelector('.date-info').textContent.trim();
+                const timeInfo = el.querySelector('.time-badge').textContent.trim();
+                return { date: dateInfo, time: timeInfo };
+            });
 
             const csvContent = "data:text/csv;charset=utf-8," + 
-                "日付,曜日,時間帯,勤務時間,予定\n" +
-                selectedShifts.map(shift => 
-                    `"${shift.date}","${shift.dayName}","${shift.availableTime}","${shift.duration.toFixed(1)}時間","${
-                        shift.events && shift.events.length > 0 ? 
-                        (() => {
-                            const timeEvents = shift.events.filter(e => !e.isAllDay);
-                            const allDayEvents = shift.events.filter(e => e.isAllDay);
-                            let result = [];
-                            if (timeEvents.length > 0) result.push(`時間指定: ${timeEvents.map(e => e.summary).join(', ')}`);
-                            if (allDayEvents.length > 0) result.push(`終日: ${allDayEvents.map(e => e.summary).join(', ')}`);
-                            return result.join(' | ');
-                        })() : '-'
-                    }"`
-                ).join("\n");
+                "日付,時間帯\n" +
+                shifts.map(row => `"${row.date}","${row.time}"`).join("\n");
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
@@ -2131,6 +1887,126 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ダミーデータでテスト
+        function testWithDummyData() {
+            // 2週間分のダミーデータを生成
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + 13); // 2週間後
+            
+            // 日付をフォーマット
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+            
+            // フォームに日付を設定
+            document.getElementById('startDate').value = startDateStr;
+            document.getElementById('endDate').value = endDateStr;
+            
+            // ダミーシフトデータを生成
+            const dummyShifts = generateDummyShifts(startDateStr, endDateStr);
+            
+            // 結果タブに切り替え
+            showTab('results-tab');
+            
+            // 結果セクションを表示
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.add('show');
+            
+            // ローディング表示
+            document.getElementById('loadingDiv').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+            
+            // 2秒後に結果を表示（実際の処理をシミュレート）
+            setTimeout(() => {
+                displayResults(dummyShifts, getCurrentSettings());
+            }, 2000);
+        }
+
+        // ダミーシフトデータ生成
+        function generateDummyShifts(startDate, endDate) {
+            const shifts = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const settings = getCurrentSettings();
+            
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dayOfWeek = date.getDay();
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+                
+                // 除外曜日チェック
+                if (settings.excludedDays.includes(dayOfWeek)) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `${dayName}曜日のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+                
+                // ランダムに状況を決定
+                const random = Math.random();
+                
+                if (random < 0.6) { // 60%の確率で出勤可能
+                    const workHours = Math.random() * (settings.maxHours - settings.minHours) + settings.minHours;
+                    const startHour = Math.floor(Math.random() * 4) + 9; // 9-12時開始
+                    const startTime = `${startHour.toString().padStart(2, '0')}:00`;
+                    const endTime = addHours(startTime, workHours);
+                    
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'available',
+                        reason: '勤務可能',
+                        availableTime: `${startTime}-${endTime}`,
+                        duration: workHours,
+                        shifts: [{ start: startTime, end: endTime, duration: workHours }]
+                    });
+                } else if (random < 0.8) { // 20%の確率で出勤不可
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'unavailable',
+                        reason: '予定により勤務不可',
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                } else { // 20%の確率で分割シフト（分割シフト許可時）
+                    if (settings.allowSplitShifts) {
+                        const morning = { start: '10:00', end: '12:00', duration: 2 };
+                        const afternoon = { start: '15:00', end: '18:00', duration: 3 };
+                        
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '分割シフトで勤務可能',
+                            availableTime: '10:00-12:00, 15:00-18:00',
+                            duration: 5,
+                            shifts: [morning, afternoon]
+                        });
+                    } else {
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '勤務可能',
+                            availableTime: '13:00-17:00',
+                            duration: 4,
+                            shifts: [{ start: '13:00', end: '17:00', duration: 4 }]
+                        });
+                    }
+                }
+            }
+            
+            return shifts;
         }
     </script>
 </body>

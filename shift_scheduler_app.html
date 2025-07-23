@@ -462,6 +462,142 @@
         .tab-pane.active {
             display: block;
         }
+
+        /* カレンダー表示スタイル */
+        .month-container {
+            margin-bottom: 40px;
+        }
+
+        .month-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .calendar-header {
+            background: #1976D2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .calendar-day {
+            background: white;
+            padding: 15px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day:hover {
+            background: #f5f5f5;
+        }
+
+        .calendar-day.empty {
+            background: #f8f9fa;
+            color: #ccc;
+        }
+
+        .calendar-day.available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .calendar-day.unavailable {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #e57373;
+        }
+
+        .calendar-day.excluded {
+            background: #f5f5f5;
+            color: #999;
+            border: 1px solid #e0e0e0;
+        }
+
+        .time-slot {
+            font-size: 0.75em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 4px;
+            line-height: 1.2;
+        }
+
+        .calendar-day.unavailable .time-slot,
+        .calendar-day.excluded .time-slot {
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .legend-available {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .legend-unavailable {
+            background: #c62828;
+        }
+
+        .legend-excluded {
+            background: #999;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                padding: 10px;
+            }
+            
+            .calendar-day {
+                padding: 10px;
+                min-height: 40px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -587,6 +723,17 @@
                         <input type="text" id="calendarId" class="form-control" placeholder="primary" value="primary">
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="submitterName">提出者氏名</label>
+                            <input type="text" id="submitterName" class="form-control" placeholder="例：田中 太郎" value="">
+                        </div>
+                        <div class="form-group">
+                            <label for="submitterDepartment">所属部署</label>
+                            <input type="text" id="submitterDepartment" class="form-control" placeholder="例：アルバイトスタッフ" value="">
+                        </div>
+                    </div>
+
                     <!-- 高度な設定 -->
                     <div class="advanced-settings">
                         <h4>⚙️ 高度な設定</h4>
@@ -660,7 +807,66 @@
                         <div id="resultsContent" style="display: none;">
                             <h3>📊 計算結果</h3>
                             <div id="summaryStats" class="summary-stats"></div>
-                            <div id="shiftResults"></div>
+                            
+                            <!-- 表示切り替えボタン -->
+                            <div style="text-align: center; margin: 20px 0;">
+                                <button class="preset-btn" onclick="showResultView('calendar')" id="calendarViewBtn">
+                                    📅 カレンダー表示
+                                </button>
+                                <button class="preset-btn" onclick="showResultView('list')" id="listViewBtn">
+                                    📋 リスト表示
+                                </button>
+                            </div>
+                            
+                            <!-- カレンダー表示エリア -->
+                            <div id="calendarView" style="display: none;">
+                                <!-- 提出者情報ヘッダー -->
+                                <div id="submitterHeader" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #2196F3;">
+                                    <h3 style="margin: 0 0 15px 0; color: #1976D2;">📅 シフト希望提出書</h3>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="text-align: left;">
+                                            <div style="font-size: 1.1em; margin-bottom: 5px;">
+                                                <strong>氏名：</strong> <span id="displaySubmitterName">未入力</span>
+                                            </div>
+                                            <div style="font-size: 1em; opacity: 0.8;">
+                                                <strong>所属：</strong> <span id="displaySubmitterDepartment">未入力</span>
+                                            </div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 1em; opacity: 0.8;">
+                                                <strong>提出日：</strong> <span id="displaySubmissionDate"></span>
+                                            </div>
+                                            <div style="font-size: 1em; opacity: 0.8; margin-top: 5px;">
+                                                <strong>対象期間：</strong> <span id="displayDateRange"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 凡例 -->
+                                <div class="legend">
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-available"></div>
+                                        <span>出勤可能</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-unavailable"></div>
+                                        <span>出勤不可</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color legend-excluded"></div>
+                                        <span>除外日</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- カレンダーグリッドコンテナ -->
+                                <div id="calendar-container"></div>
+                            </div>
+                            
+                            <!-- リスト表示エリア -->
+                            <div id="listView">
+                                <div id="shiftResults"></div>
+                            </div>
                             
                             <div style="text-align: center; margin-top: 30px;">
                                 <button class="btn btn-success" onclick="exportToPDF()">
@@ -668,6 +874,9 @@
                                 </button>
                                 <button class="btn btn-secondary" onclick="exportToCSV()">
                                     📊 CSV出力
+                                </button>
+                                <button class="btn" onclick="testWithDummyData()" style="background: #FF9800; margin-left: 10px;">
+                                    🧪 ダミーデータでテスト
                                 </button>
                             </div>
                         </div>
@@ -1474,6 +1683,180 @@
             }).join('');
 
             document.getElementById('shiftResults').innerHTML = resultsHtml;
+
+            // カレンダー表示用にデータを保存
+            window.currentShiftsData = shifts;
+            window.currentStartDate = document.getElementById('startDate').value;
+            window.currentEndDate = document.getElementById('endDate').value;
+
+            // デフォルトでリスト表示を選択
+            showResultView('list');
+        }
+
+        // 表示切り替え機能
+        function showResultView(viewType) {
+            const calendarView = document.getElementById('calendarView');
+            const listView = document.getElementById('listView');
+            const calendarBtn = document.getElementById('calendarViewBtn');
+            const listBtn = document.getElementById('listViewBtn');
+
+            if (viewType === 'calendar') {
+                calendarView.style.display = 'block';
+                listView.style.display = 'none';
+                calendarBtn.style.background = '#2196F3';
+                calendarBtn.style.color = 'white';
+                listBtn.style.background = '#e3f2fd';
+                listBtn.style.color = '#1976D2';
+
+                // カレンダーを描画
+                if (window.currentShiftsData) {
+                    updateSubmitterInfo();
+                    renderCalendar(window.currentStartDate, window.currentEndDate, window.currentShiftsData);
+                }
+            } else {
+                calendarView.style.display = 'none';
+                listView.style.display = 'block';
+                listBtn.style.background = '#2196F3';
+                listBtn.style.color = 'white';
+                calendarBtn.style.background = '#e3f2fd';
+                calendarBtn.style.color = '#1976D2';
+            }
+        }
+
+        // カレンダー描画関数
+        function renderCalendar(startDate, endDate, shiftData) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            
+            // シフトデータをMapに変換（高速検索用）
+            const shiftMap = new Map();
+            shiftData.forEach(shift => {
+                shiftMap.set(shift.date, shift);
+            });
+            
+            // 月ごとのカレンダーを生成
+            const container = document.getElementById('calendar-container');
+            container.innerHTML = '';
+            
+            const months = getMonthsInRange(start, end);
+            months.forEach(month => {
+                const monthContainer = createMonthCalendar(month, shiftMap);
+                container.appendChild(monthContainer);
+            });
+        }
+
+        // 指定された期間に含まれる月のリストを取得
+        function getMonthsInRange(start, end) {
+            const months = [];
+            const current = new Date(start.getFullYear(), start.getMonth(), 1);
+            const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+            
+            while (current <= endMonth) {
+                months.push(new Date(current));
+                current.setMonth(current.getMonth() + 1);
+            }
+            
+            return months;
+        }
+
+        // 月カレンダーを生成
+        function createMonthCalendar(month, shiftMap) {
+            const monthContainer = document.createElement('div');
+            monthContainer.className = 'month-container';
+            
+            // 月タイトル
+            const monthTitle = document.createElement('div');
+            monthTitle.className = 'month-title';
+            monthTitle.textContent = `${month.getFullYear()}年${month.getMonth() + 1}月`;
+            monthContainer.appendChild(monthTitle);
+            
+            // カレンダーグリッド
+            const grid = document.createElement('div');
+            grid.className = 'calendar-grid';
+            
+            // 曜日ヘッダー
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+            
+            // 月の最初の日の曜日を取得
+            const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+            const startDayOfWeek = firstDay.getDay();
+            
+            // 月の最後の日を取得
+            const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // 最初の週の空のセルを追加
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day empty';
+                grid.appendChild(emptyCell);
+            }
+            
+            // 日付セルを追加
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = createDayCell(month.getFullYear(), month.getMonth(), day, shiftMap);
+                grid.appendChild(dayCell);
+            }
+            
+            monthContainer.appendChild(grid);
+            return monthContainer;
+        }
+
+        // 日付セルを生成
+        function createDayCell(year, month, day, shiftMap) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const shiftData = shiftMap.get(dateStr);
+            
+            // 日付番号
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'day-number';
+            dayNumber.textContent = day;
+            cell.appendChild(dayNumber);
+            
+            // シフトデータに基づいてスタイルを適用
+            if (shiftData) {
+                cell.classList.add(shiftData.status);
+                
+                // 利用可能時間を表示（availableの場合のみ）
+                if (shiftData.status === 'available' && shiftData.availableTime) {
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = shiftData.availableTime;
+                    cell.appendChild(timeSlot);
+                }
+            }
+            
+            return cell;
+        }
+
+        // 提出者情報を更新
+        function updateSubmitterInfo() {
+            const submitterName = document.getElementById('submitterName').value || '未入力';
+            const submitterDepartment = document.getElementById('submitterDepartment').value || '未入力';
+            const today = new Date().toLocaleDateString('ja-JP');
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // 日付をフォーマット
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('ja-JP');
+            };
+            
+            document.getElementById('displaySubmitterName').textContent = submitterName;
+            document.getElementById('displaySubmitterDepartment').textContent = submitterDepartment;
+            document.getElementById('displaySubmissionDate').textContent = today;
+            document.getElementById('displayDateRange').textContent = `${formatDate(startDate)} 〜 ${formatDate(endDate)}`;
         }
 
         // PDF出力
@@ -1504,6 +1887,126 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ダミーデータでテスト
+        function testWithDummyData() {
+            // 2週間分のダミーデータを生成
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + 13); // 2週間後
+            
+            // 日付をフォーマット
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+            
+            // フォームに日付を設定
+            document.getElementById('startDate').value = startDateStr;
+            document.getElementById('endDate').value = endDateStr;
+            
+            // ダミーシフトデータを生成
+            const dummyShifts = generateDummyShifts(startDateStr, endDateStr);
+            
+            // 結果タブに切り替え
+            showTab('results-tab');
+            
+            // 結果セクションを表示
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.classList.add('show');
+            
+            // ローディング表示
+            document.getElementById('loadingDiv').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+            
+            // 2秒後に結果を表示（実際の処理をシミュレート）
+            setTimeout(() => {
+                displayResults(dummyShifts, getCurrentSettings());
+            }, 2000);
+        }
+
+        // ダミーシフトデータ生成
+        function generateDummyShifts(startDate, endDate) {
+            const shifts = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const settings = getCurrentSettings();
+            
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dayOfWeek = date.getDay();
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = ['日', '月', '火', '水', '木', '金', '土'][dayOfWeek];
+                
+                // 除外曜日チェック
+                if (settings.excludedDays.includes(dayOfWeek)) {
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'excluded',
+                        reason: `${dayName}曜日のため対象外`,
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                    continue;
+                }
+                
+                // ランダムに状況を決定
+                const random = Math.random();
+                
+                if (random < 0.6) { // 60%の確率で出勤可能
+                    const workHours = Math.random() * (settings.maxHours - settings.minHours) + settings.minHours;
+                    const startHour = Math.floor(Math.random() * 4) + 9; // 9-12時開始
+                    const startTime = `${startHour.toString().padStart(2, '0')}:00`;
+                    const endTime = addHours(startTime, workHours);
+                    
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'available',
+                        reason: '勤務可能',
+                        availableTime: `${startTime}-${endTime}`,
+                        duration: workHours,
+                        shifts: [{ start: startTime, end: endTime, duration: workHours }]
+                    });
+                } else if (random < 0.8) { // 20%の確率で出勤不可
+                    shifts.push({
+                        date: dateStr,
+                        dayName: dayName,
+                        status: 'unavailable',
+                        reason: '予定により勤務不可',
+                        availableTime: null,
+                        duration: 0,
+                        shifts: []
+                    });
+                } else { // 20%の確率で分割シフト（分割シフト許可時）
+                    if (settings.allowSplitShifts) {
+                        const morning = { start: '10:00', end: '12:00', duration: 2 };
+                        const afternoon = { start: '15:00', end: '18:00', duration: 3 };
+                        
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '分割シフトで勤務可能',
+                            availableTime: '10:00-12:00, 15:00-18:00',
+                            duration: 5,
+                            shifts: [morning, afternoon]
+                        });
+                    } else {
+                        shifts.push({
+                            date: dateStr,
+                            dayName: dayName,
+                            status: 'available',
+                            reason: '勤務可能',
+                            availableTime: '13:00-17:00',
+                            duration: 4,
+                            shifts: [{ start: '13:00', end: '17:00', duration: 4 }]
+                        });
+                    }
+                }
+            }
+            
+            return shifts;
         }
     </script>
 </body>
