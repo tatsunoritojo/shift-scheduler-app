@@ -52,9 +52,9 @@ REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
 if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
     raise ValueError("Google OAuth認証情報が設定されていません。環境変数を確認してください。")
 
-# OAuth 2.0 スコープ
+# OAuth 2.0 スコープ - ログで確認されたスコープに合わせる
 SCOPES = [
-    'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events.readonly',
 ]
 
 # ユーザーのrefresh_tokenを保存するモデル
@@ -230,24 +230,58 @@ def callback():
 
     try:
         flow.fetch_token(authorization_response=request.url)
+        print(f"[CALLBACK] Token fetched successfully")
     except Exception as e:
+        print(f"[CALLBACK ERROR] Failed to fetch token: {str(e)}")
         return jsonify({"error": f"Failed to fetch token: {str(e)}"}), 500
 
     credentials = flow.credentials
+    print(f"[CALLBACK] Credentials obtained")
+    print(f"[CALLBACK] Has refresh_token: {bool(credentials.refresh_token)}")
+    print(f"[CALLBACK] Has id_token: {bool(credentials.id_token)}")
+
+    # Google User IDを取得（より確実な方法）
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        
+        # IDトークンからユーザー情報を取得
+        if credentials.id_token:
+            decoded_token = id_token.verify_oauth2_token(
+                credentials.id_token, google_requests.Request(), CLIENT_ID
+            )
+            user_id = decoded_token.get('sub')
+            user_email = decoded_token.get('email')
+            print(f"[CALLBACK] User ID from ID token: {user_id}")
+            print(f"[CALLBACK] User email: {user_email}")
+        else:
+            # フォールバック: Google+ APIでユーザー情報取得
+            from googleapiclient.discovery import build
+            service = build('oauth2', 'v2', credentials=credentials)
+            user_info = service.userinfo().get().execute()
+            user_id = user_info.get('id')
+            user_email = user_info.get('email')
+            print(f"[CALLBACK] User ID from userinfo API: {user_id}")
+            print(f"[CALLBACK] User email: {user_email}")
+            
+    except Exception as e:
+        print(f"[CALLBACK ERROR] Failed to get user info: {str(e)}")
+        user_id = 'default_user'
 
     # refresh_tokenをデータベースに保存
     if credentials.refresh_token:
-        user_id = credentials.id_token.get('sub') if credentials.id_token else 'default_user'
+        print(f"[CALLBACK] Saving refresh token for user: {user_id}")
         user_token = UserToken.query.filter_by(user_id=user_id).first()
         if user_token:
             user_token.refresh_token = credentials.refresh_token
+            user_token.updated_at = datetime.utcnow()
         else:
             user_token = UserToken(user_id=user_id, refresh_token=credentials.refresh_token)
         db.session.add(user_token)
         db.session.commit()
         session['user_id'] = user_id
     else:
-        user_id = credentials.id_token.get('sub') if credentials.id_token else 'default_user'
+        print(f"[CALLBACK] No refresh token, but setting user_id: {user_id}")
         session['user_id'] = user_id
 
     # access_tokenをセッションに保存 (短期間有効なので、refresh_tokenで更新する)
