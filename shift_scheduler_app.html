@@ -895,7 +895,7 @@
         // 認証状態確認
         async function checkAuthStatus() {
             try {
-                const response = await fetch('http://localhost:5000/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
+                const response = await fetch('/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
                 const authButton = document.getElementById('authButton');
                 const calculateButton = document.getElementById('calculateButton');
                 
