@@ -52,9 +52,9 @@ REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
 if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
     raise ValueError("Google OAuth認証情報が設定されていません。環境変数を確認してください。")
 
-# OAuth 2.0 スコープ - ログで確認されたスコープに合わせる
+# OAuth 2.0 スコープ
 SCOPES = [
-    'https://www.googleapis.com/auth/calendar.events.readonly',
+    'https://www.googleapis.com/auth/calendar.readonly',
 ]
 
 # ユーザーのrefresh_tokenを保存するモデル
