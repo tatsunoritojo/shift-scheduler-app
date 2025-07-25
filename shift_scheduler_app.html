@@ -1864,28 +1864,46 @@
 
         // シフト日のON/OFF切り替え機能
         function toggleShiftDay(index) {
+            console.log(`シフト切り替え: インデックス ${index}`);
+            
             const button = document.getElementById(`toggle-${index}`);
             const shiftResult = document.getElementById(`shift-${index}`);
-            const isEnabled = button.getAttribute('data-enabled') === 'true';
+            const isEnabled = button ? button.getAttribute('data-enabled') === 'true' : false;
+            
+            console.log(`現在の状態: ${isEnabled ? 'ON' : 'OFF'}`);
             
             if (isEnabled) {
                 // ONからOFFへ
-                button.setAttribute('data-enabled', 'false');
-                button.className = 'shift-toggle-btn off';
-                button.querySelector('.toggle-text').textContent = 'OFF';
-                shiftResult.classList.add('disabled');
+                if (button) {
+                    button.setAttribute('data-enabled', 'false');
+                    button.className = 'shift-toggle-btn off';
+                    button.querySelector('.toggle-text').textContent = 'OFF';
+                }
+                if (shiftResult) {
+                    shiftResult.classList.add('disabled');
+                }
                 
                 // 選択状態を更新
-                window.shiftSelectionState[index].enabled = false;
+                if (window.shiftSelectionState && window.shiftSelectionState[index]) {
+                    window.shiftSelectionState[index].enabled = false;
+                    console.log(`インデックス ${index} を無効化`);
+                }
             } else {
                 // OFFからONへ
-                button.setAttribute('data-enabled', 'true');
-                button.className = 'shift-toggle-btn on';
-                button.querySelector('.toggle-text').textContent = 'ON';
-                shiftResult.classList.remove('disabled');
+                if (button) {
+                    button.setAttribute('data-enabled', 'true');
+                    button.className = 'shift-toggle-btn on';
+                    button.querySelector('.toggle-text').textContent = 'ON';
+                }
+                if (shiftResult) {
+                    shiftResult.classList.remove('disabled');
+                }
                 
                 // 選択状態を更新
-                window.shiftSelectionState[index].enabled = true;
+                if (window.shiftSelectionState && window.shiftSelectionState[index]) {
+                    window.shiftSelectionState[index].enabled = true;
+                    console.log(`インデックス ${index} を有効化`);
+                }
             }
             
             // 統計を更新
@@ -1929,7 +1947,10 @@
 
         // カレンダー表示の更新
         function updateCalendarDisplay() {
-            if (window.currentShiftsData && document.getElementById('calendarView').style.display !== 'none') {
+            const calendarView = document.getElementById('calendarView');
+            if (window.currentShiftsData && calendarView && 
+                (calendarView.style.display === 'block' || calendarView.style.display === '')) {
+                console.log('カレンダー表示を更新中...');
                 renderCalendar(window.currentStartDate, window.currentEndDate, window.currentShiftsData);
             }
         }
@@ -2135,9 +2156,11 @@
             // シフトデータに基づいてスタイルを適用
             if (shiftData) {
                 const originalIndex = shiftData.originalIndex;
-                const isEnabled = window.shiftSelectionState && 
-                                 window.shiftSelectionState[originalIndex] && 
-                                 window.shiftSelectionState[originalIndex].enabled;
+                const selectionState = window.shiftSelectionState && window.shiftSelectionState[originalIndex];
+                const isEnabled = selectionState ? selectionState.enabled : true;
+                
+                // デバッグ情報
+                console.log(`日付: ${dateStr}, インデックス: ${originalIndex}, 有効: ${isEnabled}`);
                 
                 // 基本ステータスクラスを追加
                 cell.classList.add(shiftData.status);
@@ -2146,6 +2169,7 @@
                 if (shiftData.status === 'available' || shiftData.status === 'partial') {
                     if (!isEnabled) {
                         cell.classList.add('calendar-disabled');
+                        console.log(`${dateStr} を無効化表示`);
                     }
                     
                     // クリック可能にする
