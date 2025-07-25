@@ -283,6 +283,7 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .shift-result:hover {
@@ -309,6 +310,51 @@
             font-weight: 600;
             font-size: 1.1em;
             color: #333;
+        }
+
+        /* ON/OFFボタンのスタイル */
+        .shift-toggle-btn {
+            position: relative;
+            width: 70px;
+            height: 35px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            outline: none;
+        }
+
+        .shift-toggle-btn.on {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .shift-toggle-btn.off {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .shift-toggle-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .shift-toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 無効化されたシフト結果のスタイル */
+        .shift-result.disabled {
+            opacity: 0.6;
+            background: linear-gradient(90deg, #f5f5f5 0%, white 100%);
+            border-left-color: #bdbdbd;
+        }
+
+        .shift-result.disabled .time-badge {
+            opacity: 0.7;
         }
 
         .time-badge {
@@ -1659,7 +1705,7 @@
             document.getElementById('summaryStats').innerHTML = statsHtml;
 
             // シフト結果表示
-            const resultsHtml = shifts.map(shift => {
+            const resultsHtml = shifts.map((shift, index) => {
                 const statusClass = shift.status === 'excluded' ? 'unavailable' : shift.status;
                 const statusIcon = {
                     'available': '✅',
@@ -1672,12 +1718,19 @@
                     `<span class="time-badge ${statusClass}">${shift.availableTime} (${shift.duration.toFixed(1)}h)</span>` :
                     `<span class="time-badge unavailable">${shift.reason}</span>`;
 
+                // ON/OFFボタン（利用可能日のみ）
+                const toggleButton = (shift.status === 'available' || shift.status === 'partial') ? 
+                    `<button class="shift-toggle-btn on" id="toggle-${index}" onclick="toggleShiftDay(${index})" data-enabled="true">
+                        <span class="toggle-text">ON</span>
+                    </button>` : '';
+
                 return `
-                    <div class="shift-result ${statusClass}">
+                    <div class="shift-result ${statusClass}" id="shift-${index}">
                         <div class="date-info">
                             ${statusIcon} ${shift.date} (${shift.dayName})
                         </div>
                         ${timeDisplay}
+                        ${toggleButton}
                     </div>
                 `;
             }).join('');
@@ -1689,8 +1742,77 @@
             window.currentStartDate = document.getElementById('startDate').value;
             window.currentEndDate = document.getElementById('endDate').value;
 
+            // シフト選択状態を初期化（全てON）
+            window.shiftSelectionState = shifts.map((shift, index) => ({
+                index: index,
+                enabled: shift.status === 'available' || shift.status === 'partial',
+                shift: shift
+            }));
+
             // デフォルトでリスト表示を選択
             showResultView('list');
+        }
+
+        // シフト日のON/OFF切り替え機能
+        function toggleShiftDay(index) {
+            const button = document.getElementById(`toggle-${index}`);
+            const shiftResult = document.getElementById(`shift-${index}`);
+            const isEnabled = button.getAttribute('data-enabled') === 'true';
+            
+            if (isEnabled) {
+                // ONからOFFへ
+                button.setAttribute('data-enabled', 'false');
+                button.className = 'shift-toggle-btn off';
+                button.querySelector('.toggle-text').textContent = 'OFF';
+                shiftResult.classList.add('disabled');
+                
+                // 選択状態を更新
+                window.shiftSelectionState[index].enabled = false;
+            } else {
+                // OFFからONへ
+                button.setAttribute('data-enabled', 'true');
+                button.className = 'shift-toggle-btn on';
+                button.querySelector('.toggle-text').textContent = 'ON';
+                shiftResult.classList.remove('disabled');
+                
+                // 選択状態を更新
+                window.shiftSelectionState[index].enabled = true;
+            }
+            
+            // 統計を更新
+            updateShiftStatistics();
+        }
+
+        // 統計情報の更新
+        function updateShiftStatistics() {
+            const enabledShifts = window.shiftSelectionState.filter(s => s.enabled && s.shift.status === 'available');
+            const enabledPartialShifts = window.shiftSelectionState.filter(s => s.enabled && s.shift.status === 'partial');
+            const totalEnabledShifts = enabledShifts.length + enabledPartialShifts.length;
+            const totalHours = enabledShifts.reduce((sum, s) => sum + (s.shift.duration || 0), 0) + 
+                              enabledPartialShifts.reduce((sum, s) => sum + (s.shift.duration || 0), 0);
+            const avgHoursPerDay = totalEnabledShifts > 0 ? (totalHours / totalEnabledShifts) : 0;
+
+            // 統計表示を更新
+            const statsHtml = `
+                <div class="stat-card">
+                    <span class="stat-number">${totalEnabledShifts}</span>
+                    <div class="stat-label">選択済み出勤可能日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${totalHours.toFixed(1)}</span>
+                    <div class="stat-label">選択済み合計勤務時間</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${avgHoursPerDay.toFixed(1)}</span>
+                    <div class="stat-label">平均勤務時間/日</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${enabledShifts.length}</span>
+                    <div class="stat-label">フル勤務可能日</div>
+                </div>
+            `;
+            
+            document.getElementById('summaryStats').innerHTML = statsHtml;
         }
 
         // 表示切り替え機能
