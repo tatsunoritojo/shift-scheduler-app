@@ -50,6 +50,7 @@ if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
 # OAuth 2.0 スコープ
 SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
+    'https://www.googleapis.com/auth/calendar.events.readonly',
 ]
 
 # ユーザーのrefresh_tokenを保存するモデル
