@@ -178,6 +178,16 @@
             box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
         }
 
+        .btn-special {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-special:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
         .btn-success {
             background: linear-gradient(135deg, #4CAF50, #45a049);
         }
@@ -186,14 +196,7 @@
             box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
         }
 
-        .preset-buttons {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .preset-btn {
+        .view-toggle-btn {
             background: #e3f2fd;
             color: #1976D2;
             border: 2px solid #2196F3;
@@ -203,13 +206,15 @@
             transition: all 0.3s ease;
             font-size: 14px;
             font-weight: 500;
+            margin: 0 5px;
         }
 
-        .preset-btn:hover {
+        .view-toggle-btn:hover {
             background: #2196F3;
             color: white;
             transform: translateY(-1px);
         }
+
 
         .advanced-settings {
             background: #fff3e0;
@@ -357,15 +362,17 @@
             opacity: 0.7;
         }
 
-        /* カレンダー表示でのON/OFF状態 */
+        /* カレンダー表示でのON/OFF状態 - 除外日と同じ見た目 */
         .calendar-day.calendar-disabled {
-            opacity: 0.5;
-            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            background: #f5f5f5 !important;
+            color: #999 !important;
+            border: 1px solid #e0e0e0 !important;
+            transform: none !important;
+            box-shadow: none !important;
         }
 
         .calendar-day.calendar-disabled .time-slot {
-            opacity: 0.6;
-            text-decoration: line-through;
+            display: none !important;
         }
 
         /* カレンダーポップアップスタイル */
@@ -379,7 +386,10 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             padding: 25px;
             z-index: 1000;
-            min-width: 300px;
+            min-width: 400px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
             text-align: center;
         }
 
@@ -427,6 +437,207 @@
         }
 
         .calendar-popup .close-btn:hover {
+            background: #d32f2f;
+        }
+
+        /* イベント詳細表示スタイル */
+        .event-details {
+            margin: 20px 0;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event-details h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1em;
+            text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .event-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .event-item.all-day-event {
+            border-left-color: #4CAF50;
+            background: #f1f8e9;
+        }
+
+        .event-time {
+            font-weight: bold;
+            color: #1976D2;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .all-day-event .event-time {
+            color: #388E3C;
+        }
+
+        .event-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .event-location {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .event-description {
+            font-size: 0.8em;
+            color: #777;
+            line-height: 1.4;
+        }
+
+        .no-events {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .error {
+            text-align: center;
+            color: #f44336;
+            padding: 20px;
+        }
+
+        /* 特殊条件ダイアログスタイル */
+        .special-conditions-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .special-conditions-dialog {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .special-conditions-dialog h3 {
+            margin: 0 0 25px 0;
+            color: #333;
+            text-align: center;
+            font-size: 1.4em;
+        }
+
+        .exception-date-group {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .exception-date-group h4 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .exception-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .exception-controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .add-exception-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .add-exception-btn:hover {
+            background: #45a049;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .dialog-actions button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .calculate-with-exceptions-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .calculate-with-exceptions-btn:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
+        .cancel-exceptions-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .cancel-exceptions-btn:hover {
+            background: #d32f2f;
+        }
+
+        .remove-exception-btn {
+            background: #f44336;
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        .remove-exception-btn:hover {
             background: #d32f2f;
         }
 
@@ -521,9 +732,6 @@
                 padding: 20px;
             }
             
-            .preset-buttons {
-                justify-content: center;
-            }
         }
 
         .tooltip {
@@ -648,9 +856,9 @@
         }
 
         .calendar-day.unavailable {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #e57373;
+            background: #f5f5f5;
+            color: #999;
+            border: 1px solid #e0e0e0;
         }
 
         .calendar-day.excluded {
@@ -668,7 +876,7 @@
 
         .calendar-day.unavailable .time-slot,
         .calendar-day.excluded .time-slot {
-            color: rgba(0, 0, 0, 0.6);
+            display: none;
         }
 
         .legend {
@@ -700,7 +908,7 @@
         }
 
         .legend-unavailable {
-            background: #c62828;
+            background: #999;
         }
 
         .legend-excluded {
@@ -734,15 +942,6 @@
 
             <div class="tab-content">
                 <div id="settings-tab" class="tab-pane active">
-                    <!-- プリセットボタン -->
-            <div class="preset-buttons">
-                <button class="preset-btn" onclick="loadPreset('student')">👨‍🎓 学生バイト</button>
-                <button class="preset-btn" onclick="loadPreset('office')">🏢 オフィス勤務</button>
-                <button class="preset-btn" onclick="loadPreset('retail')">🛒 小売店</button>
-                <button class="preset-btn" onclick="loadPreset('restaurant')">🍽️ 飲食店</button>
-                <button class="preset-btn" onclick="loadPreset('flexible')">⚡ フレックス</button>
-                <button class="preset-btn" onclick="resetSettings()">🔄 リセット</button>
-            </div>
 
             <!-- 現在の設定表示 -->
             <div class="current-settings" id="currentSettings">
@@ -906,6 +1105,9 @@
                 <button class="btn" onclick="calculateShifts()" id="calculateButton" disabled>
                     🔄 シフト可能日を計算
                 </button>
+                <button class="btn btn-special" onclick="showSpecialConditionsDialog()" id="specialConditionsBtn">
+                    ⚙️ 特殊な条件で検索
+                </button>
                 <button class="btn btn-secondary" onclick="saveSettings()">
                     💾 設定を保存
                 </button>
@@ -929,10 +1131,10 @@
                             
                             <!-- 表示切り替えボタン -->
                             <div style="text-align: center; margin: 20px 0;">
-                                <button class="preset-btn" onclick="showResultView('calendar')" id="calendarViewBtn">
+                                <button class="view-toggle-btn" onclick="showResultView('calendar')" id="calendarViewBtn">
                                     📅 カレンダー表示
                                 </button>
-                                <button class="preset-btn" onclick="showResultView('list')" id="listViewBtn">
+                                <button class="view-toggle-btn" onclick="showResultView('list')" id="listViewBtn">
                                     📋 リスト表示
                                 </button>
                             </div>
@@ -1116,87 +1318,6 @@
             }
         }
 
-        // プリセット設定
-        const presets = {
-            student: {
-                startTime: '10:00',
-                endTime: '18:00',
-                minHours: 2,
-                bufferTime: 30,
-                excludeDays: [0, 3], // 日曜、水曜
-                maxHours: 8,
-                minGapTime: 30,
-                allowSplitShifts: false,
-                excludeHolidays: false
-            },
-            office: {
-                startTime: '09:00',
-                endTime: '18:00',
-                minHours: 4,
-                bufferTime: 15,
-                excludeDays: [0, 6], // 日曜、土曜
-                maxHours: 8,
-                minGapTime: 60,
-                allowSplitShifts: false,
-                excludeHolidays: false
-            },
-            retail: {
-                startTime: '10:00',
-                endTime: '20:00',
-                minHours: 3,
-                bufferTime: 15,
-                excludeDays: [],
-                maxHours: 8,
-                minGapTime: 30,
-                allowSplitShifts: true,
-                excludeHolidays: false
-            },
-            restaurant: {
-                startTime: '11:00',
-                endTime: '22:00',
-                minHours: 2,
-                bufferTime: 30,
-                excludeDays: [],
-                maxHours: 8,
-                minGapTime: 30,
-                allowSplitShifts: true,
-                excludeHolidays: false
-            },
-            flexible: {
-                startTime: '08:00',
-                endTime: '20:00',
-                minHours: 1,
-                bufferTime: 0,
-                excludeDays: [],
-                maxHours: 12,
-                minGapTime: 0,
-                allowSplitShifts: true,
-                excludeHolidays: false
-            }
-        };
-
-        // プリセット読み込み
-        function loadPreset(presetName) {
-            const preset = presets[presetName];
-            if (!preset) return;
-
-            document.getElementById('startTime').value = preset.startTime;
-            document.getElementById('endTime').value = preset.endTime;
-            document.getElementById('minHours').value = preset.minHours;
-            document.getElementById('bufferTime').value = preset.bufferTime;
-            document.getElementById('maxHours').value = preset.maxHours;
-            document.getElementById('minGapTime').value = preset.minGapTime;
-            document.getElementById('allowSplitShifts').checked = preset.allowSplitShifts;
-            document.getElementById('excludeHolidays').checked = preset.excludeHolidays;
-
-            // 曜日除外設定をリセット
-            for (let i = 0; i < 7; i++) {
-                document.getElementById(`exclude${i}`).checked = preset.excludeDays.includes(i);
-            }
-
-            updateAllCheckboxUI();
-            updateSettingsDisplay();
-        }
 
         // 設定リセット
         function resetSettings() {
@@ -1504,10 +1625,18 @@
                 // その日のイベントを取得
                 const dayEvents = eventsByDate[dateStr] || [];
                 
+                // 例外日設定をチェック
+                const exceptionDate = window.currentExceptionDates ? 
+                    window.currentExceptionDates.find(ex => ex.date === dateStr) : null;
+                
+                // 営業時間を決定（例外日設定があれば優先）
+                const businessStartTime = exceptionDate ? exceptionDate.startTime : settings.startTime;
+                const businessEndTime = exceptionDate ? exceptionDate.endTime : settings.endTime;
+                
                 // 営業時間内の利用可能時間を計算
                 const availableSlots = calculateAvailableSlots(
-                    settings.startTime,
-                    settings.endTime,
+                    businessStartTime,
+                    businessEndTime,
                     dayEvents,
                     settings
                 );
@@ -1950,7 +2079,7 @@
             const calendarView = document.getElementById('calendarView');
             if (window.currentShiftsData && calendarView && 
                 (calendarView.style.display === 'block' || calendarView.style.display === '')) {
-                console.log('カレンダー表示を更新中...');
+                // console.log('カレンダー表示を更新中...');
                 renderCalendar(window.currentStartDate, window.currentEndDate, window.currentShiftsData);
             }
         }
@@ -1972,6 +2101,7 @@
             const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
             const dayName = dayNames[date.getDay()];
             
+            // 初期コンテンツを表示（イベント詳細は非同期で読み込み）
             popup.innerHTML = `
                 <h3>シフト設定</h3>
                 <div class="date-display">${dateStr} (${dayName})</div>
@@ -1985,6 +2115,10 @@
                             onclick="toggleFromCalendar(${index})">
                         <span class="toggle-text">${shiftData.enabled ? 'ON' : 'OFF'}</span>
                     </button>
+                </div>
+                <div class="event-details" id="event-details-${index}">
+                    <h4>この日の予定</h4>
+                    <div class="loading">📅 予定を読み込み中...</div>
                 </div>
                 <div>
                     <button class="close-btn" onclick="closeCalendarPopup()">閉じる</button>
@@ -2000,6 +2134,75 @@
             
             // 現在のポップアップ要素を保存
             window.currentCalendarPopup = { overlay, popup, index };
+            
+            // イベント詳細を非同期で読み込み
+            loadEventDetailsForDate(dateStr, index);
+        }
+
+        // 特定の日付のイベント詳細を読み込み
+        async function loadEventDetailsForDate(dateStr, index) {
+            const detailsContainer = document.getElementById(`event-details-${index}`);
+            if (!detailsContainer) return;
+            
+            try {
+                // 単日のイベントを取得するため、開始日と終了日を同じにする
+                const nextDay = new Date(dateStr);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const nextDayStr = nextDay.toISOString().split('T')[0];
+                
+                const calendarId = document.getElementById('calendarId').value || 'primary';
+                const response = await fetch(`/api/calendar/events?startDate=${dateStr}&endDate=${nextDayStr}&calendarId=${calendarId}`);
+                
+                if (!response.ok) {
+                    detailsContainer.innerHTML = `
+                        <h4>この日の予定</h4>
+                        <div class="error">⚠️ 予定の取得に失敗しました</div>
+                    `;
+                    return;
+                }
+                
+                const events = await response.json();
+                
+                // この日のイベントのみをフィルタリング
+                const dayEvents = events.filter(event => {
+                    const eventDate = event.start.includes('T') ? 
+                        event.start.split('T')[0] : event.start;
+                    return eventDate === dateStr;
+                });
+                
+                // イベント詳細HTML生成
+                let eventsHtml = '<h4>この日の予定</h4>';
+                
+                if (dayEvents.length === 0) {
+                    eventsHtml += '<div class="no-events">📭 この日に予定はありません</div>';
+                } else {
+                    eventsHtml += '<div class="events-list">';
+                    dayEvents.forEach(event => {
+                        const isAllDay = !event.start.includes('T');
+                        const startTime = isAllDay ? '終日' : new Date(event.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                        const endTime = isAllDay ? '' : ` - ${new Date(event.end).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
+                        
+                        eventsHtml += `
+                            <div class="event-item ${isAllDay ? 'all-day-event' : 'timed-event'}">
+                                <div class="event-time">${startTime}${endTime}</div>
+                                <div class="event-title">${event.summary || '(タイトルなし)'}</div>
+                                ${event.location ? `<div class="event-location">📍 ${event.location}</div>` : ''}
+                                ${event.description ? `<div class="event-description">${event.description.substring(0, 100)}${event.description.length > 100 ? '...' : ''}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    eventsHtml += '</div>';
+                }
+                
+                detailsContainer.innerHTML = eventsHtml;
+                
+            } catch (error) {
+                console.error('イベント詳細の読み込みエラー:', error);
+                detailsContainer.innerHTML = `
+                    <h4>この日の予定</h4>
+                    <div class="error">⚠️ 予定の読み込み中にエラーが発生しました</div>
+                `;
+            }
         }
 
         // カレンダーからのON/OFF切り替え
@@ -2022,6 +2225,156 @@
                 document.body.removeChild(window.currentCalendarPopup.popup);
                 window.currentCalendarPopup = null;
             }
+        }
+
+        // 特殊条件の例外営業時間を管理
+        window.exceptionDates = [];
+
+        // 特殊条件ダイアログを表示
+        function showSpecialConditionsDialog() {
+            const overlay = document.createElement('div');
+            overlay.className = 'special-conditions-overlay';
+            
+            const dialog = document.createElement('div');
+            dialog.className = 'special-conditions-dialog';
+            
+            dialog.innerHTML = `
+                <h3>⚙️ 特殊な条件で検索</h3>
+                <p>通常の営業時間と異なる日の設定を追加できます</p>
+                
+                <div id="exception-dates-container">
+                    <!-- 例外日設定がここに表示される -->
+                </div>
+                
+                <div class="exception-controls">
+                    <button class="add-exception-btn" onclick="addExceptionDate()">
+                        📅 例外日を追加
+                    </button>
+                </div>
+                
+                <div class="dialog-actions">
+                    <button class="calculate-with-exceptions-btn" onclick="calculateWithExceptions()">
+                        🔄 例外条件でシフト計算
+                    </button>
+                    <button class="cancel-exceptions-btn" onclick="closeSpecialConditionsDialog()">
+                        ❌ キャンセル
+                    </button>
+                </div>
+            `;
+            
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            // 背景クリックで閉じる
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeSpecialConditionsDialog();
+                }
+            });
+            
+            window.currentSpecialDialog = overlay;
+            renderExceptionDates();
+        }
+
+        // 特殊条件ダイアログを閉じる
+        function closeSpecialConditionsDialog() {
+            if (window.currentSpecialDialog) {
+                document.body.removeChild(window.currentSpecialDialog);
+                window.currentSpecialDialog = null;
+            }
+        }
+
+        // 例外日を追加
+        function addExceptionDate() {
+            const today = new Date().toISOString().split('T')[0];
+            const newException = {
+                id: Date.now(),
+                date: today,
+                startTime: '10:00',
+                endTime: '18:00',
+                description: ''
+            };
+            
+            window.exceptionDates.push(newException);
+            renderExceptionDates();
+        }
+
+        // 例外日を削除
+        function removeExceptionDate(id) {
+            window.exceptionDates = window.exceptionDates.filter(ex => ex.id !== id);
+            renderExceptionDates();
+        }
+
+        // 例外日一覧を描画
+        function renderExceptionDates() {
+            const container = document.getElementById('exception-dates-container');
+            if (!container) return;
+            
+            if (window.exceptionDates.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">例外日は設定されていません</p>';
+                return;
+            }
+            
+            container.innerHTML = window.exceptionDates.map(exception => `
+                <div class="exception-date-group">
+                    <h4>📅 例外営業時間</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>日付</label>
+                            <input type="date" value="${exception.date}" 
+                                   onchange="updateExceptionDate(${exception.id}, 'date', this.value)"
+                                   class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>営業時間</label>
+                            <div class="time-range">
+                                <input type="time" value="${exception.startTime}" 
+                                       onchange="updateExceptionDate(${exception.id}, 'startTime', this.value)"
+                                       class="form-control form-control-small">
+                                <span>〜</span>
+                                <input type="time" value="${exception.endTime}" 
+                                       onchange="updateExceptionDate(${exception.id}, 'endTime', this.value)"
+                                       class="form-control form-control-small">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>備考</label>
+                        <input type="text" value="${exception.description}" 
+                               placeholder="例：祝日営業、イベント開催日など"
+                               onchange="updateExceptionDate(${exception.id}, 'description', this.value)"
+                               class="form-control">
+                    </div>
+                    <div style="text-align: right;">
+                        <button class="remove-exception-btn" onclick="removeExceptionDate(${exception.id})">
+                            🗑️ 削除
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 例外日データを更新
+        function updateExceptionDate(id, field, value) {
+            const exception = window.exceptionDates.find(ex => ex.id === id);
+            if (exception) {
+                exception[field] = value;
+            }
+        }
+
+        // 例外条件でシフト計算を実行
+        function calculateWithExceptions() {
+            // 通常のシフト計算に例外日情報を追加して実行
+            console.log('例外条件でシフト計算:', window.exceptionDates);
+            
+            // 例外日情報をグローバルに保存
+            window.currentExceptionDates = [...window.exceptionDates];
+            
+            // 通常のシフト計算を実行
+            calculateShifts();
+            
+            // ダイアログを閉じる
+            closeSpecialConditionsDialog();
         }
 
         // 表示切り替え機能
@@ -2159,8 +2512,8 @@
                 const selectionState = window.shiftSelectionState && window.shiftSelectionState[originalIndex];
                 const isEnabled = selectionState ? selectionState.enabled : true;
                 
-                // デバッグ情報
-                console.log(`日付: ${dateStr}, インデックス: ${originalIndex}, 有効: ${isEnabled}`);
+                // デバッグ情報（本番では削除）
+                // console.log(`日付: ${dateStr}, インデックス: ${originalIndex}, 有効: ${isEnabled}`);
                 
                 // 基本ステータスクラスを追加
                 cell.classList.add(shiftData.status);
@@ -2169,7 +2522,7 @@
                 if (shiftData.status === 'available' || shiftData.status === 'partial') {
                     if (!isEnabled) {
                         cell.classList.add('calendar-disabled');
-                        console.log(`${dateStr} を無効化表示`);
+                        // console.log(`${dateStr} を無効化表示`);
                     }
                     
                     // クリック可能にする
