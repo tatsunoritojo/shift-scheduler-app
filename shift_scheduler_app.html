@@ -941,26 +941,55 @@
         // 認証状態確認
         async function checkAuthStatus() {
             try {
-                const response = await fetch('/api/calendar/events?startDate=2025-01-01&endDate=2025-01-01');
+                const response = await fetch('/api/debug/auth-check');
                 const authButton = document.getElementById('authButton');
                 const calculateButton = document.getElementById('calculateButton');
                 
-                if (response.status === 401) {
-                    // 未認証
+                if (response.ok) {
+                    const authData = await response.json();
+                    
+                    if (authData.authenticated) {
+                        // 認証済み
+                        authButton.style.display = 'none';
+                        calculateButton.disabled = false;
+                        
+                        // セッション情報をコンソールに表示（デバッグ用）
+                        console.log('認証済み:', authData);
+                    } else {
+                        // 未認証
+                        authButton.style.display = 'inline-flex';
+                        authButton.textContent = '🔐 Googleアカウント認証';
+                        calculateButton.disabled = true;
+                        
+                        console.log('未認証:', authData);
+                    }
+                } else {
+                    // APIエラーの場合は未認証として扱う
                     authButton.style.display = 'inline-flex';
                     authButton.textContent = '🔐 Googleアカウント認証';
                     calculateButton.disabled = true;
-                } else {
-                    // 認証済み
-                    authButton.style.display = 'none';
-                    calculateButton.disabled = false;
+                    
+                    console.warn('認証状態確認APIでエラー:', response.status);
                 }
             } catch (error) {
                 console.log('認証状態確認エラー:', error);
                 // エラー時は認証が必要と仮定
                 document.getElementById('authButton').style.display = 'inline-flex';
+                document.getElementById('authButton').textContent = '🔐 Googleアカウント認証';
                 document.getElementById('calculateButton').disabled = true;
             }
+        }
+
+        // 認証状態を強制的にリセット（デバッグ用）
+        function resetAuthStatus() {
+            const authButton = document.getElementById('authButton');
+            const calculateButton = document.getElementById('calculateButton');
+            
+            authButton.style.display = 'inline-flex';
+            authButton.textContent = '🔐 Googleアカウント認証';
+            calculateButton.disabled = true;
+            
+            console.log('認証状態をリセットしました');
         }
 
         // 初期化
@@ -1285,8 +1314,15 @@
                 const response = await fetch(`/api/calendar/events?startDate=${startDate}&endDate=${endDate}&calendarId=${calendarId}`);
                 
                 if (response.status === 401) {
+                    // 認証が切れた場合、認証ボタンを再表示
+                    const authButton = document.getElementById('authButton');
+                    const calculateButton = document.getElementById('calculateButton');
+                    authButton.style.display = 'inline-flex';
+                    authButton.textContent = '🔐 Googleアカウント認証';
+                    calculateButton.disabled = true;
+                    
                     // 認証が必要な場合
-                    const authConfirm = confirm('Googleアカウントでの認証が必要です。認証ページに移動しますか？');
+                    const authConfirm = confirm('認証が切れました。再認証が必要です。認証ページに移動しますか？');
                     if (authConfirm) {
                         window.location.href = '/auth/google/login';
                     }
