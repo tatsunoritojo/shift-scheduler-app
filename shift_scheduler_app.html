@@ -357,6 +357,79 @@
             opacity: 0.7;
         }
 
+        /* カレンダー表示でのON/OFF状態 */
+        .calendar-day.calendar-disabled {
+            opacity: 0.5;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+        }
+
+        .calendar-day.calendar-disabled .time-slot {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        /* カレンダーポップアップスタイル */
+        .calendar-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 25px;
+            z-index: 1000;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .calendar-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .calendar-popup h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+
+        .calendar-popup .date-display {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .calendar-popup .toggle-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .calendar-popup button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-popup .close-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .calendar-popup .close-btn:hover {
+            background: #d32f2f;
+        }
+
         .time-badge {
             background: #2196F3;
             color: white;
@@ -1849,6 +1922,85 @@
             `;
             
             document.getElementById('summaryStats').innerHTML = statsHtml;
+            
+            // カレンダー表示も更新
+            updateCalendarDisplay();
+        }
+
+        // カレンダー表示の更新
+        function updateCalendarDisplay() {
+            if (window.currentShiftsData && document.getElementById('calendarView').style.display !== 'none') {
+                renderCalendar(window.currentStartDate, window.currentEndDate, window.currentShiftsData);
+            }
+        }
+
+        // カレンダー用のON/OFFポップアップ表示
+        function showCalendarTogglePopup(index, dateStr, cellElement) {
+            const shiftData = window.shiftSelectionState[index];
+            if (!shiftData) return;
+
+            // オーバーレイを作成
+            const overlay = document.createElement('div');
+            overlay.className = 'calendar-popup-overlay';
+            
+            // ポップアップを作成
+            const popup = document.createElement('div');
+            popup.className = 'calendar-popup';
+            
+            const date = new Date(dateStr);
+            const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+            const dayName = dayNames[date.getDay()];
+            
+            popup.innerHTML = `
+                <h3>シフト設定</h3>
+                <div class="date-display">${dateStr} (${dayName})</div>
+                <div class="shift-info">
+                    ${shiftData.shift.availableTime ? 
+                        `勤務可能時間: ${shiftData.shift.availableTime}` : 
+                        '勤務時間情報なし'}
+                </div>
+                <div class="toggle-controls">
+                    <button class="shift-toggle-btn ${shiftData.enabled ? 'on' : 'off'}" 
+                            onclick="toggleFromCalendar(${index})">
+                        <span class="toggle-text">${shiftData.enabled ? 'ON' : 'OFF'}</span>
+                    </button>
+                </div>
+                <div>
+                    <button class="close-btn" onclick="closeCalendarPopup()">閉じる</button>
+                </div>
+            `;
+            
+            // DOMに追加
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            
+            // クリックでポップアップを閉じる
+            overlay.addEventListener('click', closeCalendarPopup);
+            
+            // 現在のポップアップ要素を保存
+            window.currentCalendarPopup = { overlay, popup, index };
+        }
+
+        // カレンダーからのON/OFF切り替え
+        function toggleFromCalendar(index) {
+            // リスト表示のボタンと同期
+            toggleShiftDay(index);
+            
+            // ポップアップのボタン表示を更新
+            const popupButton = document.querySelector('.calendar-popup .shift-toggle-btn');
+            const isEnabled = window.shiftSelectionState[index].enabled;
+            
+            popupButton.className = `shift-toggle-btn ${isEnabled ? 'on' : 'off'}`;
+            popupButton.querySelector('.toggle-text').textContent = isEnabled ? 'ON' : 'OFF';
+        }
+
+        // カレンダーポップアップを閉じる
+        function closeCalendarPopup() {
+            if (window.currentCalendarPopup) {
+                document.body.removeChild(window.currentCalendarPopup.overlay);
+                document.body.removeChild(window.currentCalendarPopup.popup);
+                window.currentCalendarPopup = null;
+            }
         }
 
         // 表示切り替え機能
@@ -1888,8 +2040,8 @@
             
             // シフトデータをMapに変換（高速検索用）
             const shiftMap = new Map();
-            shiftData.forEach(shift => {
-                shiftMap.set(shift.date, shift);
+            shiftData.forEach((shift, index) => {
+                shiftMap.set(shift.date, { ...shift, originalIndex: index });
             });
             
             // 月ごとのカレンダーを生成
@@ -1982,10 +2134,31 @@
             
             // シフトデータに基づいてスタイルを適用
             if (shiftData) {
+                const originalIndex = shiftData.originalIndex;
+                const isEnabled = window.shiftSelectionState && 
+                                 window.shiftSelectionState[originalIndex] && 
+                                 window.shiftSelectionState[originalIndex].enabled;
+                
+                // 基本ステータスクラスを追加
                 cell.classList.add(shiftData.status);
                 
-                // 利用可能時間を表示（availableの場合のみ）
-                if (shiftData.status === 'available' && shiftData.availableTime) {
+                // ON/OFF状態に基づいて表示を調整
+                if (shiftData.status === 'available' || shiftData.status === 'partial') {
+                    if (!isEnabled) {
+                        cell.classList.add('calendar-disabled');
+                    }
+                    
+                    // クリック可能にする
+                    cell.style.cursor = 'pointer';
+                    cell.setAttribute('data-shift-index', originalIndex);
+                    cell.setAttribute('data-date', dateStr);
+                    
+                    // クリックイベントを追加
+                    cell.addEventListener('click', () => showCalendarTogglePopup(originalIndex, dateStr, cell));
+                }
+                
+                // 利用可能時間を表示
+                if (shiftData.availableTime) {
                     const timeSlot = document.createElement('div');
                     timeSlot.className = 'time-slot';
                     timeSlot.textContent = shiftData.availableTime;
