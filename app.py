@@ -1,17 +1,16 @@
 from flask import Flask, redirect, request, url_for, session, jsonify
 from dotenv import load_dotenv
 import os
+import logging
 from pathlib import Path
 
 # .envファイルの絶対パスを指定して読み込み
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# 本番環境では OAUTHLIB_INSECURE_TRANSPORT を設定しない
-# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime, timedelta
 import json
 import requests
@@ -22,14 +21,21 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+# ロギング設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 CORS(app)
+
+# Vercelリバースプロキシ対応（OAuthコールバックでHTTPSが正しく認識されるようにする）
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # 本番環境用のセッションキー設定
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
-# セッション設定（本番環境用）
-app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS必須
+# セッション設定
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', '1') == '1'
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # XSS対策
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF対策
 # セッションのタイムアウト設定
@@ -81,81 +87,39 @@ def index():
 def app_page():
     return app.send_static_file('shift_scheduler_app.html')
 
-# デバッグ用エンドポイント
-@app.route('/debug/config')
-def debug_config():
-    return jsonify({
-        'env_file_path': str(env_path),
-        'env_file_exists': env_path.exists(),
-        'CLIENT_ID_raw': CLIENT_ID,
-        'CLIENT_SECRET_raw': CLIENT_SECRET[:10] + '...' if CLIENT_SECRET else None,
-        'CLIENT_ID_exists': bool(CLIENT_ID and CLIENT_ID != 'your_google_client_id_here'),
-        'CLIENT_SECRET_exists': bool(CLIENT_SECRET and CLIENT_SECRET != 'your_google_client_secret_here'),
-        'REDIRECT_URI': REDIRECT_URI,
-        'all_env_vars': {k: v for k, v in os.environ.items() if 'GOOGLE' in k}
-    })
-
-# 追加のデバッグエンドポイント
-@app.route('/api/debug/routes')
-def debug_routes():
-    routes = []
-    for rule in app.url_map.iter_rules():
-        routes.append({
-            'endpoint': rule.endpoint,
-            'methods': list(rule.methods),
-            'rule': str(rule)
-        })
-    return jsonify(routes)
-
-@app.route('/api/debug/session')
-def debug_session():
-    return jsonify({
-        'user_id': session.get('user_id'),
-        'has_credentials': 'credentials' in session,
-        'session_keys': list(session.keys())
-    })
-
-@app.route('/api/debug/auth-check')
-def auth_check():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({
-            'authenticated': False,
-            'error': 'No user_id in session',
-            'session_keys': list(session.keys())
-        })
-    
-    user_token = UserToken.query.filter_by(user_id=user_id).first()
-    return jsonify({
-        'authenticated': bool(user_token),
-        'user_id': user_id,
-        'has_refresh_token': bool(user_token.refresh_token if user_token else False),
-        'token_created': user_token.created_at.isoformat() if user_token else None
-    })
-
 @app.route('/health')
 def health():
     return jsonify({"status": "healthy", "version": "1.0.0"})
 
-# 環境変数確認エンドポイント（デバッグ用）
-@app.route('/api/debug/config2')
-def debug_config2():
-    return jsonify({
-        'CLIENT_ID_set': bool(CLIENT_ID),
-        'CLIENT_ID_preview': CLIENT_ID[:20] + '...' if CLIENT_ID else None,
-        'CLIENT_SECRET_set': bool(CLIENT_SECRET),
-        'REDIRECT_URI': REDIRECT_URI,
-        'SCOPES': SCOPES,
-        'app_url': request.url_root
-    })
+# デバッグエンドポイント（環境変数 ENABLE_DEBUG=1 で有効化）
+if os.environ.get('ENABLE_DEBUG') == '1':
+    @app.route('/debug/config')
+    def debug_config():
+        return jsonify({
+            'env_file_path': str(env_path),
+            'env_file_exists': env_path.exists(),
+            'CLIENT_ID_set': bool(CLIENT_ID),
+            'CLIENT_ID_preview': CLIENT_ID[:20] + '...' if CLIENT_ID else None,
+            'CLIENT_SECRET_set': bool(CLIENT_SECRET),
+            'REDIRECT_URI': REDIRECT_URI,
+            'SCOPES': SCOPES,
+            'app_url': request.url_root
+        })
+
+    @app.route('/api/debug/session')
+    def debug_session():
+        return jsonify({
+            'user_id': session.get('user_id'),
+            'has_credentials': 'credentials' in session,
+            'session_keys': list(session.keys())
+        })
 
 # Google認証開始エンドポイント
 @app.route('/auth/google/login')
 def login():
-    print(f"[AUTH] Starting Google OAuth flow")
-    print(f"[AUTH] CLIENT_ID: {CLIENT_ID[:20]}...")
-    print(f"[AUTH] REDIRECT_URI: {REDIRECT_URI}")
-    print(f"[AUTH] SCOPES: {SCOPES}")
+    logger.info("[AUTH] Starting Google OAuth flow")
+    logger.info(f"[AUTH] CLIENT_ID: {CLIENT_ID[:20]}...")
+    logger.info(f"[AUTH] REDIRECT_URI: {REDIRECT_URI}")
     
     try:
         client_config = {
@@ -181,35 +145,32 @@ def login():
             prompt='consent'  # 強制的に同意画面を表示
         )
         
-        print(f"[AUTH] Generated authorization URL: {authorization_url}")
-        print(f"[AUTH] State: {state}")
+        logger.info(f"[AUTH] Generated authorization URL: {authorization_url[:80]}...")
         
         session['state'] = state
         return redirect(authorization_url)
         
     except Exception as e:
-        print(f"[AUTH ERROR] Failed to create authorization URL: {str(e)}")
+        logger.error(f"[AUTH] Failed to create authorization URL: {e}")
         return jsonify({"error": f"Failed to start OAuth flow: {str(e)}"}), 500
 
 # Google認証コールバックエンドポイント
 @app.route('/auth/google/callback')
 def callback():
-    print(f"[CALLBACK] OAuth callback received")
-    print(f"[CALLBACK] Request args: {dict(request.args)}")
-    print(f"[CALLBACK] Session state: {session.get('state')}")
+    logger.info("[CALLBACK] OAuth callback received")
     
     state = session.get('state')
     request_state = request.args.get('state')
     
     if not state:
-        print(f"[CALLBACK ERROR] No state in session")
+        logger.error("[CALLBACK] No state in session")
         return jsonify({"error": "No state in session"}), 400
         
     if state != request_state:
-        print(f"[CALLBACK ERROR] State mismatch: session={state}, request={request_state}")
+        logger.error(f"[CALLBACK] State mismatch: session={state}, request={request_state}")
         return jsonify({"error": "State mismatch"}), 400
         
-    print(f"[CALLBACK] State validation passed")
+    logger.info("[CALLBACK] State validation passed")
 
     client_config = {
         "web": {
@@ -231,15 +192,13 @@ def callback():
 
     try:
         flow.fetch_token(authorization_response=request.url)
-        print(f"[CALLBACK] Token fetched successfully")
+        logger.info("[CALLBACK] Token fetched successfully")
     except Exception as e:
-        print(f"[CALLBACK ERROR] Failed to fetch token: {str(e)}")
+        logger.error(f"[CALLBACK] Failed to fetch token: {e}")
         return jsonify({"error": f"Failed to fetch token: {str(e)}"}), 500
 
     credentials = flow.credentials
-    print(f"[CALLBACK] Credentials obtained")
-    print(f"[CALLBACK] Has refresh_token: {bool(credentials.refresh_token)}")
-    print(f"[CALLBACK] Has id_token: {bool(credentials.id_token)}")
+    logger.info("[CALLBACK] Credentials obtained")
 
     # Google User IDを取得（より確実な方法）
     try:
@@ -253,8 +212,7 @@ def callback():
             )
             user_id = decoded_token.get('sub')
             user_email = decoded_token.get('email')
-            print(f"[CALLBACK] User ID from ID token: {user_id}")
-            print(f"[CALLBACK] User email: {user_email}")
+            logger.info(f"[CALLBACK] User authenticated: {user_email}")
         else:
             # フォールバック: Google+ APIでユーザー情報取得
             from googleapiclient.discovery import build
@@ -262,16 +220,15 @@ def callback():
             user_info = service.userinfo().get().execute()
             user_id = user_info.get('id')
             user_email = user_info.get('email')
-            print(f"[CALLBACK] User ID from userinfo API: {user_id}")
-            print(f"[CALLBACK] User email: {user_email}")
+            logger.info(f"[CALLBACK] User authenticated via userinfo: {user_email}")
             
     except Exception as e:
-        print(f"[CALLBACK ERROR] Failed to get user info: {str(e)}")
+        logger.error(f"[CALLBACK] Failed to get user info: {e}")
         user_id = 'default_user'
 
     # refresh_tokenをデータベースに保存
     if credentials.refresh_token:
-        print(f"[CALLBACK] Saving refresh token for user: {user_id}")
+        logger.info(f"[CALLBACK] Saving refresh token for user: {user_id}")
         user_token = UserToken.query.filter_by(user_id=user_id).first()
         if user_token:
             user_token.refresh_token = credentials.refresh_token
@@ -282,7 +239,7 @@ def callback():
         db.session.commit()
         session['user_id'] = user_id
     else:
-        print(f"[CALLBACK] No refresh token, but setting user_id: {user_id}")
+        logger.warning(f"[CALLBACK] No refresh token, setting user_id: {user_id}")
         session['user_id'] = user_id
 
     # access_tokenをセッションに保存 (短期間有効なので、refresh_tokenで更新する)
@@ -301,14 +258,12 @@ def callback():
 # Google Calendar APIイベント取得エンドポイント
 @app.route('/api/calendar/events')
 def get_calendar_events():
-    print(f"[DEBUG] API endpoint called: /api/calendar/events")
-    print(f"[DEBUG] Session: {dict(session)}")
-    
+    logger.info("[API] /api/calendar/events called")
+
     user_id = session.get('user_id')
-    print(f"[DEBUG] User ID: {user_id}")
-    
+
     if not user_id:
-        print("[DEBUG] User not authenticated - returning 401")
+        logger.warning("[API] User not authenticated")
         return jsonify({"error": "User not authenticated"}), 401
 
     user_token = UserToken.query.filter_by(user_id=user_id).first()
@@ -397,7 +352,6 @@ def get_calendar_events():
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    # 本番環境ではGunicornが使用されるため、この部分は開発時のみ実行される
-    # 開発時の起動: python app.py
+    # ローカル開発時の起動: python app.py
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

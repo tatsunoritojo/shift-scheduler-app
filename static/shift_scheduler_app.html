@@ -641,6 +641,77 @@
             background: #d32f2f;
         }
 
+        /* 時間帯編集機能スタイル */
+        .time-edit-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .time-edit-section h5 {
+            margin: 0 0 15px 0;
+            color: #1976D2;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .time-edit-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .time-edit-input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .time-edit-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .time-edit-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .time-edit-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .time-reset-btn {
+            background: #ff9800;
+            color: white;
+        }
+
+        .time-reset-btn:hover {
+            background: #f57c00;
+        }
+
+        .custom-time-indicator {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
         .time-badge {
             background: #2196F3;
             color: white;
@@ -2120,6 +2191,16 @@
                         <span class="toggle-text">${shiftData.enabled ? 'ON' : 'OFF'}</span>
                     </button>
                 </div>
+                <div class="time-edit-section" id="time-edit-${index}">
+                    <h5>⏰ 勤務時間カスタマイズ</h5>
+                    <div class="time-edit-controls">
+                        <input type="time" id="custom-start-${index}" class="time-edit-input" placeholder="開始時間">
+                        <span>〜</span>
+                        <input type="time" id="custom-end-${index}" class="time-edit-input" placeholder="終了時間">
+                        <button class="time-edit-btn" onclick="applyCustomWorkHours(${index})">適用</button>
+                        <button class="time-edit-btn time-reset-btn" onclick="resetCustomWorkHours(${index})">リセット</button>
+                    </div>
+                </div>
                 <div class="event-details" id="event-details-${index}">
                     <h4>この日の予定</h4>
                     <div class="loading">📅 予定を読み込み中...</div>
@@ -2138,6 +2219,9 @@
             
             // 現在のポップアップ要素を保存
             window.currentCalendarPopup = { overlay, popup, index };
+            
+            // カスタム時間があれば入力欄に設定
+            initializeCustomTimeInputs(index, dateStr);
             
             // イベント詳細を非同期で読み込み
             loadEventDetailsForDate(dateStr, index);
@@ -2233,6 +2317,9 @@
 
         // 特殊条件の例外営業時間を管理
         window.exceptionDates = [];
+        
+        // カスタム勤務時間を管理
+        window.customWorkHours = {};
 
         // 特殊条件ダイアログを表示
         function showSpecialConditionsDialog() {
@@ -2379,6 +2466,123 @@
             
             // ダイアログを閉じる
             closeSpecialConditionsDialog();
+        }
+
+        // カスタム時間入力の初期化
+        function initializeCustomTimeInputs(index, dateStr) {
+            const customTime = window.customWorkHours[dateStr];
+            if (customTime) {
+                const startInput = document.getElementById(`custom-start-${index}`);
+                const endInput = document.getElementById(`custom-end-${index}`);
+                if (startInput && endInput) {
+                    startInput.value = customTime.start;
+                    endInput.value = customTime.end;
+                }
+            }
+        }
+
+        // カスタム勤務時間を適用
+        function applyCustomWorkHours(index) {
+            const shiftData = window.shiftSelectionState[index];
+            if (!shiftData || shiftData.shift.status !== 'available') return;
+            
+            const startInput = document.getElementById(`custom-start-${index}`);
+            const endInput = document.getElementById(`custom-end-${index}`);
+            
+            if (!startInput || !endInput || !startInput.value || !endInput.value) {
+                alert('開始時間と終了時間の両方を入力してください。');
+                return;
+            }
+            
+            const startTime = startInput.value;
+            const endTime = endInput.value;
+            
+            if (startTime >= endTime) {
+                alert('終了時間は開始時間より後に設定してください。');
+                return;
+            }
+            
+            const dateStr = shiftData.shift.date;
+            
+            // カスタム時間を保存
+            window.customWorkHours[dateStr] = {
+                start: startTime,
+                end: endTime
+            };
+            
+            // シフトデータを更新
+            updateShiftDataWithCustomTime(index, startTime, endTime);
+            
+            // 表示を更新
+            updateResultDisplays();
+            
+            // 成功メッセージ
+            alert(`${dateStr}の勤務時間を${startTime}〜${endTime}に設定しました。`);
+        }
+
+        // カスタム勤務時間をリセット
+        function resetCustomWorkHours(index) {
+            const shiftData = window.shiftSelectionState[index];
+            if (!shiftData) return;
+            
+            const dateStr = shiftData.shift.date;
+            
+            // カスタム時間を削除
+            delete window.customWorkHours[dateStr];
+            
+            // 入力欄をクリア
+            const startInput = document.getElementById(`custom-start-${index}`);
+            const endInput = document.getElementById(`custom-end-${index}`);
+            if (startInput && endInput) {
+                startInput.value = '';
+                endInput.value = '';
+            }
+            
+            // 元のシフトデータに戻す
+            resetShiftDataToOriginal(index);
+            
+            // 表示を更新
+            updateResultDisplays();
+            
+            alert(`${dateStr}の勤務時間をデフォルトに戻しました。`);
+        }
+
+        // シフトデータをカスタム時間で更新
+        function updateShiftDataWithCustomTime(index, startTime, endTime) {
+            const shiftData = window.shiftSelectionState[index];
+            if (!shiftData) return;
+            
+            // 時間文字列を数値に変換して時間を計算
+            const start = parseTime(startTime);
+            const end = parseTime(endTime);
+            const duration = (end - start) / 60; // 分を時間に変換
+            
+            // シフトデータを更新
+            shiftData.shift.availableTime = `${startTime}-${endTime}`;
+            shiftData.shift.duration = duration;
+            shiftData.shift.shifts = [{
+                start: startTime,
+                end: endTime,
+                duration: duration
+            }];
+            shiftData.shift.reason = `カスタム時間: ${startTime}-${endTime}`;
+            shiftData.shift.isCustomTime = true;
+        }
+
+        // シフトデータを元に戻す
+        function resetShiftDataToOriginal(index) {
+            const shiftData = window.shiftSelectionState[index];
+            if (!shiftData || !shiftData.originalShift) return;
+            
+            // 元のデータに戻す
+            Object.assign(shiftData.shift, shiftData.originalShift);
+            delete shiftData.shift.isCustomTime;
+        }
+
+        // 時間文字列を分に変換
+        function parseTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
         }
 
         // 表示切り替え機能
