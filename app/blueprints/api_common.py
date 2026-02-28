@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, session, current_app
+from flask import Blueprint, jsonify, session, current_app, redirect
+
+from app.middleware.auth_middleware import get_current_user
 
 api_common_bp = Blueprint('api_common', __name__)
 
@@ -10,10 +12,8 @@ def health():
 
 @api_common_bp.route('/')
 def index():
-    from flask import redirect
     user_id = session.get('user_id')
     if user_id:
-        from app.middleware.auth_middleware import get_current_user
         user = get_current_user()
         if user:
             if user.role == 'admin':
@@ -38,16 +38,31 @@ def login_page():
 
 @api_common_bp.route('/worker')
 def worker_page():
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    if user.role != 'worker':
+        return redirect('/')
     return current_app.send_static_file('pages/worker.html')
 
 
 @api_common_bp.route('/admin')
 def admin_page():
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    if user.role != 'admin':
+        return redirect('/')
     return current_app.send_static_file('pages/admin.html')
 
 
 @api_common_bp.route('/owner')
 def owner_page():
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    if user.role != 'owner':
+        return redirect('/')
     return current_app.send_static_file('pages/owner.html')
 
 

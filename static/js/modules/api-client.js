@@ -45,3 +45,7 @@ export async function getCalendarEvents(startDate, endDate, calendarId = 'primar
     const params = new URLSearchParams({ startDate, endDate, calendarId });
     return api.get(`/api/calendar/events?${params}`);
 }
+
+export async function getCalendarList() {
+    return api.get('/api/worker/calendars');
+}
