@@ -1,11 +1,23 @@
 import { api, getCurrentUser } from './modules/api-client.js';
 import { showToast } from './modules/notification.js';
+import { renderCalendar } from './modules/calendar-grid.js';
+import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
 
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
-let submissionsData = {};  // period submissions
+let submissionsData = [];  // period submissions
+let openingHoursData = {}; // dateStr -> { start_time, end_time } | null
+let currentPeriod = null;  // Selected period object
+let dayAggregatedData = {}; // dateStr -> aggregated day info
+let workersData = []; // workers list
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
+
+// Worker colors for timeline
+const WORKER_COLORS = [
+    '#4caf50', '#2196F3', '#ff9800', '#9c27b0', '#e91e63',
+    '#00bcd4', '#ff5722', '#795548', '#607d8b', '#8bc34a',
+];
 
 async function init() {
     try {
@@ -211,14 +223,24 @@ window.loadBuilderData = async function() {
 
     document.getElementById('builder-content').style.display = 'block';
 
-    const [submissions, schedule, workers] = await Promise.all([
+    // Find the period object from the select option text
+    const select = document.getElementById('builder-period-select');
+    const opt = select.options[select.selectedIndex];
+    // Parse dates from option text: "name (YYYY-MM-DD 〜 YYYY-MM-DD)"
+    const match = opt.textContent.match(/(\d{4}-\d{2}-\d{2})\s*〜\s*(\d{4}-\d{2}-\d{2})/);
+    currentPeriod = match ? { id: periodId, start_date: match[1], end_date: match[2] } : null;
+
+    const [submissions, schedule, workers, openingHours] = await Promise.all([
         api.get(`/api/admin/periods/${periodId}/submissions`),
         api.get(`/api/admin/periods/${periodId}/schedule`),
         api.get('/api/admin/workers'),
+        api.get(`/api/admin/periods/${periodId}/opening-hours`),
     ]);
 
-    submissionsData = submissions;
+    submissionsData = submissions || [];
+    workersData = workers || [];
     scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
+    openingHoursData = openingHours || {};
 
     // Show confirm button if schedule is approved
     if (schedule && schedule.status === 'approved') {
@@ -228,9 +250,368 @@ window.loadBuilderData = async function() {
     }
 
     renderSubmissionsSummary(submissions);
-    renderScheduleGrid(periodId, submissions, workers);
+    buildDayAggregatedData();
+    renderBuilderCalendar();
     renderHoursSummary();
 };
+
+// --- Aggregation ---
+
+function buildDayAggregatedData() {
+    dayAggregatedData = {};
+    if (!currentPeriod) return;
+
+    const start = new Date(currentPeriod.start_date);
+    const end = new Date(currentPeriod.end_date);
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        const oh = openingHoursData[dateStr];
+        const closed = !oh || oh.is_closed;
+
+        // Build per-worker info for this date
+        const workers = [];
+        (submissionsData || []).forEach(sub => {
+            const slot = (sub.slots || []).find(s => s.slot_date === dateStr);
+            const isAvailable = slot && slot.is_available;
+            const entry = scheduleEntries.find(e => e.user_id === sub.user_id && e.shift_date === dateStr);
+            workers.push({
+                user_id: sub.user_id,
+                user_name: sub.user_name || sub.user_email || `User ${sub.user_id}`,
+                is_available: !!isAvailable,
+                start_time: slot ? slot.start_time : null,
+                end_time: slot ? slot.end_time : null,
+                is_assigned: !!entry,
+                assigned_start: entry ? entry.start_time : null,
+                assigned_end: entry ? entry.end_time : null,
+            });
+        });
+
+        const availableCount = workers.filter(w => w.is_available).length;
+        const assignedCount = workers.filter(w => w.is_assigned).length;
+
+        dayAggregatedData[dateStr] = {
+            closed,
+            openingHours: oh,
+            workers,
+            availableCount,
+            assignedCount,
+        };
+    }
+}
+
+// --- Calendar Rendering ---
+
+function renderBuilderCalendar() {
+    const container = document.getElementById('calendar-container');
+    if (!currentPeriod) {
+        container.innerHTML = '<p style="color:#999;">期間が選択されていません</p>';
+        return;
+    }
+
+    renderCalendar(container, currentPeriod.start_date, currentPeriod.end_date, dayAggregatedData, {
+        renderDayContent(cell, dateStr, data) {
+            // Remove default styles, add admin-specific class
+            cell.classList.add('admin-calendar-day');
+            if (data.closed) {
+                cell.classList.add('admin-day-closed');
+            } else if (data.availableCount === 0) {
+                cell.classList.add('admin-day-nobody');
+            } else if (data.assignedCount === 0) {
+                cell.classList.add('admin-day-empty');
+            } else if (data.assignedCount < data.availableCount) {
+                cell.classList.add('admin-day-partial');
+            } else {
+                cell.classList.add('admin-day-full');
+            }
+
+            // Badge: assigned/available
+            if (!data.closed) {
+                const badge = document.createElement('div');
+                badge.className = 'admin-day-badge';
+                badge.textContent = `${data.assignedCount}/${data.availableCount}`;
+                cell.appendChild(badge);
+            }
+
+            // Opening hours text
+            if (!data.closed && data.openingHours) {
+                const hours = document.createElement('div');
+                hours.className = 'admin-day-hours';
+                hours.textContent = `${data.openingHours.start_time}-${data.openingHours.end_time}`;
+                cell.appendChild(hours);
+            }
+
+            if (data.closed) {
+                const closedLabel = document.createElement('div');
+                closedLabel.className = 'admin-day-hours';
+                closedLabel.textContent = '休校';
+                closedLabel.style.color = '#999';
+                cell.appendChild(closedLabel);
+            }
+        },
+        onDayClick(dateStr, data) {
+            if (!data.closed) {
+                showAdminDayPopup(dateStr, data);
+            }
+        },
+    });
+}
+
+// --- Day Popup ---
+
+function showAdminDayPopup(dateStr, data) {
+    // Remove existing popup if any
+    closeAdminDayPopup();
+
+    const d = new Date(dateStr);
+    const dayLabel = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_NAMES[d.getDay()]})`;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'day-popup-overlay';
+    overlay.id = 'admin-day-popup-overlay';
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeAdminDayPopup();
+    });
+
+    const popup = document.createElement('div');
+    popup.className = 'day-popup admin-day-popup';
+
+    // Header
+    popup.innerHTML = `
+        <div class="day-popup-header">
+            <span class="day-popup-date">${dayLabel}</span>
+            <button class="day-popup-close" onclick="window.closeAdminDayPopup()">&times;</button>
+        </div>
+    `;
+
+    // Opening hours section
+    if (data.openingHours) {
+        const section = document.createElement('div');
+        section.className = 'day-popup-section';
+        section.innerHTML = `
+            <div class="day-popup-label">開校時間</div>
+            <div class="day-popup-opening-hours">${data.openingHours.start_time} 〜 ${data.openingHours.end_time}</div>
+        `;
+        popup.appendChild(section);
+    }
+
+    // Coverage timeline section
+    const tlSection = document.createElement('div');
+    tlSection.className = 'day-popup-section';
+    tlSection.innerHTML = `<div class="day-popup-label">カバレッジ</div>`;
+    const tlContainer = document.createElement('div');
+    tlContainer.id = 'admin-coverage-timeline';
+    tlSection.appendChild(tlContainer);
+    popup.appendChild(tlSection);
+    renderAdminCoverageTimeline(dateStr, data, tlContainer);
+
+    // Workers section
+    const workersSection = document.createElement('div');
+    workersSection.className = 'day-popup-section';
+    workersSection.innerHTML = `<div class="day-popup-label">スタッフ (${data.assignedCount}/${data.availableCount})</div>`;
+    const workerList = document.createElement('div');
+    workerList.className = 'admin-worker-list';
+    workerList.id = 'admin-worker-list';
+
+    data.workers.forEach((w, idx) => {
+        const card = createWorkerCard(w, dateStr, idx);
+        workerList.appendChild(card);
+    });
+
+    workersSection.appendChild(workerList);
+    popup.appendChild(workersSection);
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // Animate in
+    requestAnimationFrame(() => {
+        overlay.classList.add('visible');
+        popup.classList.add('visible');
+    });
+}
+
+function createWorkerCard(worker, dateStr, idx) {
+    const card = document.createElement('div');
+    card.className = 'admin-worker-card';
+    card.dataset.userId = worker.user_id;
+
+    if (!worker.is_available) {
+        card.classList.add('admin-worker-card-unavailable');
+    } else if (worker.is_assigned) {
+        card.classList.add('admin-worker-card-assigned');
+    }
+
+    const color = WORKER_COLORS[idx % WORKER_COLORS.length];
+
+    let html = `
+        <div class="admin-worker-card-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span class="admin-worker-dot" style="background:${color};"></span>
+                <span class="admin-worker-name">${worker.user_name}</span>
+            </div>
+    `;
+
+    if (worker.is_available) {
+        const activeClass = worker.is_assigned ? ' active' : '';
+        html += `
+            <button class="day-popup-toggle${activeClass}"
+                onclick="window.toggleWorkerAssignment(${worker.user_id}, '${dateStr}')">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-label">${worker.is_assigned ? 'ON' : 'OFF'}</span>
+            </button>
+        `;
+    } else {
+        html += `<span style="color:#999;font-size:0.85em;">不可</span>`;
+    }
+
+    html += `</div>`;
+
+    // Available time
+    if (worker.is_available && worker.start_time) {
+        html += `<div class="admin-worker-time-info">希望: ${worker.start_time} 〜 ${worker.end_time}</div>`;
+    }
+
+    // Assigned time editing
+    if (worker.is_assigned) {
+        const aStart = worker.assigned_start || worker.start_time || '09:00';
+        const aEnd = worker.assigned_end || worker.end_time || '17:00';
+        html += `
+            <div class="admin-worker-assigned-time">
+                <input type="time" class="form-control popup-time-input" value="${aStart}"
+                    id="assigned-start-${worker.user_id}" onchange="window.applyWorkerTime(${worker.user_id}, '${dateStr}')">
+                <span class="time-separator">〜</span>
+                <input type="time" class="form-control popup-time-input" value="${aEnd}"
+                    id="assigned-end-${worker.user_id}" onchange="window.applyWorkerTime(${worker.user_id}, '${dateStr}')">
+            </div>
+        `;
+    }
+
+    card.innerHTML = html;
+    return card;
+}
+
+function closeAdminDayPopup() {
+    const overlay = document.getElementById('admin-day-popup-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('visible');
+    const popup = overlay.querySelector('.day-popup');
+    if (popup) popup.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 200);
+}
+window.closeAdminDayPopup = closeAdminDayPopup;
+
+// --- Coverage Timeline ---
+
+function renderAdminCoverageTimeline(dateStr, data, container) {
+    const oh = data.openingHours;
+    if (!oh) {
+        container.innerHTML = '<span style="color:#999;font-size:0.85em;">開校時間未設定</span>';
+        return;
+    }
+
+    const totalStart = timeToMinutes(oh.start_time);
+    const totalEnd = timeToMinutes(oh.end_time);
+    const totalRange = totalEnd - totalStart;
+    if (totalRange <= 0) {
+        container.innerHTML = '<span style="color:#999;font-size:0.85em;">-</span>';
+        return;
+    }
+
+    const assignedWorkers = data.workers.filter(w => w.is_assigned);
+
+    // Build timeline bar
+    let html = '<div class="timeline-bar">';
+    assignedWorkers.forEach((w, idx) => {
+        const color = WORKER_COLORS[idx % WORKER_COLORS.length];
+        const wStart = timeToMinutes(w.assigned_start || w.start_time || oh.start_time);
+        const wEnd = timeToMinutes(w.assigned_end || w.end_time || oh.end_time);
+        const left = Math.max(0, ((wStart - totalStart) / totalRange) * 100);
+        const width = Math.min(100 - left, ((wEnd - wStart) / totalRange) * 100);
+        html += `<div class="tl-block" style="left:${left}%;width:${width}%;background:${color};opacity:0.7;" title="${w.user_name}"></div>`;
+    });
+    html += '</div>';
+
+    // Labels
+    html += '<div class="timeline-labels">';
+    const labels = [oh.start_time];
+    const midTime = minutesToTime(Math.round((totalStart + totalEnd) / 2));
+    labels.push(midTime);
+    labels.push(oh.end_time);
+    labels.forEach((lbl, i) => {
+        const pos = i === 0 ? 0 : i === labels.length - 1 ? 100 : 50;
+        html += `<span class="tl-label" style="left:${pos}%;">${lbl}</span>`;
+    });
+    html += '</div>';
+
+    // Legend
+    if (assignedWorkers.length > 0) {
+        html += '<div class="timeline-legend">';
+        assignedWorkers.forEach((w, idx) => {
+            const color = WORKER_COLORS[idx % WORKER_COLORS.length];
+            html += `<span class="tl-legend-item"><span class="tl-legend-dot" style="background:${color};"></span>${w.user_name}</span>`;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+// --- Worker Assignment Toggle ---
+
+window.toggleWorkerAssignment = function(userId, dateStr) {
+    const idx = scheduleEntries.findIndex(e => e.user_id === userId && e.shift_date === dateStr);
+    if (idx >= 0) {
+        scheduleEntries.splice(idx, 1);
+    } else {
+        // Find worker's available time from submissions
+        const dayData = dayAggregatedData[dateStr];
+        const worker = dayData ? dayData.workers.find(w => w.user_id === userId) : null;
+        scheduleEntries.push({
+            user_id: userId,
+            shift_date: dateStr,
+            start_time: (worker && worker.start_time) || '09:00',
+            end_time: (worker && worker.end_time) || '17:00',
+        });
+    }
+
+    // Rebuild and re-render
+    buildDayAggregatedData();
+    renderBuilderCalendar();
+    renderHoursSummary();
+
+    // Re-open popup for this date
+    const newData = dayAggregatedData[dateStr];
+    if (newData) showAdminDayPopup(dateStr, newData);
+};
+
+// --- Apply Worker Time Change ---
+
+window.applyWorkerTime = function(userId, dateStr) {
+    const startInput = document.getElementById(`assigned-start-${userId}`);
+    const endInput = document.getElementById(`assigned-end-${userId}`);
+    if (!startInput || !endInput) return;
+
+    const entry = scheduleEntries.find(e => e.user_id === userId && e.shift_date === dateStr);
+    if (entry) {
+        entry.start_time = startInput.value;
+        entry.end_time = endInput.value;
+    }
+
+    // Rebuild and refresh popup
+    buildDayAggregatedData();
+    renderBuilderCalendar();
+    renderHoursSummary();
+
+    // Refresh timeline in popup without full re-open
+    const tlContainer = document.getElementById('admin-coverage-timeline');
+    const newData = dayAggregatedData[dateStr];
+    if (tlContainer && newData) {
+        renderAdminCoverageTimeline(dateStr, newData, tlContainer);
+    }
+};
+
+// --- Sidebar renderers ---
 
 function renderSubmissionsSummary(submissions) {
     const container = document.getElementById('submissions-summary');
@@ -246,92 +627,21 @@ function renderSubmissionsSummary(submissions) {
     `).join('');
 }
 
-function renderScheduleGrid(periodId, submissions, workers) {
-    const container = document.getElementById('schedule-grid');
-
-    if (!submissions || submissions.length === 0) {
-        container.innerHTML = '<p style="color:#999;">提出データがありません。アルバイトにシフト希望を提出してもらってください。</p>';
-        return;
-    }
-
-    // Collect all dates from submissions
-    const allDates = new Set();
-    submissions.forEach(sub => {
-        (sub.slots || []).forEach(slot => allDates.add(slot.slot_date));
-    });
-    const sortedDates = [...allDates].sort();
-
-    // Build grid: rows = workers, columns = dates
-    let html = '<div style="overflow-x:auto;"><table class="data-table" style="font-size:0.85em;">';
-    html += '<thead><tr><th>名前</th>';
-    sortedDates.forEach(d => {
-        const dt = new Date(d);
-        html += `<th style="text-align:center;min-width:60px;">${dt.getMonth()+1}/${dt.getDate()}<br>${WEEKDAY_NAMES[dt.getDay()]}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-
-    submissions.forEach(sub => {
-        html += `<tr><td style="white-space:nowrap;">${sub.user_name || sub.user_email || 'User'}</td>`;
-        const slotMap = {};
-        (sub.slots || []).forEach(s => slotMap[s.slot_date] = s);
-
-        sortedDates.forEach(d => {
-            const slot = slotMap[d];
-            const isAssigned = scheduleEntries.some(e => e.user_id === sub.user_id && e.shift_date === d);
-
-            if (!slot || !slot.is_available) {
-                html += '<td style="text-align:center;background:#ffebee;">-</td>';
-            } else {
-                const bg = isAssigned ? '#c8e6c9' : '#e3f2fd';
-                const border = isAssigned ? '2px solid #4caf50' : 'none';
-                html += `<td style="text-align:center;background:${bg};border:${border};cursor:pointer;"
-                    onclick="window.toggleAssignment(${sub.user_id}, '${d}', '${slot.start_time}', '${slot.end_time}')">
-                    ${slot.start_time ? `<div style="font-size:0.75em;">${slot.start_time}-${slot.end_time}</div>` : 'OK'}
-                </td>`;
-            }
-        });
-        html += '</tr>';
-    });
-
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-}
-
-window.toggleAssignment = function(userId, date, startTime, endTime) {
-    const idx = scheduleEntries.findIndex(e => e.user_id === userId && e.shift_date === date);
-    if (idx >= 0) {
-        scheduleEntries.splice(idx, 1);
-    } else {
-        scheduleEntries.push({
-            user_id: userId,
-            shift_date: date,
-            start_time: startTime || '09:00',
-            end_time: endTime || '17:00',
-        });
-    }
-
-    // Re-render
-    const periodId = document.getElementById('builder-period-select').value;
-    renderScheduleGrid(periodId, submissionsData, []);
-    renderHoursSummary();
-};
-
 function renderHoursSummary() {
     const container = document.getElementById('hours-summary');
     const summary = {};
     scheduleEntries.forEach(e => {
         const uid = e.user_id;
         if (!summary[uid]) {
-            // Find user name from submissions
-            const sub = submissionsData.find(s => s.user_id === uid);
+            const sub = (submissionsData || []).find(s => s.user_id === uid);
             summary[uid] = {
                 name: sub ? (sub.user_name || sub.user_email) : `User ${uid}`,
                 hours: 0,
                 shifts: 0,
             };
         }
-        const startMins = parseInt(e.start_time.split(':')[0]) * 60 + parseInt(e.start_time.split(':')[1]);
-        const endMins = parseInt(e.end_time.split(':')[0]) * 60 + parseInt(e.end_time.split(':')[1]);
+        const startMins = timeToMinutes(e.start_time);
+        const endMins = timeToMinutes(e.end_time);
         summary[uid].hours += (endMins - startMins) / 60;
         summary[uid].shifts++;
     });

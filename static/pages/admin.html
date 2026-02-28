@@ -114,7 +114,14 @@
                                         <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()">確定・カレンダー同期</button>
                                     </div>
                                 </div>
-                                <div id="schedule-grid"></div>
+                                <!-- Calendar legend -->
+                                <div class="admin-calendar-legend">
+                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-full"></span>充足</span>
+                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-partial"></span>一部割当</span>
+                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-empty"></span>未割当</span>
+                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-closed"></span>休校</span>
+                                </div>
+                                <div id="calendar-container"></div>
                             </div>
                         </div>
                         <!-- Sidebar -->

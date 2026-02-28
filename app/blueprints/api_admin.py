@@ -9,6 +9,7 @@ from app.models.shift import ShiftPeriod, ShiftSchedule, ShiftScheduleEntry
 from app.models.user import User
 from app.services.shift_service import (
     get_submissions_for_period, save_schedule, get_worker_hours_summary,
+    get_opening_hours_for_period,
 )
 from app.services.approval_service import submit_for_approval, confirm_schedule
 from app.services.auth_service import get_credentials_for_user
@@ -214,6 +215,21 @@ def update_period(period_id):
 
     db.session.commit()
     return jsonify(period.to_dict())
+
+
+# --- Period Opening Hours ---
+
+@api_admin_bp.route('/periods/<int:period_id>/opening-hours', methods=['GET'])
+@require_role('admin')
+def get_period_opening_hours(period_id):
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period:
+        return jsonify({"error": "Not found"}), 404
+
+    hours = get_opening_hours_for_period(
+        period.organization_id, period.start_date, period.end_date
+    )
+    return jsonify(hours)
 
 
 # --- Submissions (view) ---
