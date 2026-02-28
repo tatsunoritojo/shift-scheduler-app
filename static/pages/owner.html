@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事業主 - シフト管理システム</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/owner.css">
+    <link rel="manifest" href="/static/manifest.json">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>シフト管理システム</h1>
+            <div class="user-info">
+                <span id="user-name"></span>
+                <span class="role-badge">事業主</span>
+                <button class="logout-btn" onclick="location.href='/auth/logout'">ログアウト</button>
+            </div>
+        </header>
+        <main class="main-content">
+            <h2 class="mb-16">承認管理</h2>
+
+            <!-- Pending list -->
+            <div id="pending-list" class="loading">
+                <div class="loading-spinner"></div>
+                <p>読み込み中...</p>
+            </div>
+
+            <!-- Schedule detail view -->
+            <div id="schedule-detail" style="display:none;">
+                <div class="flex-between mb-16">
+                    <h3 id="detail-title"></h3>
+                    <button class="btn btn-outline" onclick="showPendingList()">戻る</button>
+                </div>
+
+                <div class="card mb-16">
+                    <h3>スケジュール概要</h3>
+                    <div id="detail-summary"></div>
+                </div>
+
+                <div class="card mb-16">
+                    <h3>シフト一覧</h3>
+                    <div id="detail-entries"></div>
+                </div>
+
+                <div class="card mb-16">
+                    <h3>勤務時間集計</h3>
+                    <div id="detail-hours"></div>
+                </div>
+
+                <div class="card mb-16">
+                    <h3>承認履歴</h3>
+                    <div id="detail-history"></div>
+                </div>
+
+                <div class="card">
+                    <h3>承認/差戻し</h3>
+                    <div class="form-group">
+                        <label>コメント</label>
+                        <textarea id="approval-comment" class="form-control" placeholder="コメント（任意）"></textarea>
+                    </div>
+                    <div class="flex gap-8">
+                        <button class="btn btn-success" onclick="approveSchedule()">承認</button>
+                        <button class="btn btn-danger" onclick="rejectSchedule()">差戻し</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/static/js/owner-app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+</body>
+</html>

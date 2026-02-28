@@ -1,0 +1,23 @@
+/* Admin-specific styles */
+.app-header {
+    background: linear-gradient(135deg, #2196F3, #1565c0);
+}
+
+/* Opening hours grid */
+#opening-hours-grid .form-control {
+    width: auto;
+    display: inline-block;
+}
+
+/* Schedule grid */
+#schedule-grid table {
+    border-collapse: collapse;
+}
+
+#schedule-grid td {
+    transition: all 0.15s;
+}
+
+#schedule-grid td:hover {
+    opacity: 0.8;
+}
