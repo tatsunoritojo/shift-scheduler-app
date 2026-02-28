@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者 - シフト管理システム</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="manifest" href="/static/manifest.json">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>シフト管理システム</h1>
+            <div class="user-info">
+                <span id="user-name"></span>
+                <span class="role-badge">管理者</span>
+                <button class="logout-btn" onclick="location.href='/auth/logout'">ログアウト</button>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="settings" onclick="switchTab('settings')">設定</button>
+                <button class="tab-btn" data-tab="periods" onclick="switchTab('periods')">シフト期間</button>
+                <button class="tab-btn" data-tab="builder" onclick="switchTab('builder')">シフト構築</button>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content active">
+                <div class="card mb-24">
+                    <h3>開校時間設定</h3>
+                    <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します</p>
+                    <div id="opening-hours-grid"></div>
+                    <button class="btn btn-primary mt-16" onclick="saveOpeningHours()">保存</button>
+                </div>
+
+                <div class="card">
+                    <h3>開校時間の例外</h3>
+                    <p class="mb-16" style="color:#666;font-size:0.9em;">祝日や特別な休校日を設定します</p>
+                    <div class="flex gap-8 mb-16">
+                        <input type="date" id="exc-date" class="form-control" style="width:auto;">
+                        <input type="time" id="exc-start" class="form-control" style="width:auto;" value="09:00">
+                        <input type="time" id="exc-end" class="form-control" style="width:auto;" value="21:00">
+                        <label style="display:flex;align-items:center;gap:4px;">
+                            <input type="checkbox" id="exc-closed"> 休校
+                        </label>
+                        <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
+                        <button class="btn btn-primary" onclick="addException()">追加</button>
+                    </div>
+                    <div id="exceptions-list"></div>
+                </div>
+            </div>
+
+            <!-- Periods Tab -->
+            <div id="tab-periods" class="tab-content">
+                <div class="card mb-24">
+                    <h3>新規シフト期間の作成</h3>
+                    <div class="grid-2 mb-16">
+                        <div class="form-group">
+                            <label>名前</label>
+                            <input type="text" id="period-name" class="form-control" placeholder="例: 2026年3月前半">
+                        </div>
+                        <div class="form-group">
+                            <label>ステータス</label>
+                            <select id="period-status" class="form-control">
+                                <option value="draft">下書き</option>
+                                <option value="open">募集中</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>開始日</label>
+                            <input type="date" id="period-start" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>終了日</label>
+                            <input type="date" id="period-end" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>提出期限</label>
+                            <input type="datetime-local" id="period-deadline" class="form-control">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="createPeriod()">作成</button>
+                </div>
+
+                <div class="card">
+                    <h3>シフト期間一覧</h3>
+                    <div id="periods-table-container"></div>
+                </div>
+            </div>
+
+            <!-- Builder Tab -->
+            <div id="tab-builder" class="tab-content">
+                <div class="card mb-16">
+                    <h3>シフト構築</h3>
+                    <div class="form-group">
+                        <label>シフト期間を選択</label>
+                        <select id="builder-period-select" class="form-control" onchange="loadBuilderData()">
+                            <option value="">選択してください</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="builder-content" style="display:none;">
+                    <div class="flex gap-16">
+                        <!-- Main schedule area -->
+                        <div style="flex:1;">
+                            <div class="card">
+                                <div class="flex-between mb-16">
+                                    <h3>スケジュール</h3>
+                                    <div class="flex gap-8">
+                                        <button class="btn btn-primary" onclick="saveSchedule()">保存</button>
+                                        <button class="btn btn-warning" onclick="submitForApproval()">承認申請</button>
+                                        <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()">確定・カレンダー同期</button>
+                                    </div>
+                                </div>
+                                <div id="schedule-grid"></div>
+                            </div>
+                        </div>
+                        <!-- Sidebar -->
+                        <div style="width:300px;">
+                            <div class="card mb-16">
+                                <h3>勤務時間集計</h3>
+                                <div id="hours-summary"></div>
+                            </div>
+                            <div class="card">
+                                <h3>提出状況</h3>
+                                <div id="submissions-summary"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/static/js/admin-app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+</body>
+</html>

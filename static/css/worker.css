@@ -1,0 +1,27 @@
+/* Worker-specific styles */
+.app-header {
+    background: linear-gradient(135deg, #4caf50, #388e3c);
+}
+
+.calendar-day.available {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.calendar-day.available:hover {
+    box-shadow: 0 2px 8px rgba(76,175,80,0.3);
+    transform: translateY(-1px);
+}
+
+.calendar-day.unavailable {
+    cursor: pointer;
+}
+
+.calendar-day.unavailable:hover {
+    box-shadow: 0 2px 8px rgba(244,67,54,0.2);
+}
+
+#submit-btn {
+    font-size: 1.1em;
+    padding: 12px 32px;
+}
