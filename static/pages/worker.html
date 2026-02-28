@@ -35,11 +35,30 @@
                     <button class="btn btn-outline" onclick="showPeriodList()">戻る</button>
                 </div>
 
-                <div class="card mb-16">
-                    <h3>カレンダー</h3>
+                <div class="card mb-16" id="calendar-selector-card" style="display:none;">
+                    <h3>参照するカレンダー</h3>
                     <p class="mb-8" style="color:#666;font-size:0.9em;">
-                        緑 = 勤務可能 / 黄 = 一部可能 / 赤 = 不可 / グレー = 休校日
+                        予定を取得するGoogleカレンダーを選択してください
                     </p>
+                    <div id="calendar-selector" class="calendar-selector"></div>
+                </div>
+
+                <div class="card mb-16">
+                    <div class="calendar-card-header">
+                        <h3>カレンダー</h3>
+                        <button class="calc-settings-toggle-btn" id="calc-settings-toggle-btn" onclick="window.toggleCalcSettings()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <path d="M6.5 1L7.1 3.1C7.5 3.2 7.9 3.4 8.2 3.6L10.2 2.8L11.7 5.4L10 6.7C10 7.1 10 7.5 9.9 7.9L11.7 9.1L10.2 11.7L8.2 10.9C7.9 11.1 7.5 11.3 7.1 11.4L6.5 13.5H3.5L2.9 11.4C2.5 11.3 2.1 11.1 1.8 10.9L-0.2 11.7L-1.7 9.1L0.1 7.9C0 7.5 0 7.1 0 6.7L-1.7 5.4L-0.2 2.8L1.8 3.6C2.1 3.4 2.5 3.2 2.9 3.1L3.5 1H6.5Z" transform="translate(3,1)" fill="currentColor"/>
+                                <circle cx="8" cy="8.2" r="2" fill="#fff"/>
+                            </svg>
+                            計算設定
+                        </button>
+                    </div>
+                    <p class="mb-8" style="color:#666;font-size:0.9em;">
+                        日付をクリックして勤務可否と時間を設定できます。
+                        緑枠 = 勤務可能 / グレー枠 = 不可 / 薄グレー = 休校日
+                    </p>
+                    <div id="calc-settings-container"></div>
                     <div id="calendar-container"></div>
                 </div>
 

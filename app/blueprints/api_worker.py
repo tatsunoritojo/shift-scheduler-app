@@ -8,13 +8,13 @@ from app.services.shift_service import (
     get_opening_hours_for_period, create_or_update_submission,
 )
 from app.services.auth_service import get_credentials_for_user
-from app.services.calendar_service import fetch_events
+from app.services.calendar_service import fetch_events, list_calendars
 
 api_worker_bp = Blueprint('api_worker', __name__, url_prefix='/api/worker')
 
 
 @api_worker_bp.route('/periods', methods=['GET'])
-@require_role('worker', 'admin')
+@require_role('worker')
 def get_open_periods():
     user = get_current_user()
     # Get periods that are open for submission
@@ -37,7 +37,7 @@ def get_open_periods():
 
 
 @api_worker_bp.route('/periods/<int:period_id>/opening-hours', methods=['GET'])
-@require_role('worker', 'admin')
+@require_role('worker')
 def get_period_opening_hours(period_id):
     period = db.session.get(ShiftPeriod, period_id)
     if not period:
@@ -49,8 +49,28 @@ def get_period_opening_hours(period_id):
     return jsonify(hours)
 
 
+@api_worker_bp.route('/calendars', methods=['GET'])
+@require_role('worker')
+def get_worker_calendars():
+    user = get_current_user()
+
+    try:
+        credentials = get_credentials_for_user(user)
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 500
+
+    if not credentials:
+        return jsonify({"error": "No credentials found"}), 404
+
+    try:
+        calendars = list_calendars(credentials)
+        return jsonify(calendars)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @api_worker_bp.route('/calendar/events', methods=['GET'])
-@require_role('worker', 'admin')
+@require_role('worker')
 def get_worker_calendar_events():
     user = get_current_user()
 
@@ -77,7 +97,7 @@ def get_worker_calendar_events():
 
 
 @api_worker_bp.route('/periods/<int:period_id>/availability', methods=['GET'])
-@require_role('worker', 'admin')
+@require_role('worker')
 def get_my_submission(period_id):
     user = get_current_user()
     sub = ShiftSubmission.query.filter_by(
@@ -92,7 +112,7 @@ def get_my_submission(period_id):
 
 
 @api_worker_bp.route('/periods/<int:period_id>/availability', methods=['POST'])
-@require_role('worker', 'admin')
+@require_role('worker')
 def submit_availability(period_id):
     user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)

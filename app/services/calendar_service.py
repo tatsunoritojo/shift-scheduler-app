@@ -35,6 +35,24 @@ def fetch_events(credentials, start_date, end_date, calendar_id='primary'):
     return event_list
 
 
+def list_calendars(credentials):
+    """List all calendars the user has access to."""
+    service = build('calendar', 'v3', credentials=credentials)
+    result = service.calendarList().list().execute()
+    calendars = []
+    for cal in result.get('items', []):
+        calendars.append({
+            'id': cal['id'],
+            'summary': cal.get('summary', ''),
+            'description': cal.get('description', ''),
+            'backgroundColor': cal.get('backgroundColor', '#4285f4'),
+            'foregroundColor': cal.get('foregroundColor', '#ffffff'),
+            'primary': cal.get('primary', False),
+            'accessRole': cal.get('accessRole', ''),
+        })
+    return calendars
+
+
 def create_event(credentials, calendar_id, summary, start_datetime, end_datetime, description=None):
     """Create a Google Calendar event."""
     service = build('calendar', 'v3', credentials=credentials)
