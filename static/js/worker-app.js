@@ -3,6 +3,7 @@ import { renderCalendar } from './modules/calendar-grid.js';
 import { calculateAvailableSlots, calculateDetailedSlots } from './modules/shift-calculator.js';
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
 import { showToast } from './modules/notification.js';
+import { escapeHtml } from './modules/escape-html.js';
 
 let currentUser = null;
 let currentPeriod = null;
@@ -135,7 +136,7 @@ async function loadPeriods() {
                 <div class="card" style="cursor:pointer;" onclick="window.selectPeriod(${p.id})">
                     <div class="flex-between">
                         <div>
-                            <strong>${p.name}</strong>
+                            <strong>${escapeHtml(p.name)}</strong>
                             <div style="color:#666;font-size:0.9em;">${p.start_date} 〜 ${p.end_date}</div>
                             ${p.submission_status ? '<div style="color:#16a34a;font-size:0.82em;margin-top:2px;">クリックして内容を確認・再提出</div>' : ''}
                         </div>
@@ -669,7 +670,7 @@ function renderEventChips(allDayEvents, timedEvents) {
             if (isAllDay) {
                 html += `
                     <div class="event-chip event-chip-allday" style="border-left-color:${color}">
-                        <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                        <span class="event-chip-title">${escapeHtml(event.summary || 'No Title')}</span>
                         <span class="event-chip-time">終日</span>
                     </div>
                 `;
@@ -679,7 +680,7 @@ function renderEventChips(allDayEvents, timedEvents) {
                 html += `
                     <div class="event-chip event-chip-timed" style="border-left-color:${color}">
                         <span class="event-chip-time">${startTime} - ${endTime}</span>
-                        <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                        <span class="event-chip-title">${escapeHtml(event.summary || 'No Title')}</span>
                     </div>
                 `;
             }

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 
 from app.extensions import db
 from app.middleware.auth_middleware import require_role, get_current_user
@@ -59,7 +59,8 @@ def get_worker_calendars():
     try:
         credentials = get_credentials_for_user(user)
     except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Credential error for user {user.id}: {e}")
+        return jsonify({"error": "認証情報の取得に失敗しました。再ログインしてください。"}), 500
 
     if not credentials:
         return jsonify({"error": "No credentials found"}), 404
@@ -68,7 +69,8 @@ def get_worker_calendars():
         calendars = list_calendars(credentials)
         return jsonify(calendars)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Calendar list error: {e}")
+        return jsonify({"error": "カレンダー一覧の取得に失敗しました。"}), 500
 
 
 @api_worker_bp.route('/calendar/events', methods=['GET'])
@@ -79,7 +81,8 @@ def get_worker_calendar_events():
     try:
         credentials = get_credentials_for_user(user)
     except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Credential error for user {user.id}: {e}")
+        return jsonify({"error": "認証情報の取得に失敗しました。再ログインしてください。"}), 500
 
     if not credentials:
         return jsonify({"error": "No credentials found"}), 404
@@ -95,7 +98,8 @@ def get_worker_calendar_events():
         events = fetch_events(credentials, start_date, end_date, calendar_id)
         return jsonify(events)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Calendar event fetch error: {e}")
+        return jsonify({"error": "カレンダーイベントの取得に失敗しました。"}), 500
 
 
 @api_worker_bp.route('/periods/<int:period_id>/availability', methods=['GET'])

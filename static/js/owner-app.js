@@ -1,5 +1,6 @@
 import { api, getCurrentUser } from './modules/api-client.js';
 import { showToast } from './modules/notification.js';
+import { escapeHtml } from './modules/escape-html.js';
 
 let currentUser = null;
 let currentScheduleId = null;
@@ -30,11 +31,11 @@ async function loadPendingApprovals() {
             <div class="card" style="cursor:pointer;" onclick="window.viewSchedule(${a.id})">
                 <div class="flex-between">
                     <div>
-                        <strong>${a.period ? a.period.name : 'スケジュール #' + a.id}</strong>
+                        <strong>${a.period ? escapeHtml(a.period.name) : 'スケジュール #' + a.id}</strong>
                         <div style="color:#666;font-size:0.9em;">
                             ${a.period ? `${a.period.start_date} 〜 ${a.period.end_date}` : ''}
                         </div>
-                        <div style="color:#666;font-size:0.85em;">作成: ${a.creator_name || '不明'}</div>
+                        <div style="color:#666;font-size:0.85em;">作成: ${escapeHtml(a.creator_name || '不明')}</div>
                     </div>
                     <span class="badge badge-pending">承認待ち</span>
                 </div>
@@ -78,7 +79,7 @@ window.viewSchedule = async function(scheduleId) {
                             return `<tr>
                                 <td>${e.shift_date}</td>
                                 <td>${WEEKDAYS[dt.getDay()]}</td>
-                                <td>${e.user_name || `User ${e.user_id}`}</td>
+                                <td>${escapeHtml(e.user_name) || `User ${e.user_id}`}</td>
                                 <td>${e.start_time} - ${e.end_time}</td>
                             </tr>`;
                         }).join('')}
@@ -97,7 +98,7 @@ window.viewSchedule = async function(scheduleId) {
                     <tbody>
                         ${data.hours_summary.map(h => `
                             <tr>
-                                <td>${h.user_name || `User ${h.user_id}`}</td>
+                                <td>${escapeHtml(h.user_name) || `User ${h.user_id}`}</td>
                                 <td>${h.total_hours.toFixed(1)} 時間</td>
                                 <td>${h.shift_count} 日</td>
                             </tr>
@@ -120,12 +121,12 @@ window.viewSchedule = async function(scheduleId) {
             document.getElementById('detail-history').innerHTML = data.history.map(h => `
                 <div class="flex-between mb-8" style="padding:8px;background:#f8f9fa;border-radius:8px;">
                     <div>
-                        <span class="badge badge-${h.action}">${actionLabels[h.action] || h.action}</span>
-                        <span style="color:#666;margin-left:8px;">${h.performer_name || ''}</span>
+                        <span class="badge badge-${h.action}">${actionLabels[h.action] || escapeHtml(h.action)}</span>
+                        <span style="color:#666;margin-left:8px;">${escapeHtml(h.performer_name || '')}</span>
                     </div>
                     <span style="color:#999;font-size:0.85em;">${h.performed_at ? h.performed_at.substring(0, 16).replace('T', ' ') : ''}</span>
                 </div>
-                ${h.comment ? `<p style="color:#666;font-size:0.9em;margin:4px 0 8px 8px;">${h.comment}</p>` : ''}
+                ${h.comment ? `<p style="color:#666;font-size:0.9em;margin:4px 0 8px 8px;">${escapeHtml(h.comment)}</p>` : ''}
             `).join('');
         } else {
             document.getElementById('detail-history').innerHTML = '<p style="color:#999;">履歴なし</p>';
@@ -174,7 +175,7 @@ window.rejectSchedule = async function() {
 
     showConfirmDialog(
         'このスケジュールを差戻しますか？',
-        `理由「${comment}」で差戻します。管理者がスケジュールを修正して再申請できます。`,
+        `理由「${escapeHtml(comment)}」で差戻します。管理者がスケジュールを修正して再申請できます。`,
         'btn-danger',
         '差戻す',
         async () => {

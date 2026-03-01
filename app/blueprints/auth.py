@@ -33,7 +33,8 @@ def callback():
     try:
         flow.fetch_token(authorization_response=request.url)
     except Exception as e:
-        return jsonify({"error": f"Failed to fetch token: {e}"}), 500
+        current_app.logger.error(f"Failed to fetch token: {e}")
+        return jsonify({"error": "認証に失敗しました。もう一度お試しください。"}), 500
 
     credentials = flow.credentials
     google_id, email, display_name = extract_user_info(credentials)
