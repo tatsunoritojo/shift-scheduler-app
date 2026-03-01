@@ -140,35 +140,11 @@
 
 /* ==========================================
    Day Popup — Admin overrides
-   (base styles from worker.css)
    ========================================== */
 
 /* Admin popup is wider */
 .admin-day-popup {
     max-width: 520px;
-}
-
-/* Admin toggle uses primary blue instead of green */
-.day-popup-toggle.active .toggle-track {
-    background: var(--color-primary-500);
-}
-
-.day-popup-toggle.active .toggle-label {
-    color: var(--color-primary-600);
-}
-
-/* Timeline bar inherits from worker.css */
-.timeline-bar {
-    background: var(--color-neutral-100);
-    border-radius: var(--radius-sm);
-}
-
-.timeline-labels {
-    color: var(--color-neutral-400);
-}
-
-.timeline-legend {
-    color: var(--color-neutral-500);
 }
 
 /* ==========================================

@@ -20,7 +20,7 @@ async function loadPendingApprovals() {
         const approvals = await api.get('/api/owner/pending-approvals');
 
         if (!approvals || approvals.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>承認待ちのスケジュールはありません</p></div>';
+            container.innerHTML = '<div class="empty-state"><p>承認待ちのスケジュールはありません</p><p class="empty-state-hint">管理者がシフトスケジュールの承認申請を行うと、ここに表示されます</p></div>';
             container.classList.remove('loading');
             return;
         }
@@ -42,7 +42,7 @@ async function loadPendingApprovals() {
         `).join('');
     } catch (e) {
         container.classList.remove('loading');
-        container.innerHTML = '<div class="empty-state"><p>読み込みに失敗しました</p></div>';
+        container.innerHTML = '<div class="empty-state"><p>読み込みに失敗しました</p><p class="empty-state-hint">ネットワーク接続を確認して、ページを再読み込みしてください</p></div>';
     }
 }
 
@@ -145,31 +145,71 @@ window.showPendingList = function() {
 window.approveSchedule = async function() {
     if (!currentScheduleId) return;
     const comment = document.getElementById('approval-comment').value;
-    try {
-        await api.post(`/api/owner/schedules/${currentScheduleId}/approve`, { comment });
-        showToast('スケジュールを承認しました', 'success');
-        showPendingList();
-        await loadPendingApprovals();
-    } catch (e) {
-        showToast(`承認に失敗しました: ${e.message}`, 'error');
-    }
+
+    showConfirmDialog(
+        'このスケジュールを承認しますか？',
+        '承認すると、管理者がシフトを確定してGoogleカレンダーに同期できるようになります。',
+        'btn-success',
+        '承認する',
+        async () => {
+            try {
+                await api.post(`/api/owner/schedules/${currentScheduleId}/approve`, { comment });
+                showToast('スケジュールを承認しました', 'success');
+                showPendingList();
+                await loadPendingApprovals();
+            } catch (e) {
+                showToast(`承認に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
 
 window.rejectSchedule = async function() {
     if (!currentScheduleId) return;
     const comment = document.getElementById('approval-comment').value;
     if (!comment) {
-        showToast('差戻しの理由を入力してください', 'warning');
+        showToast('差戻しの理由をコメント欄に入力してください', 'warning');
         return;
     }
-    try {
-        await api.post(`/api/owner/schedules/${currentScheduleId}/reject`, { comment });
-        showToast('スケジュールを差戻しました', 'success');
-        showPendingList();
-        await loadPendingApprovals();
-    } catch (e) {
-        showToast(`差戻しに失敗しました: ${e.message}`, 'error');
-    }
+
+    showConfirmDialog(
+        'このスケジュールを差戻しますか？',
+        `理由「${comment}」で差戻します。管理者がスケジュールを修正して再申請できます。`,
+        'btn-danger',
+        '差戻す',
+        async () => {
+            try {
+                await api.post(`/api/owner/schedules/${currentScheduleId}/reject`, { comment });
+                showToast('スケジュールを差戻しました', 'success');
+                showPendingList();
+                await loadPendingApprovals();
+            } catch (e) {
+                showToast(`差戻しに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
+
+function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-dialog-overlay';
+    overlay.innerHTML = `
+        <div class="confirm-dialog">
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <div class="confirm-dialog-actions">
+                <button class="btn btn-outline" id="confirm-cancel">キャンセル</button>
+                <button class="btn ${btnClass}" id="confirm-ok">${btnLabel}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
+    overlay.querySelector('#confirm-ok').onclick = () => {
+        overlay.remove();
+        onConfirm();
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

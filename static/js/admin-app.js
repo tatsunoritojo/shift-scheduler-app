@@ -10,6 +10,8 @@ let openingHoursData = {}; // dateStr -> { start_time, end_time } | null
 let currentPeriod = null;  // Selected period object
 let dayAggregatedData = {}; // dateStr -> aggregated day info
 let workersData = []; // workers list
+let builderLoadGeneration = 0; // Guard against stale async responses
+let adminCalendarEvents = []; // Google Calendar events for the admin
 
 const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -91,7 +93,7 @@ async function loadExceptions() {
     const container = document.getElementById('exceptions-list');
 
     if (!data || data.length === 0) {
-        container.innerHTML = '<p style="color:#999;">例外日はありません</p>';
+        container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>例外日はまだ設定されていません</p><p class="empty-state-hint">祝日や休校日を上のフォームから追加できます</p></div>';
         return;
     }
 
@@ -147,7 +149,7 @@ async function loadPeriods() {
     const container = document.getElementById('periods-table-container');
 
     if (!data || data.length === 0) {
-        container.innerHTML = '<p style="color:#999;">シフト期間はありません</p>';
+        container.innerHTML = '<div class="empty-state"><p>シフト期間はまだありません</p><p class="empty-state-hint">上のフォームから新しいシフト期間を作成してください</p></div>';
         return;
     }
 
@@ -218,8 +220,14 @@ window.loadBuilderData = async function() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) {
         document.getElementById('builder-content').style.display = 'none';
+        updateBuilderPeriodTitle(null);
         return;
     }
+
+    // Close any open popup before switching
+    closeAdminDayPopup();
+
+    const thisGeneration = ++builderLoadGeneration;
 
     document.getElementById('builder-content').style.display = 'block';
 
@@ -228,31 +236,48 @@ window.loadBuilderData = async function() {
     const opt = select.options[select.selectedIndex];
     // Parse dates from option text: "name (YYYY-MM-DD 〜 YYYY-MM-DD)"
     const match = opt.textContent.match(/(\d{4}-\d{2}-\d{2})\s*〜\s*(\d{4}-\d{2}-\d{2})/);
-    currentPeriod = match ? { id: periodId, start_date: match[1], end_date: match[2] } : null;
+    const periodName = opt.textContent.replace(/\s*\(.*$/, '');
+    currentPeriod = match ? { id: periodId, name: periodName, start_date: match[1], end_date: match[2] } : null;
 
-    const [submissions, schedule, workers, openingHours] = await Promise.all([
-        api.get(`/api/admin/periods/${periodId}/submissions`),
-        api.get(`/api/admin/periods/${periodId}/schedule`),
-        api.get('/api/admin/workers'),
-        api.get(`/api/admin/periods/${periodId}/opening-hours`),
-    ]);
+    updateBuilderPeriodTitle(currentPeriod);
 
-    submissionsData = submissions || [];
-    workersData = workers || [];
-    scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
-    openingHoursData = openingHours || {};
+    try {
+        // Fetch calendar events in parallel with other data
+        const calEventsPromise = api.get(`/api/calendar/events?startDate=${currentPeriod.start_date}&endDate=${currentPeriod.end_date}&calendarId=primary`)
+            .catch(err => { console.warn('カレンダーイベント取得失敗:', err); return []; });
 
-    // Show confirm button if schedule is approved
-    if (schedule && schedule.status === 'approved') {
-        document.getElementById('confirm-btn').style.display = 'inline-block';
-    } else {
-        document.getElementById('confirm-btn').style.display = 'none';
+        const [submissions, schedule, workers, openingHours, calEvents] = await Promise.all([
+            api.get(`/api/admin/periods/${periodId}/submissions`),
+            api.get(`/api/admin/periods/${periodId}/schedule`),
+            api.get('/api/admin/workers'),
+            api.get(`/api/admin/periods/${periodId}/opening-hours`),
+            calEventsPromise,
+        ]);
+
+        // Guard: discard stale response if user switched periods during fetch
+        if (thisGeneration !== builderLoadGeneration) return;
+
+        submissionsData = submissions || [];
+        workersData = workers || [];
+        scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
+        openingHoursData = openingHours || {};
+        adminCalendarEvents = calEvents || [];
+
+        // Show confirm button if schedule is approved
+        if (schedule && schedule.status === 'approved') {
+            document.getElementById('confirm-btn').style.display = 'inline-block';
+        } else {
+            document.getElementById('confirm-btn').style.display = 'none';
+        }
+
+        renderSubmissionsSummary(submissions);
+        buildDayAggregatedData();
+        renderBuilderCalendar();
+        renderHoursSummary();
+    } catch (e) {
+        if (thisGeneration !== builderLoadGeneration) return;
+        showToast('データの読み込みに失敗しました', 'error');
     }
-
-    renderSubmissionsSummary(submissions);
-    buildDayAggregatedData();
-    renderBuilderCalendar();
-    renderHoursSummary();
 };
 
 // --- Aggregation ---
@@ -297,6 +322,24 @@ function buildDayAggregatedData() {
             availableCount,
             assignedCount,
         };
+    }
+}
+
+// --- Period Title ---
+
+function updateBuilderPeriodTitle(period) {
+    let el = document.getElementById('builder-period-title');
+    if (!el) {
+        const container = document.getElementById('builder-content');
+        if (!container) return;
+        el = document.createElement('div');
+        el.id = 'builder-period-title';
+        container.insertBefore(el, container.firstChild);
+    }
+    if (period) {
+        el.innerHTML = `<div class="guide-box" style="padding:12px 20px;margin-bottom:16px;"><strong style="font-size:1.05em;">${period.name}</strong><span style="margin-left:12px;color:var(--color-neutral-500);font-size:0.9em;">${period.start_date} 〜 ${period.end_date}</span></div>`;
+    } else {
+        el.innerHTML = '';
     }
 }
 
@@ -357,6 +400,54 @@ function renderBuilderCalendar() {
     });
 }
 
+// --- Calendar Event Helpers ---
+
+function isAllDayEvent(event) {
+    return event.start && event.start.length === 10;
+}
+
+function getEventsForDate(dateStr) {
+    return adminCalendarEvents.filter(event => {
+        const eventStart = (event.start || '').substring(0, 10);
+        const eventEnd = (event.end || '').substring(0, 10);
+        return eventStart === dateStr || (eventStart < dateStr && eventEnd > dateStr);
+    });
+}
+
+function renderAdminEventsSection(dateStr) {
+    const events = getEventsForDate(dateStr);
+    if (events.length === 0) {
+        return '<div class="day-popup-no-events">この日の予定はありません</div>';
+    }
+
+    const allDayEvents = events.filter(isAllDayEvent);
+    const timedEvents = events.filter(e => !isAllDayEvent(e));
+    const sorted = [...allDayEvents, ...timedEvents];
+
+    let html = '<div class="day-popup-events">';
+    for (const event of sorted) {
+        if (isAllDayEvent(event)) {
+            html += `
+                <div class="event-chip event-chip-allday">
+                    <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                    <span class="event-chip-time">終日</span>
+                </div>
+            `;
+        } else {
+            const startTime = (event.start || '').substring(11, 16) || '';
+            const endTime = (event.end || '').substring(11, 16) || '';
+            html += `
+                <div class="event-chip event-chip-timed">
+                    <span class="event-chip-time">${startTime} - ${endTime}</span>
+                    <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                </div>
+            `;
+        }
+    }
+    html += '</div>';
+    return html;
+}
+
 // --- Day Popup ---
 
 function showAdminDayPopup(dateStr, data) {
@@ -393,6 +484,15 @@ function showAdminDayPopup(dateStr, data) {
             <div class="day-popup-opening-hours">${data.openingHours.start_time} 〜 ${data.openingHours.end_time}</div>
         `;
         popup.appendChild(section);
+    }
+
+    // Calendar events section
+    const eventsForDay = getEventsForDate(dateStr);
+    if (eventsForDay.length > 0) {
+        const evSection = document.createElement('div');
+        evSection.className = 'day-popup-section';
+        evSection.innerHTML = `<div class="day-popup-label">Googleカレンダー予定 (${eventsForDay.length}件)</div>` + renderAdminEventsSection(dateStr);
+        popup.appendChild(evSection);
     }
 
     // Coverage timeline section
@@ -613,18 +713,30 @@ window.applyWorkerTime = function(userId, dateStr) {
 
 // --- Sidebar renderers ---
 
+function formatSubmittedAt(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 function renderSubmissionsSummary(submissions) {
     const container = document.getElementById('submissions-summary');
     if (!submissions || submissions.length === 0) {
-        container.innerHTML = '<p style="color:#999;">提出なし</p>';
+        container.innerHTML = '<p style="color:#999;font-size:0.9em;">まだ希望提出がありません。アルバイトがシフト希望を提出すると、ここに表示されます。</p>';
         return;
     }
-    container.innerHTML = submissions.map(s => `
-        <div class="flex-between mb-8">
-            <span>${s.user_name || s.user_email}</span>
-            <span class="badge badge-${s.status}">${s.status === 'submitted' ? '提出済' : s.status}</span>
-        </div>
-    `).join('');
+    container.innerHTML = submissions.map(s => {
+        const timeLabel = s.submitted_at ? formatSubmittedAt(s.submitted_at) : '';
+        return `
+            <div class="mb-8" style="padding:6px 0;border-bottom:1px solid var(--color-neutral-100);">
+                <div class="flex-between">
+                    <span>${s.user_name || s.user_email}</span>
+                    <span class="badge badge-${s.status}">${s.status === 'submitted' ? '提出済' : s.status}</span>
+                </div>
+                ${timeLabel ? `<div style="color:#999;font-size:0.78em;margin-top:2px;">提出: ${timeLabel}</div>` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 function renderHoursSummary() {
@@ -647,7 +759,7 @@ function renderHoursSummary() {
     });
 
     if (Object.keys(summary).length === 0) {
-        container.innerHTML = '<p style="color:#999;">割当なし</p>';
+        container.innerHTML = '<p style="color:#999;font-size:0.9em;">カレンダーの日付をクリックして、スタッフを割り当ててください。</p>';
         return;
     }
 
@@ -673,28 +785,72 @@ window.saveSchedule = async function() {
 window.submitForApproval = async function() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
-    // Save first, then submit
-    try {
-        await api.post(`/api/admin/periods/${periodId}/schedule`, { entries: scheduleEntries });
-        await api.post(`/api/admin/periods/${periodId}/schedule/submit`);
-        showToast('承認申請を送信しました', 'success');
-    } catch (e) {
-        showToast(`承認申請に失敗しました: ${e.message}`, 'error');
+
+    if (scheduleEntries.length === 0) {
+        showToast('スタッフが割り当てられていません。カレンダーから割当を行ってください。', 'warning');
+        return;
     }
+
+    showConfirmDialog(
+        '承認申請を送信しますか？',
+        `現在のスケジュール（${scheduleEntries.length}件のシフト）を事業主に承認申請します。申請後も事業主が差戻した場合は再編集できます。`,
+        'btn-warning',
+        '承認申請を送信',
+        async () => {
+            try {
+                await api.post(`/api/admin/periods/${periodId}/schedule`, { entries: scheduleEntries });
+                await api.post(`/api/admin/periods/${periodId}/schedule/submit`);
+                showToast('承認申請を送信しました', 'success');
+            } catch (e) {
+                showToast(`承認申請に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
 
 window.confirmSchedule = async function() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
-    try {
-        const result = await api.post(`/api/admin/periods/${periodId}/schedule/confirm`);
-        const syncResults = result.sync_results || [];
-        const success = syncResults.filter(r => r.success).length;
-        const failed = syncResults.filter(r => r.error).length;
-        showToast(`確定完了: ${success}件同期成功, ${failed}件失敗`, success > 0 ? 'success' : 'warning');
-    } catch (e) {
-        showToast(`確定に失敗しました: ${e.message}`, 'error');
-    }
+
+    showConfirmDialog(
+        'シフトを確定してGoogleカレンダーに同期しますか？',
+        '確定すると各スタッフのGoogleカレンダーにシフトが登録されます。この操作は取り消せません。',
+        'btn-success',
+        '確定・同期する',
+        async () => {
+            try {
+                const result = await api.post(`/api/admin/periods/${periodId}/schedule/confirm`);
+                const syncResults = result.sync_results || [];
+                const success = syncResults.filter(r => r.success).length;
+                const failed = syncResults.filter(r => r.error).length;
+                showToast(`確定完了: ${success}件同期成功, ${failed}件失敗`, success > 0 ? 'success' : 'warning');
+            } catch (e) {
+                showToast(`確定に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
+
+function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-dialog-overlay';
+    overlay.innerHTML = `
+        <div class="confirm-dialog">
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <div class="confirm-dialog-actions">
+                <button class="btn btn-outline" id="confirm-cancel">キャンセル</button>
+                <button class="btn ${btnClass}" id="confirm-ok">${btnLabel}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
+    overlay.querySelector('#confirm-ok').onclick = () => {
+        overlay.remove();
+        onConfirm();
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

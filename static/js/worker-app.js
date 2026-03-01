@@ -40,6 +40,8 @@ function renderCalcSettingsPanel() {
     const settings = getCalcSettings();
     container.innerHTML = `
         <div class="calc-settings-body" id="calc-settings-body" style="display:none;">
+            <p class="help-text" style="margin-bottom:4px;">開校時間からGoogleカレンダーの予定を差し引き、勤務可能な時間帯を自動計算しています。</p>
+            <p class="help-text" style="margin-bottom:12px;">計算ロジック: 開校時間 − 予定の時間 − 前後バッファ = 勤務可能時間。残った空き時間が最低勤務時間より短い場合は除外されます。</p>
             <div class="calc-settings-row">
                 <label class="calc-settings-label">移動時間（前後バッファ）</label>
                 <div class="calc-settings-input-group">
@@ -48,6 +50,7 @@ function renderCalcSettingsPanel() {
                         oninput="document.getElementById('calc-buffer-val').textContent=this.value">
                     <span class="calc-settings-value"><span id="calc-buffer-val">${settings.bufferTime}</span> 分</span>
                 </div>
+                <div class="field-hint">予定の前後に確保する余裕時間です。通勤や準備の時間を考慮してください。</div>
             </div>
             <div class="calc-settings-row">
                 <label class="calc-settings-label">最低勤務時間</label>
@@ -57,6 +60,7 @@ function renderCalcSettingsPanel() {
                         oninput="document.getElementById('calc-mingap-val').textContent=this.value">
                     <span class="calc-settings-value"><span id="calc-mingap-val">${settings.minGapTime}</span> 分</span>
                 </div>
+                <div class="field-hint">空き時間がこの値より短い場合、勤務不可として除外されます。</div>
             </div>
             <div class="calc-settings-actions">
                 <button class="btn btn-primary btn-sm" onclick="window.applyCalcSettings()">適用</button>
@@ -94,6 +98,12 @@ window.resetCalcSettings = function() {
     showToast('デフォルト設定に戻しました', 'info');
 };
 
+function formatSubmittedAt(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 提出`;
+}
+
 async function init() {
     try {
         currentUser = await getCurrentUser();
@@ -109,28 +119,33 @@ async function loadPeriods() {
     try {
         const periods = await api.get('/api/worker/periods');
         if (!periods || periods.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>現在提出可能なシフト期間はありません</p></div>';
+            container.innerHTML = '<div class="empty-state"><p>現在提出可能なシフト期間はありません</p><p class="empty-state-hint">管理者がシフト期間を作成し「募集中」にすると、ここに表示されます</p></div>';
             return;
         }
 
-        container.innerHTML = periods.map(p => `
-            <div class="card" style="cursor:pointer;" onclick="window.selectPeriod(${p.id})">
-                <div class="flex-between">
-                    <div>
-                        <strong>${p.name}</strong>
-                        <div style="color:#666;font-size:0.9em;">${p.start_date} 〜 ${p.end_date}</div>
-                    </div>
-                    <div>
-                        ${p.submission_status
-                            ? `<span class="badge badge-submitted">提出済</span>`
-                            : `<span class="badge badge-open">未提出</span>`
-                        }
+        container.innerHTML = periods.map(p => {
+            let statusHtml;
+            if (p.submission_status) {
+                const submittedLabel = formatSubmittedAt(p.submitted_at);
+                statusHtml = `<div style="text-align:right;"><span class="badge badge-submitted">提出済</span><div style="color:#999;font-size:0.78em;margin-top:4px;">${submittedLabel}</div></div>`;
+            } else {
+                statusHtml = `<span class="badge badge-open">未提出</span>`;
+            }
+            return `
+                <div class="card" style="cursor:pointer;" onclick="window.selectPeriod(${p.id})">
+                    <div class="flex-between">
+                        <div>
+                            <strong>${p.name}</strong>
+                            <div style="color:#666;font-size:0.9em;">${p.start_date} 〜 ${p.end_date}</div>
+                            ${p.submission_status ? '<div style="color:#16a34a;font-size:0.82em;margin-top:2px;">クリックして内容を確認・再提出</div>' : ''}
+                        </div>
+                        <div>${statusHtml}</div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) {
-        container.innerHTML = `<div class="empty-state"><p>読み込みに失敗しました</p></div>`;
+        container.innerHTML = `<div class="empty-state"><p>読み込みに失敗しました</p><p class="empty-state-hint">ネットワーク接続を確認して、ページを再読み込みしてください</p></div>`;
     }
 }
 
@@ -143,6 +158,25 @@ window.selectPeriod = async function(periodId) {
         document.getElementById('period-select-section').style.display = 'none';
         document.getElementById('availability-section').style.display = 'block';
         document.getElementById('period-title').textContent = currentPeriod.name;
+
+        // Show resubmission banner if already submitted
+        let bannerEl = document.getElementById('resubmit-banner');
+        if (!bannerEl) {
+            bannerEl = document.createElement('div');
+            bannerEl.id = 'resubmit-banner';
+            const section = document.getElementById('availability-section');
+            section.insertBefore(bannerEl, section.children[1]);
+        }
+        if (currentPeriod.submission_status) {
+            const submittedLabel = formatSubmittedAt(currentPeriod.submitted_at);
+            bannerEl.className = 'guide-box';
+            bannerEl.style.cssText = 'background:var(--color-warning-50);border-color:var(--color-warning-100);';
+            bannerEl.innerHTML = `<div class="guide-box-title" style="color:var(--color-warning-600);">前回の提出内容を表示しています</div><p style="margin:0;font-size:0.9em;color:var(--color-neutral-600);">最終提出: ${submittedLabel}。内容を変更して再提出できます。再提出すると前回の内容は上書きされます。</p>`;
+        } else {
+            bannerEl.className = '';
+            bannerEl.style.cssText = '';
+            bannerEl.innerHTML = '';
+        }
 
         await loadCalendarList();
         await loadAvailabilityData();
@@ -774,28 +808,68 @@ window.showPeriodList = function() {
 window.submitAvailability = async function() {
     if (!currentPeriod) return;
 
-    const slots = Object.entries(slotData)
-        .filter(([_, d]) => !d.closed)
-        .map(([dateStr, d]) => ({
-            slot_date: dateStr,
-            is_available: d.is_available,
-            start_time: d.start_time || null,
-            end_time: d.end_time || null,
-            is_custom_time: d.is_custom_time || false,
-            auto_calculated_start: d.auto_calculated_start || null,
-            auto_calculated_end: d.auto_calculated_end || null,
-        }));
+    const available = Object.values(slotData).filter(d => d.is_available).length;
+    const total = Object.values(slotData).filter(d => !d.closed).length;
+    const isResubmit = !!currentPeriod.submission_status;
 
-    const notes = document.getElementById('submission-notes').value;
+    const title = isResubmit ? 'シフト希望を再提出しますか？' : 'シフト希望を提出しますか？';
+    const message = isResubmit
+        ? `${total}日中 ${available}日を勤務可能として再提出します。前回の提出内容は上書きされます。`
+        : `${total}日中 ${available}日を勤務可能として提出します。提出後も期間内であれば再提出できます。`;
+    const btnLabel = isResubmit ? '再提出する' : '提出する';
 
-    try {
-        await api.post(`/api/worker/periods/${currentPeriod.id}/availability`, { slots, notes });
-        showToast('シフト希望を提出しました', 'success');
-        showPeriodList();
-        await loadPeriods();
-    } catch (e) {
-        showToast(`提出に失敗しました: ${e.message}`, 'error');
-    }
+    showConfirmDialog(
+        title,
+        message,
+        'btn-success',
+        btnLabel,
+        async () => {
+            const slots = Object.entries(slotData)
+                .filter(([_, d]) => !d.closed)
+                .map(([dateStr, d]) => ({
+                    slot_date: dateStr,
+                    is_available: d.is_available,
+                    start_time: d.start_time || null,
+                    end_time: d.end_time || null,
+                    is_custom_time: d.is_custom_time || false,
+                    auto_calculated_start: d.auto_calculated_start || null,
+                    auto_calculated_end: d.auto_calculated_end || null,
+                }));
+
+            const notes = document.getElementById('submission-notes').value;
+
+            try {
+                await api.post(`/api/worker/periods/${currentPeriod.id}/availability`, { slots, notes });
+                showToast(isResubmit ? 'シフト希望を再提出しました' : 'シフト希望を提出しました', 'success');
+                showPeriodList();
+                await loadPeriods();
+            } catch (e) {
+                showToast(`提出に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
+
+function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-dialog-overlay';
+    overlay.innerHTML = `
+        <div class="confirm-dialog">
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <div class="confirm-dialog-actions">
+                <button class="btn btn-outline" id="confirm-cancel">キャンセル</button>
+                <button class="btn ${btnClass}" id="confirm-ok">${btnLabel}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
+    overlay.querySelector('#confirm-ok').onclick = () => {
+        overlay.remove();
+        onConfirm();
+    };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

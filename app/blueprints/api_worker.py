@@ -31,6 +31,7 @@ def get_open_periods():
             shift_period_id=p.id, user_id=user.id
         ).first()
         data['submission_status'] = sub.status if sub else None
+        data['submitted_at'] = sub.submitted_at.isoformat() if sub and sub.submitted_at else None
         result.append(data)
 
     return jsonify(result)

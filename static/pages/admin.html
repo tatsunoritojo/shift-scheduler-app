@@ -27,16 +27,24 @@
 
             <!-- Settings Tab -->
             <div id="tab-settings" class="tab-content active">
+                <div class="guide-box">
+                    <div class="guide-box-title">管理者画面の使い方</div>
+                    <ol class="guide-steps">
+                        <li><strong>設定</strong>（このタブ）: 開校時間と休校日を設定します</li>
+                        <li><strong>シフト期間</strong>: シフトの募集期間を作成し、アルバイトに希望を提出してもらいます</li>
+                        <li><strong>シフト構築</strong>: 提出された希望をもとにシフトを組み、事業主に承認申請します</li>
+                    </ol>
+                </div>
                 <div class="card mb-24">
                     <h3>開校時間設定</h3>
-                    <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します</p>
+                    <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの開校時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
                     <div id="opening-hours-grid"></div>
                     <button class="btn btn-primary mt-16" onclick="saveOpeningHours()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                 </div>
 
                 <div class="card">
                     <h3>開校時間の例外</h3>
-                    <p class="mb-16" style="color:#666;font-size:0.9em;">祝日や特別な休校日を設定します</p>
+                    <p class="mb-16" style="color:#666;font-size:0.9em;">祝日・長期休暇・特別営業日など、通常と異なる日を個別に設定します</p>
                     <div class="flex gap-8 mb-16">
                         <input type="date" id="exc-date" class="form-control" style="width:auto;">
                         <input type="time" id="exc-start" class="form-control" style="width:auto;" value="09:00">
@@ -55,10 +63,12 @@
             <div id="tab-periods" class="tab-content">
                 <div class="card mb-24">
                     <h3>新規シフト期間の作成</h3>
+                    <p class="help-text mb-16">シフトを募集する期間を作成します。「募集中」にするとアルバイトがシフト希望を提出できるようになります。</p>
                     <div class="grid-2 mb-16">
                         <div class="form-group">
                             <label>名前</label>
                             <input type="text" id="period-name" class="form-control" placeholder="例: 2026年3月前半">
+                            <div class="field-hint">アルバイトに表示される名前です</div>
                         </div>
                         <div class="form-group">
                             <label>ステータス</label>
@@ -66,6 +76,7 @@
                                 <option value="draft">下書き</option>
                                 <option value="open">募集中</option>
                             </select>
+                            <div class="field-hint">下書き = まだ非公開 / 募集中 = アルバイトに公開</div>
                         </div>
                         <div class="form-group">
                             <label>開始日</label>
@@ -78,6 +89,7 @@
                         <div class="form-group">
                             <label>提出期限</label>
                             <input type="datetime-local" id="period-deadline" class="form-control">
+                            <div class="field-hint">この日時を過ぎると提出できなくなります（任意）</div>
                         </div>
                     </div>
                     <button class="btn btn-primary" onclick="createPeriod()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 作成</button>
@@ -93,6 +105,7 @@
             <div id="tab-builder" class="tab-content">
                 <div class="card mb-16">
                     <h3>シフト構築</h3>
+                    <p class="help-text mb-16">アルバイトが提出したシフト希望をもとに、実際のシフトスケジュールを組み立てます。カレンダーの日付をクリックして、スタッフの割当を行ってください。</p>
                     <div class="form-group">
                         <label>シフト期間を選択</label>
                         <select id="builder-period-select" class="form-control" onchange="loadBuilderData()">
@@ -114,6 +127,7 @@
                                         <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
                                     </div>
                                 </div>
+                                <p class="help-text mb-8">「保存」で下書き保存、「承認申請」で事業主に確認を依頼、承認後に「確定・カレンダー同期」でGoogleカレンダーに反映します。</p>
                                 <!-- Calendar legend -->
                                 <div class="admin-calendar-legend">
                                     <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-full"></span>充足</span>
@@ -131,7 +145,11 @@
                                 <div id="hours-summary"></div>
                             </div>
                             <div class="card">
-                                <h3>提出状況</h3>
+                                <div class="flex-between mb-8">
+                                    <h3 style="margin-bottom:0;">提出状況</h3>
+                                    <button class="btn btn-outline btn-sm" onclick="loadBuilderData()" title="最新の提出データを再読み込み"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i></button>
+                                </div>
+                                <p class="help-text mb-8">アルバイトは期間中に何度でも再提出できます。日時は最終提出時刻です。</p>
                                 <div id="submissions-summary"></div>
                             </div>
                         </div>

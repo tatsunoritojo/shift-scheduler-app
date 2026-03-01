@@ -513,6 +513,114 @@ textarea.form-control {
     color: var(--color-neutral-400);
 }
 
+/* Guidance / Help text components */
+.guide-box {
+    background: var(--color-primary-50);
+    border: 1px solid var(--color-primary-100);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    line-height: 1.7;
+    color: var(--color-neutral-700);
+}
+
+.guide-box-title {
+    font-weight: 600;
+    color: var(--color-primary-700);
+    margin-bottom: 6px;
+    font-size: 0.95em;
+}
+
+.guide-steps {
+    list-style: none;
+    counter-reset: guide-step;
+    padding: 0;
+    margin: 0;
+}
+
+.guide-steps li {
+    counter-increment: guide-step;
+    padding: 4px 0 4px 32px;
+    position: relative;
+}
+
+.guide-steps li::before {
+    content: counter(guide-step);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    color: white;
+    font-size: 0.75em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-text {
+    font-size: 0.85em;
+    color: var(--color-neutral-500);
+    line-height: 1.6;
+    margin-top: 4px;
+}
+
+.field-hint {
+    font-size: 0.82em;
+    color: var(--color-neutral-400);
+    margin-top: 4px;
+}
+
+/* Confirm dialog */
+.confirm-dialog-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(2px);
+}
+
+.confirm-dialog {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: 28px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: var(--shadow-xl);
+    animation: confirmIn 0.15s ease-out;
+}
+
+@keyframes confirmIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.confirm-dialog h3 {
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    color: var(--color-neutral-800);
+}
+
+.confirm-dialog p {
+    color: var(--color-neutral-600);
+    font-size: 0.92em;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.confirm-dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 /* Modal/Overlay */
 .modal-overlay {
     position: fixed;
@@ -549,6 +657,241 @@ textarea.form-control {
     margin-top: 24px;
 }
 
+/* ==========================================
+   Day Popup (shared between worker & admin)
+   ========================================== */
+
+.day-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.day-popup-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.day-popup {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    max-width: 420px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.2s ease;
+}
+
+.day-popup.visible {
+    transform: scale(1) translateY(0);
+}
+
+.day-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.day-popup-date {
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--color-neutral-800);
+}
+
+.day-popup-close {
+    background: none;
+    border: none;
+    font-size: 1.3em;
+    color: var(--color-neutral-400);
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    line-height: 1;
+    transition: all 0.15s;
+}
+
+.day-popup-close:hover {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+}
+
+.day-popup-section {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.day-popup-section:last-child {
+    border-bottom: none;
+    padding-bottom: 20px;
+}
+
+.day-popup-label {
+    font-size: 0.78em;
+    font-weight: 600;
+    color: var(--color-neutral-400);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.day-popup-opening-hours {
+    font-size: 1em;
+    color: var(--color-neutral-800);
+    font-weight: 500;
+}
+
+/* Toggle switch */
+.day-popup-toggle-row {
+    display: flex;
+    align-items: center;
+}
+
+.day-popup-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.toggle-track {
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    border-radius: 13px;
+    background: var(--color-neutral-300);
+    position: relative;
+    transition: background 0.2s;
+}
+
+.day-popup-toggle.active .toggle-track {
+    background: var(--color-primary-500);
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+
+.day-popup-toggle.active .toggle-thumb {
+    transform: translateX(22px);
+}
+
+.toggle-label {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--color-neutral-500);
+}
+
+.day-popup-toggle.active .toggle-label {
+    color: var(--color-primary-600);
+}
+
+/* Time editing in popup */
+.day-popup-time-edit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.popup-time-input {
+    width: auto !important;
+    flex: 1;
+    padding: 8px 10px !important;
+    font-size: 1em !important;
+}
+
+.time-separator {
+    color: var(--color-neutral-400);
+    font-size: 0.95em;
+    flex-shrink: 0;
+}
+
+.day-popup-time-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* Timeline bar */
+.timeline-bar {
+    position: relative;
+    height: 28px;
+    background: var(--color-neutral-100);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.tl-block {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    min-width: 1px;
+}
+
+.timeline-labels {
+    position: relative;
+    height: 18px;
+    margin-top: 2px;
+    font-size: 0.7em;
+    color: var(--color-neutral-400);
+}
+
+.tl-label {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.timeline-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 0.75em;
+    color: var(--color-neutral-500);
+}
+
+.tl-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.tl-legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
 /* Grid layout helpers */
 .grid-2 {
     display: grid;
@@ -574,6 +917,67 @@ textarea.form-control {
 .mt-16 { margin-top: 16px; }
 
 /* Responsive */
+/* ==========================================
+   Event Chips (shared between worker & admin popups)
+   ========================================== */
+
+.day-popup-events {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.day-popup-no-events {
+    color: var(--color-neutral-300);
+    font-size: 0.9em;
+    padding: 8px 0;
+}
+
+.event-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-neutral-50);
+    border-left: 3px solid var(--color-primary-600);
+    font-size: 0.9em;
+}
+
+.event-chip-allday {
+    border-left-color: var(--color-success-500);
+    background: var(--color-success-50);
+}
+
+.event-chip-timed {
+    border-left-color: var(--color-primary-600);
+    background: var(--color-primary-50);
+}
+
+.event-chip-time {
+    font-weight: 700;
+    color: var(--color-neutral-800);
+    white-space: nowrap;
+    font-size: 0.85em;
+    min-width: 80px;
+}
+
+.event-chip-allday .event-chip-time {
+    color: var(--color-success-600);
+}
+
+.event-chip-timed .event-chip-time {
+    color: var(--color-primary-700);
+}
+
+.event-chip-title {
+    color: var(--color-neutral-600);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
 @media (max-width: 768px) {
     .app-container { padding: 10px; }
     .app-header {
@@ -592,4 +996,36 @@ textarea.form-control {
     .form-group { margin-bottom: 20px; }
     .btn { width: 100%; justify-content: center; }
     .modal-actions .btn { width: auto; }
+    .confirm-dialog-actions .btn { width: auto; }
+
+    /* Day popup → bottom sheet on mobile */
+    .day-popup-overlay {
+        align-items: flex-end;
+    }
+    .day-popup {
+        max-width: 100%;
+        width: 100%;
+        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+        max-height: 80vh;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .day-popup.visible {
+        transform: translateY(0);
+    }
+    .day-popup-header {
+        padding: 16px 20px 12px;
+    }
+    .day-popup-header::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 5px;
+        background: var(--color-neutral-300);
+        border-radius: 3px;
+        margin: 0 auto 12px;
+    }
+    .day-popup-section {
+        padding: 14px 20px;
+    }
 }

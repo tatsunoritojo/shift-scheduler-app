@@ -22,6 +22,15 @@
             <!-- Period Selection -->
             <div id="period-select-section">
                 <h2 class="mb-16">シフト希望提出</h2>
+                <div class="guide-box">
+                    <div class="guide-box-title">シフト希望の提出方法</div>
+                    <ol class="guide-steps">
+                        <li>下の一覧から提出するシフト期間を選択します</li>
+                        <li>Googleカレンダーの予定をもとに、勤務可能な日時が自動で計算されます</li>
+                        <li>日付をクリックして、勤務の可否や時間を手動で調整できます</li>
+                        <li>内容を確認して「シフト希望を提出」ボタンを押してください</li>
+                    </ol>
+                </div>
                 <div id="periods-list" class="loading">
                     <div class="loading-spinner"></div>
                     <p>読み込み中...</p>
@@ -38,7 +47,7 @@
                 <div class="card mb-16" id="calendar-selector-card" style="display:none;">
                     <h3>参照するカレンダー</h3>
                     <p class="mb-8" style="color:#666;font-size:0.9em;">
-                        予定を取得するGoogleカレンダーを選択してください
+                        チェックを入れたカレンダーの予定が「既に埋まっている時間」として扱われ、それ以外の空き時間が勤務可能として自動計算されます。チェックを外したカレンダーの予定は無視されます。
                     </p>
                     <div id="calendar-selector" class="calendar-selector"></div>
                 </div>
@@ -54,19 +63,29 @@
                             計算設定
                         </button>
                     </div>
-                    <p class="mb-8" style="color:#666;font-size:0.9em;">
-                        日付をクリックして勤務可否と時間を設定できます。
-                        緑枠 = 勤務可能 / グレー枠 = 不可 / 薄グレー = 休校日
-                    </p>
+                    <div class="mb-8" style="color:#666;font-size:0.9em;line-height:1.7;">
+                        <p style="margin-bottom:6px;">Googleカレンダーの予定と開校時間をもとに、各日の勤務可能時間が自動計算されています。</p>
+                        <p style="margin-bottom:6px;"><strong>どの日付もクリックして手動変更できます</strong> &#8212; 勤務ON/OFFの切り替えや、勤務時間の手入力が可能です。自動計算の結果はあくまで初期値です。</p>
+                        <p>緑枠 = 勤務可能 / グレー枠 = 勤務不可 / 薄グレー = 休校日（変更不可）</p>
+                    </div>
                     <div id="calc-settings-container"></div>
                     <div id="calendar-container"></div>
                 </div>
 
                 <div class="card mb-16">
                     <h3>備考</h3>
-                    <textarea id="submission-notes" class="form-control" placeholder="備考があれば入力してください"></textarea>
+                    <textarea id="submission-notes" class="form-control" placeholder="例: 試験期間のためシフトを減らしたい、特定の曜日に入りたい等"></textarea>
+                    <div class="field-hint">管理者への連絡事項があれば入力してください（任意）</div>
                 </div>
 
+                <div class="guide-box" style="background:var(--color-success-50);border-color:var(--color-success-100);">
+                    <div class="guide-box-title" style="color:var(--color-success-700);">提出後の流れ</div>
+                    <ol class="guide-steps">
+                        <li>提出した希望をもとに、管理者がシフトスケジュールを作成します</li>
+                        <li>事業主の承認を経て、確定したシフトがGoogleカレンダーに自動登録されます</li>
+                    </ol>
+                    <p class="help-text" style="margin-top:4px;">期間内であれば何度でも再提出できます。提出済の期間は一覧で「提出済」と表示されます。</p>
+                </div>
                 <div class="flex-between">
                     <span id="slot-summary" style="color:#666;"></span>
                     <button class="btn btn-success btn-lg" id="submit-btn" onclick="submitAvailability()">

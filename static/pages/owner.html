@@ -20,6 +20,10 @@
         </header>
         <main class="main-content">
             <h2 class="mb-16">承認管理</h2>
+            <div class="guide-box">
+                <div class="guide-box-title">承認フローについて</div>
+                <p>管理者が作成したシフトスケジュールの承認・差戻しを行います。シフト内容（日付・時間・スタッフ配置）を確認し、問題がなければ承認してください。差戻す場合はコメントで理由を記入してください。</p>
+            </div>
 
             <!-- Pending list -->
             <div id="pending-list" class="loading">
@@ -56,9 +60,11 @@
 
                 <div class="card">
                     <h3>承認/差戻し</h3>
+                    <p class="help-text mb-16">上記のシフト内容を確認のうえ、承認または差戻しを行ってください。承認するとシフトが確定可能になります。</p>
                     <div class="form-group">
                         <label>コメント</label>
-                        <textarea id="approval-comment" class="form-control" placeholder="コメント（任意）"></textarea>
+                        <textarea id="approval-comment" class="form-control" placeholder="例: 問題ありません / ○日のスタッフ配置を見直してください"></textarea>
+                        <div class="field-hint">差戻しの場合はコメント必須です。承認時は任意です。</div>
                     </div>
                     <div class="flex gap-8">
                         <button class="btn btn-success" onclick="approveSchedule()"><i data-lucide="check" style="width:15px;height:15px;"></i> 承認</button>
