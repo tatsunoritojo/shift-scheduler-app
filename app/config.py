@@ -3,7 +3,7 @@ from datetime import timedelta
 
 
 class BaseConfig:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
 
     # Session
     SESSION_COOKIE_SECURE = True
@@ -50,6 +50,7 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     SESSION_COOKIE_SECURE = False  # Allow HTTP in dev
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-do-not-use-in-production')
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):
@@ -59,9 +60,17 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
 
+    def __init__(self):
+        super().__init__()
+        if not self.SECRET_KEY:
+            raise RuntimeError('SECRET_KEY must be set in production')
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
-        return self._get_database_url() or 'sqlite:///tokens.db'
+        url = self._get_database_url()
+        if not url:
+            raise RuntimeError('DATABASE_URL must be set in production')
+        return url
 
 
 class TestConfig(BaseConfig):

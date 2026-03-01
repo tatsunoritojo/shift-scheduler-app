@@ -135,18 +135,16 @@ def get_credentials_for_user(user):
     if not token:
         return None
 
-    creds_data = session.get('credentials')
-    if not creds_data:
-        creds_data = {
-            'token': None,
-            'refresh_token': token.refresh_token,
-            'token_uri': 'https://oauth2.googleapis.com/token',
-            'client_id': current_app.config['GOOGLE_CLIENT_ID'],
-            'client_secret': current_app.config['GOOGLE_CLIENT_SECRET'],
-            'scopes': current_app.config['GOOGLE_SCOPES_WRITE'],
-        }
-    else:
-        creds_data['refresh_token'] = token.refresh_token
+    session_creds = session.get('credentials', {})
+
+    creds_data = {
+        'token': session_creds.get('token'),
+        'refresh_token': token.refresh_token,
+        'token_uri': 'https://oauth2.googleapis.com/token',
+        'client_id': current_app.config['GOOGLE_CLIENT_ID'],
+        'client_secret': current_app.config['GOOGLE_CLIENT_SECRET'],
+        'scopes': current_app.config['GOOGLE_SCOPES_WRITE'],
+    }
 
     credentials = Credentials(**creds_data)
 
@@ -156,10 +154,6 @@ def get_credentials_for_user(user):
             session['credentials'] = {
                 'token': credentials.token,
                 'refresh_token': credentials.refresh_token,
-                'token_uri': credentials.token_uri,
-                'client_id': credentials.client_id,
-                'client_secret': credentials.client_secret,
-                'scopes': credentials.scopes,
             }
         except Exception as e:
             raise RuntimeError(f"Failed to refresh access token: {e}")

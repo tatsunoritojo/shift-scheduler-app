@@ -1,6 +1,7 @@
-from flask import Flask
+from flask import Flask, jsonify
 from pathlib import Path
 from dotenv import load_dotenv
+import logging
 import os
 
 from app.extensions import db, cors
@@ -25,6 +26,10 @@ def create_app(config_name=None):
     # Load config
     config_cls = config_by_name.get(config_name, config_by_name['development'])
     app.config.from_object(config_cls())
+
+    # Configure logging
+    log_level = logging.DEBUG if app.debug else logging.INFO
+    logging.basicConfig(level=log_level, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 
     # Validate Google OAuth credentials
     if not app.config.get('GOOGLE_CLIENT_ID') or not app.config.get('GOOGLE_CLIENT_SECRET'):
@@ -53,8 +58,34 @@ def create_app(config_name=None):
     app.register_blueprint(api_worker_bp)
     app.register_blueprint(api_owner_bp)
 
+    # Register error handlers
+    _register_error_handlers(app)
+
     # Create tables
     with app.app_context():
         db.create_all()
 
     return app
+
+
+def _register_error_handlers(app):
+    """Register global error handlers that return JSON responses."""
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify({"error": "Not found"}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify({"error": "Method not allowed"}), 405
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        return jsonify({"error": "Internal server error"}), 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(e):
+        app.logger.exception("Unhandled exception: %s", e)
+        if app.debug:
+            return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal server error"}), 500
