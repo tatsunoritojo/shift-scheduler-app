@@ -14,7 +14,6 @@ class BaseConfig:
     # Server-side session (Flask-Session with SQLAlchemy backend)
     SESSION_TYPE = 'sqlalchemy'
     SESSION_SQLALCHEMY_TABLE = 'sessions'
-    SESSION_USE_SIGNER = True
 
     # Database
     SQLALCHEMY_TRACK_MODIFICATIONS = False
