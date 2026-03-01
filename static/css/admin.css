@@ -1,6 +1,6 @@
 /* Admin-specific styles */
 .app-header {
-    background: linear-gradient(135deg, #1e293b, #334155);
+    background: linear-gradient(135deg, var(--color-neutral-800), var(--color-neutral-700));
 }
 
 /* Opening hours grid */
@@ -20,90 +20,90 @@
 }
 
 .admin-calendar-day:not(.empty):hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
 }
 
 /* --- Cell color states --- */
 
 .admin-day-full {
-    background: #f0fdf4;
-    border-left: 4px solid #22c55e;
+    background: var(--color-success-50);
+    border-left: 3px solid var(--color-success-500);
     cursor: pointer;
 }
 .admin-day-full:hover {
-    background: #dcfce7;
+    background: var(--color-success-100);
 }
 
 .admin-day-partial {
-    background: #fffbeb;
-    border-left: 4px solid #f59e0b;
+    background: var(--color-warning-50);
+    border-left: 3px solid var(--color-warning-500);
     cursor: pointer;
 }
 .admin-day-partial:hover {
-    background: #fef3c7;
+    background: var(--color-warning-100);
 }
 
 .admin-day-empty {
-    background: #eff6ff;
-    border-left: 4px solid #3b82f6;
+    background: var(--color-primary-50);
+    border-left: 3px solid var(--color-primary-500);
     cursor: pointer;
 }
 .admin-day-empty:hover {
-    background: #dbeafe;
+    background: var(--color-primary-100);
 }
 
 .admin-day-nobody {
-    background: #f5f5f5;
-    border-left: 4px solid #e0e0e0;
+    background: var(--color-neutral-100);
+    border-left: 3px solid var(--color-neutral-200);
     cursor: pointer;
 }
 .admin-day-nobody:hover {
-    background: #eee;
+    background: var(--color-neutral-200);
 }
 
 .admin-day-closed {
-    background: #fafafa;
-    border-left: 4px solid #e0e0e0;
+    background: var(--color-neutral-50);
+    border-left: 3px solid var(--color-neutral-200);
 }
 
 .admin-day-closed .day-number {
-    color: #bbb;
+    color: var(--color-neutral-300);
 }
 
 /* --- Badge (assigned/available count) --- */
 
 .admin-day-badge {
-    font-size: 0.85em;
+    font-size: 0.82em;
     font-weight: 700;
     padding: 2px 6px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     display: inline-block;
     margin-top: 2px;
-    background: rgba(0,0,0,0.06);
-    color: #333;
+    background: rgba(0,0,0,0.05);
+    color: var(--color-neutral-700);
 }
 
 .admin-day-full .admin-day-badge {
     background: rgba(34,197,94,0.12);
-    color: #16a34a;
+    color: var(--color-success-600);
 }
 
 .admin-day-partial .admin-day-badge {
     background: rgba(245,158,11,0.12);
-    color: #d97706;
+    color: var(--color-warning-600);
 }
 
 .admin-day-empty .admin-day-badge {
     background: rgba(59,130,246,0.1);
-    color: #2563eb;
+    color: var(--color-primary-600);
 }
 
 /* --- Cell opening hours text --- */
 
 .admin-day-hours {
     font-size: 0.72em;
-    color: #888;
+    color: var(--color-neutral-400);
     margin-top: 2px;
 }
 
@@ -115,7 +115,7 @@
     gap: 14px;
     margin-bottom: 12px;
     font-size: 0.82em;
-    color: #555;
+    color: var(--color-neutral-600);
 }
 
 .admin-legend-item {
@@ -133,243 +133,42 @@
     flex-shrink: 0;
 }
 
-.admin-legend-full { background: #22c55e; }
-.admin-legend-partial { background: #f59e0b; }
-.admin-legend-empty { background: #3b82f6; }
-.admin-legend-closed { background: #e0e0e0; }
+.admin-legend-full { background: var(--color-success-500); }
+.admin-legend-partial { background: var(--color-warning-500); }
+.admin-legend-empty { background: var(--color-primary-500); }
+.admin-legend-closed { background: var(--color-neutral-200); }
 
 /* ==========================================
-   Day Popup — copied from worker.css + admin overrides
+   Day Popup — Admin overrides
+   (base styles from worker.css)
    ========================================== */
-
-.day-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.day-popup-overlay.visible {
-    opacity: 1;
-}
-
-.day-popup {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-    max-width: 420px;
-    width: 90%;
-    max-height: 85vh;
-    overflow-y: auto;
-    transform: scale(0.95) translateY(10px);
-    transition: transform 0.2s ease;
-}
-
-.day-popup.visible {
-    transform: scale(1) translateY(0);
-}
 
 /* Admin popup is wider */
 .admin-day-popup {
     max-width: 520px;
 }
 
-.day-popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px 12px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.day-popup-date {
-    font-size: 1.25em;
-    font-weight: 600;
-    color: #333;
-}
-
-.day-popup-close {
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    color: #999;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 8px;
-    line-height: 1;
-    transition: background 0.15s;
-}
-
-.day-popup-close:hover {
-    background: #f5f5f5;
-    color: #333;
-}
-
-.day-popup-section {
-    padding: 16px 24px;
-    border-bottom: 1px solid #f5f5f5;
-}
-
-.day-popup-section:last-child {
-    border-bottom: none;
-    padding-bottom: 20px;
-}
-
-.day-popup-label {
-    font-size: 0.8em;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-}
-
-.day-popup-opening-hours {
-    font-size: 1.05em;
-    color: #333;
-    font-weight: 500;
-}
-
-/* ==========================================
-   Toggle Switch
-   ========================================== */
-
-.day-popup-toggle {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px 0;
-}
-
-.toggle-track {
-    display: inline-block;
-    width: 52px;
-    height: 28px;
-    border-radius: 14px;
-    background: #ccc;
-    position: relative;
-    transition: background 0.2s;
-}
-
+/* Admin toggle uses primary blue instead of green */
 .day-popup-toggle.active .toggle-track {
-    background: #22c55e;
-}
-
-.toggle-thumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.2s;
-}
-
-.day-popup-toggle.active .toggle-thumb {
-    transform: translateX(24px);
-}
-
-.toggle-label {
-    font-size: 1em;
-    font-weight: 600;
-    color: #666;
+    background: var(--color-primary-500);
 }
 
 .day-popup-toggle.active .toggle-label {
-    color: #22c55e;
+    color: var(--color-primary-600);
 }
 
-/* ==========================================
-   Timeline Bar
-   ========================================== */
-
+/* Timeline bar inherits from worker.css */
 .timeline-bar {
-    position: relative;
-    height: 28px;
-    background: #f0f0f0;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.tl-block {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    min-width: 1px;
+    background: var(--color-neutral-100);
+    border-radius: var(--radius-sm);
 }
 
 .timeline-labels {
-    position: relative;
-    height: 18px;
-    margin-top: 2px;
-    font-size: 0.7em;
-    color: #999;
-}
-
-.tl-label {
-    position: absolute;
-    transform: translateX(-50%);
-    white-space: nowrap;
+    color: var(--color-neutral-400);
 }
 
 .timeline-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 8px;
-    font-size: 0.75em;
-    color: #666;
-}
-
-.tl-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-}
-
-.tl-legend-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    flex-shrink: 0;
-}
-
-/* ==========================================
-   Time Input
-   ========================================== */
-
-.time-separator {
-    color: #999;
-    font-size: 0.95em;
-    flex-shrink: 0;
-}
-
-.popup-time-input {
-    width: auto !important;
-    flex: 1;
-    padding: 8px 10px !important;
-    font-size: 1em !important;
-}
-
-.btn-sm {
-    padding: 6px 16px;
-    font-size: 0.85em;
-    border-radius: 8px;
+    color: var(--color-neutral-500);
 }
 
 /* ==========================================
@@ -383,20 +182,20 @@
 }
 
 .admin-worker-card {
-    border: 1px solid #e8e8e8;
-    border-radius: 10px;
+    border: 1.5px solid var(--color-neutral-200);
+    border-radius: var(--radius-md);
     padding: 10px 14px;
     transition: border-color 0.15s, background 0.15s;
 }
 
 .admin-worker-card-assigned {
-    border-color: #22c55e;
-    background: #f0fdf4;
+    border-color: var(--color-success-500);
+    background: var(--color-success-50);
 }
 
 .admin-worker-card-unavailable {
     opacity: 0.5;
-    background: #fafafa;
+    background: var(--color-neutral-50);
 }
 
 .admin-worker-card-header {
@@ -416,12 +215,12 @@
 .admin-worker-name {
     font-weight: 600;
     font-size: 0.95em;
-    color: #333;
+    color: var(--color-neutral-800);
 }
 
 .admin-worker-time-info {
     font-size: 0.82em;
-    color: #888;
+    color: var(--color-neutral-400);
     margin-top: 4px;
 }
 
@@ -440,47 +239,12 @@
 }
 
 /* ==========================================
-   Responsive: Mobile bottom sheet
+   Responsive: Mobile
    ========================================== */
 
 @media (max-width: 768px) {
     .admin-calendar-day {
-        min-height: 60px;
-    }
-
-    .day-popup-overlay {
-        align-items: flex-end;
-    }
-
-    .day-popup {
-        max-width: 100%;
-        width: 100%;
-        border-radius: 20px 20px 0 0;
-        max-height: 80vh;
-        transform: translateY(100%);
-        transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-
-    .day-popup.visible {
-        transform: translateY(0);
-    }
-
-    .day-popup-header {
-        padding: 16px 20px 12px;
-    }
-
-    .day-popup-header::before {
-        content: '';
-        display: block;
-        width: 36px;
-        height: 4px;
-        background: #ddd;
-        border-radius: 2px;
-        margin: 0 auto 12px;
-    }
-
-    .day-popup-section {
-        padding: 14px 20px;
+        min-height: 64px;
     }
 
     .admin-day-popup {

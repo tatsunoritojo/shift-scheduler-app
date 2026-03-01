@@ -15,7 +15,7 @@
             <div class="user-info">
                 <span id="user-name"></span>
                 <span class="role-badge">アルバイト</span>
-                <button class="logout-btn" onclick="location.href='/auth/logout'">ログアウト</button>
+                <button class="logout-btn" onclick="location.href='/auth/logout'"><i data-lucide="log-out" style="width:14px;height:14px;"></i> ログアウト</button>
             </div>
         </header>
         <main class="main-content">
@@ -32,7 +32,7 @@
             <div id="availability-section" style="display:none;">
                 <div class="flex-between mb-16">
                     <h2 id="period-title"></h2>
-                    <button class="btn btn-outline" onclick="showPeriodList()">戻る</button>
+                    <button class="btn btn-outline" onclick="showPeriodList()"><i data-lucide="arrow-left" style="width:15px;height:15px;"></i> 戻る</button>
                 </div>
 
                 <div class="card mb-16" id="calendar-selector-card" style="display:none;">
@@ -69,19 +69,21 @@
 
                 <div class="flex-between">
                     <span id="slot-summary" style="color:#666;"></span>
-                    <button class="btn btn-success" id="submit-btn" onclick="submitAvailability()">
-                        シフト希望を提出
+                    <button class="btn btn-success btn-lg" id="submit-btn" onclick="submitAvailability()">
+                        <i data-lucide="send" style="width:16px;height:16px;"></i> シフト希望を提出
                     </button>
                 </div>
             </div>
         </main>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="/static/js/worker-app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js');
         }
+        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
     </script>
 </body>
 </html>

@@ -172,4 +172,4 @@ window.rejectSchedule = async function() {
     }
 };
 
-init();
+init().finally(() => { if (window.lucide) lucide.createIcons(); });

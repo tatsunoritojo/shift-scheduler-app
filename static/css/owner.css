@@ -1,4 +1,4 @@
 /* Owner-specific styles */
 .app-header {
-    background: linear-gradient(135deg, #334155, #475569);
+    background: linear-gradient(135deg, var(--color-neutral-700), var(--color-neutral-600));
 }

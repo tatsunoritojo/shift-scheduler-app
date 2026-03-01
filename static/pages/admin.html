@@ -15,7 +15,7 @@
             <div class="user-info">
                 <span id="user-name"></span>
                 <span class="role-badge">管理者</span>
-                <button class="logout-btn" onclick="location.href='/auth/logout'">ログアウト</button>
+                <button class="logout-btn" onclick="location.href='/auth/logout'"><i data-lucide="log-out" style="width:14px;height:14px;"></i> ログアウト</button>
             </div>
         </header>
         <main class="main-content">
@@ -31,7 +31,7 @@
                     <h3>開校時間設定</h3>
                     <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します</p>
                     <div id="opening-hours-grid"></div>
-                    <button class="btn btn-primary mt-16" onclick="saveOpeningHours()">保存</button>
+                    <button class="btn btn-primary mt-16" onclick="saveOpeningHours()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                 </div>
 
                 <div class="card">
@@ -45,7 +45,7 @@
                             <input type="checkbox" id="exc-closed"> 休校
                         </label>
                         <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
-                        <button class="btn btn-primary" onclick="addException()">追加</button>
+                        <button class="btn btn-primary" onclick="addException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
                     </div>
                     <div id="exceptions-list"></div>
                 </div>
@@ -80,7 +80,7 @@
                             <input type="datetime-local" id="period-deadline" class="form-control">
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="createPeriod()">作成</button>
+                    <button class="btn btn-primary" onclick="createPeriod()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 作成</button>
                 </div>
 
                 <div class="card">
@@ -109,9 +109,9 @@
                                 <div class="flex-between mb-16">
                                     <h3>スケジュール</h3>
                                     <div class="flex gap-8">
-                                        <button class="btn btn-primary" onclick="saveSchedule()">保存</button>
-                                        <button class="btn btn-warning" onclick="submitForApproval()">承認申請</button>
-                                        <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()">確定・カレンダー同期</button>
+                                        <button class="btn btn-primary" onclick="saveSchedule()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                                        <button class="btn btn-warning" onclick="submitForApproval()"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
+                                        <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
                                     </div>
                                 </div>
                                 <!-- Calendar legend -->
@@ -141,11 +141,13 @@
         </main>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="/static/js/admin-app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js');
         }
+        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
     </script>
 </body>
 </html>

@@ -697,4 +697,4 @@ window.confirmSchedule = async function() {
     }
 };
 
-init();
+init().finally(() => { if (window.lucide) lucide.createIcons(); });
