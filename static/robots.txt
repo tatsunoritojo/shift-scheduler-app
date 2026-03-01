@@ -1,10 +1,4 @@
 User-agent: *
-Allow: /lp
-Allow: /static/
-Disallow: /api/
-Disallow: /auth/
-Disallow: /admin
-Disallow: /worker
-Disallow: /owner
+Disallow: /
 
 Sitemap: https://shift-scheduler-app-flame.vercel.app/static/sitemap.xml
