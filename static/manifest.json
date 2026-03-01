@@ -4,8 +4,8 @@
     "description": "シフト提出・構築・承認・カレンダー連携のワークフロー管理",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#667eea",
-    "theme_color": "#2196F3",
+    "background_color": "#f8fafc",
+    "theme_color": "#1e293b",
     "orientation": "any",
     "icons": [
         {

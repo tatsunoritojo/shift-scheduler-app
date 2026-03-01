@@ -1,6 +1,6 @@
 /* Admin-specific styles */
 .app-header {
-    background: linear-gradient(135deg, #2196F3, #1565c0);
+    background: linear-gradient(135deg, #1e293b, #334155);
 }
 
 /* Opening hours grid */
@@ -27,30 +27,30 @@
 /* --- Cell color states --- */
 
 .admin-day-full {
-    background: #e8f5e9;
-    border-left: 4px solid #4caf50;
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
     cursor: pointer;
 }
 .admin-day-full:hover {
-    background: #c8e6c9;
+    background: #dcfce7;
 }
 
 .admin-day-partial {
-    background: #fff3e0;
-    border-left: 4px solid #ff9800;
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
     cursor: pointer;
 }
 .admin-day-partial:hover {
-    background: #ffe0b2;
+    background: #fef3c7;
 }
 
 .admin-day-empty {
-    background: #e3f2fd;
-    border-left: 4px solid #2196F3;
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
     cursor: pointer;
 }
 .admin-day-empty:hover {
-    background: #bbdefb;
+    background: #dbeafe;
 }
 
 .admin-day-nobody {
@@ -85,18 +85,18 @@
 }
 
 .admin-day-full .admin-day-badge {
-    background: rgba(76,175,80,0.15);
-    color: #2e7d32;
+    background: rgba(34,197,94,0.12);
+    color: #16a34a;
 }
 
 .admin-day-partial .admin-day-badge {
-    background: rgba(255,152,0,0.15);
-    color: #e65100;
+    background: rgba(245,158,11,0.12);
+    color: #d97706;
 }
 
 .admin-day-empty .admin-day-badge {
-    background: rgba(33,150,243,0.12);
-    color: #1565c0;
+    background: rgba(59,130,246,0.1);
+    color: #2563eb;
 }
 
 /* --- Cell opening hours text --- */
@@ -133,9 +133,9 @@
     flex-shrink: 0;
 }
 
-.admin-legend-full { background: #4caf50; }
-.admin-legend-partial { background: #ff9800; }
-.admin-legend-empty { background: #2196F3; }
+.admin-legend-full { background: #22c55e; }
+.admin-legend-partial { background: #f59e0b; }
+.admin-legend-empty { background: #3b82f6; }
 .admin-legend-closed { background: #e0e0e0; }
 
 /* ==========================================
@@ -263,7 +263,7 @@
 }
 
 .day-popup-toggle.active .toggle-track {
-    background: #4caf50;
+    background: #22c55e;
 }
 
 .toggle-thumb {
@@ -289,7 +289,7 @@
 }
 
 .day-popup-toggle.active .toggle-label {
-    color: #4caf50;
+    color: #22c55e;
 }
 
 /* ==========================================
@@ -390,8 +390,8 @@
 }
 
 .admin-worker-card-assigned {
-    border-color: #4caf50;
-    background: #f1f8e9;
+    border-color: #22c55e;
+    background: #f0fdf4;
 }
 
 .admin-worker-card-unavailable {

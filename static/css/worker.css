@@ -1,6 +1,6 @@
 /* Worker-specific styles */
 .app-header {
-    background: linear-gradient(135deg, #4caf50, #388e3c);
+    background: linear-gradient(135deg, #1e3a5f, #1e40af);
 }
 
 /* --- Calendar cell enhancements --- */
@@ -18,13 +18,13 @@
 
 .calendar-day.available {
     background: white;
-    border-left: 4px solid #4caf50;
+    border-left: 4px solid #3b82f6;
     cursor: pointer;
 }
 
 .calendar-day.available:hover {
-    background: #f1f8e9;
-    box-shadow: 0 2px 8px rgba(76,175,80,0.2);
+    background: #eff6ff;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.15);
 }
 
 .calendar-day.unavailable {
@@ -45,7 +45,7 @@
 
 /* Custom time indicator */
 .time-slot.custom-time {
-    color: #1976D2;
+    color: #2563eb;
     font-weight: 600;
 }
 
@@ -57,7 +57,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #1976D2;
+    background: #2563eb;
 }
 
 /* --- Day Popup Overlay --- */
@@ -185,7 +185,7 @@
 }
 
 .day-popup-toggle.active .toggle-track {
-    background: #4caf50;
+    background: #3b82f6;
 }
 
 .toggle-thumb {
@@ -211,7 +211,7 @@
 }
 
 .day-popup-toggle.active .toggle-label {
-    color: #4caf50;
+    color: #3b82f6;
 }
 
 /* Time editing */
@@ -249,8 +249,8 @@
 
 .day-popup-custom-badge {
     display: inline-block;
-    background: #e3f2fd;
-    color: #1976D2;
+    background: #eff6ff;
+    color: #2563eb;
     font-size: 0.8em;
     font-weight: 600;
     padding: 3px 10px;
@@ -282,12 +282,12 @@
 }
 
 .tl-available {
-    background: #4caf50;
+    background: #3b82f6;
     z-index: 1;
 }
 
 .tl-event {
-    background: #e53935;
+    background: #ef4444;
     z-index: 3;
 }
 
@@ -295,15 +295,15 @@
     z-index: 2;
     background: repeating-linear-gradient(
         -45deg,
-        #ff9800,
-        #ff9800 2px,
-        rgba(255, 152, 0, 0.3) 2px,
-        rgba(255, 152, 0, 0.3) 5px
+        #f59e0b,
+        #f59e0b 2px,
+        rgba(245, 158, 11, 0.3) 2px,
+        rgba(245, 158, 11, 0.3) 5px
     );
 }
 
 .tl-excluded {
-    background: rgba(255, 152, 0, 0.35);
+    background: rgba(245, 158, 11, 0.35);
     z-index: 1;
 }
 
@@ -346,25 +346,25 @@
 }
 
 .tl-legend-event {
-    background: #e53935;
+    background: #ef4444;
 }
 
 .tl-legend-buffer {
     background: repeating-linear-gradient(
         -45deg,
-        #ff9800,
-        #ff9800 2px,
-        rgba(255, 152, 0, 0.3) 2px,
-        rgba(255, 152, 0, 0.3) 5px
+        #f59e0b,
+        #f59e0b 2px,
+        rgba(245, 158, 11, 0.3) 2px,
+        rgba(245, 158, 11, 0.3) 5px
     );
 }
 
 .tl-legend-available {
-    background: #4caf50;
+    background: #3b82f6;
 }
 
 .tl-legend-excluded {
-    background: rgba(255, 152, 0, 0.35);
+    background: rgba(245, 158, 11, 0.35);
 }
 
 /* Event chips */
@@ -387,18 +387,18 @@
     padding: 8px 12px;
     border-radius: 8px;
     background: #f8f9fa;
-    border-left: 4px solid #1976D2;
+    border-left: 4px solid #2563eb;
     font-size: 0.9em;
 }
 
 .event-chip-allday {
-    border-left-color: #4caf50;
-    background: #f1f8e9;
+    border-left-color: #3b82f6;
+    background: #eff6ff;
 }
 
 .event-chip-timed {
-    border-left-color: #1976D2;
-    background: #e3f2fd;
+    border-left-color: #2563eb;
+    background: #eff6ff;
 }
 
 .event-chip-time {
@@ -410,11 +410,11 @@
 }
 
 .event-chip-allday .event-chip-time {
-    color: #388e3c;
+    color: #16a34a;
 }
 
 .event-chip-timed .event-chip-time {
-    color: #1565c0;
+    color: #1d4ed8;
 }
 
 .event-chip-title {
@@ -533,12 +533,12 @@
 }
 
 .cal-selector-item:has(input:checked) {
-    border-color: #4caf50;
-    background: #f1f8e9;
+    border-color: #3b82f6;
+    background: #eff6ff;
 }
 
 .cal-selector-item input[type="checkbox"] {
-    accent-color: #4caf50;
+    accent-color: #3b82f6;
     width: 16px;
     height: 16px;
     cursor: pointer;
@@ -595,20 +595,20 @@
 }
 
 .calc-settings-toggle-btn:hover {
-    border-color: #4caf50;
-    color: #4caf50;
-    background: #f1f8e9;
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
 }
 
 .calc-settings-toggle-btn.active {
-    border-color: #4caf50;
+    border-color: #3b82f6;
     color: #fff;
-    background: #4caf50;
+    background: #3b82f6;
 }
 
 .calc-settings-body {
-    background: #f8faf8;
-    border: 1px solid #e0e8e0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 12px;
@@ -619,7 +619,7 @@
 }
 
 .calc-settings-row + .calc-settings-row {
-    border-top: 1px solid #e8ece8;
+    border-top: 1px solid #e2e8f0;
 }
 
 .calc-settings-label {
@@ -638,7 +638,7 @@
 
 .calc-settings-range {
     flex: 1;
-    accent-color: #4caf50;
+    accent-color: #3b82f6;
     height: 6px;
 }
 

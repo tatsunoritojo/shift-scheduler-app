@@ -21,10 +21,10 @@ export function showToast(message, type = 'info', duration = 3000) {
     toast.textContent = message;
 
     const colors = {
-        success: '#4caf50',
-        error: '#f44336',
-        warning: '#ff9800',
-        info: '#2196f3',
+        success: '#22c55e',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6',
     };
     toast.style.cssText = `
         padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px;

@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f8fafc;
             min-height: 100vh;
             padding: 20px;
         }
@@ -28,7 +28,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
+            background: linear-gradient(135deg, #1e293b, #334155);
             color: white;
             padding: 30px;
             text-align: center;
@@ -60,11 +60,11 @@
             background: #f8f9fa;
             padding: 25px;
             border-radius: 15px;
-            border-left: 5px solid #2196F3;
+            border-left: 5px solid #3b82f6;
         }
 
         .settings-panel h3 {
-            color: #1976D2;
+            color: #2563eb;
             margin-bottom: 20px;
             font-size: 1.3em;
             display: flex;
@@ -95,8 +95,8 @@
 
         .form-control:focus {
             outline: none;
-            border-color: #2196F3;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .form-control-small {
@@ -130,18 +130,18 @@
         }
 
         .checkbox-item:hover {
-            border-color: #2196F3;
+            border-color: #3b82f6;
         }
 
         .checkbox-item input[type="checkbox"] {
             width: 18px;
             height: 18px;
-            accent-color: #2196F3;
+            accent-color: #3b82f6;
         }
 
         .checkbox-item.checked {
-            background: #e3f2fd;
-            border-color: #2196F3;
+            background: #eff6ff;
+            border-color: #3b82f6;
         }
 
         .time-range {
@@ -151,7 +151,7 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #2196F3, #1976D2);
+            background: linear-gradient(135deg, #1e293b, #334155);
             color: white;
             border: none;
             padding: 15px 30px;
@@ -167,7 +167,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
         }
 
         .btn-secondary {
@@ -179,27 +179,27 @@
         }
 
         .btn-special {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
             color: white;
         }
 
         .btn-special:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, #2d3a4a 0%, #3d4f63 100%);
+            box-shadow: 0 8px 25px rgba(51, 65, 85, 0.3);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
+            background: linear-gradient(135deg, #22c55e, #16a34a);
         }
 
         .btn-success:hover {
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.2);
         }
 
         .view-toggle-btn {
-            background: #e3f2fd;
-            color: #1976D2;
-            border: 2px solid #2196F3;
+            background: #eff6ff;
+            color: #2563eb;
+            border: 2px solid #3b82f6;
             padding: 10px 20px;
             border-radius: 20px;
             cursor: pointer;
@@ -210,22 +210,22 @@
         }
 
         .view-toggle-btn:hover {
-            background: #2196F3;
+            background: #3b82f6;
             color: white;
             transform: translateY(-1px);
         }
 
 
         .advanced-settings {
-            background: #fff3e0;
-            border-left: 5px solid #FF9800;
+            background: #fffbeb;
+            border-left: 5px solid #f59e0b;
             padding: 20px;
             border-radius: 10px;
             margin-top: 20px;
         }
 
         .advanced-settings h4 {
-            color: #F57F17;
+            color: #d97706;
             margin-bottom: 15px;
             display: flex;
             align-items: center;
@@ -237,7 +237,7 @@
             padding: 30px;
             background: #f8f9fa;
             border-radius: 15px;
-            border-left: 5px solid #FF9800;
+            border-left: 5px solid #f59e0b;
             display: none;
         }
 
@@ -267,7 +267,7 @@
             width: 40px;
             height: 40px;
             border: 4px solid #e0e0e0;
-            border-top: 4px solid #2196F3;
+            border-top: 4px solid #3b82f6;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -297,18 +297,18 @@
         }
 
         .shift-result.available {
-            border-left: 5px solid #4CAF50;
-            background: linear-gradient(90deg, #e8f5e8 0%, white 100%);
+            border-left: 5px solid #22c55e;
+            background: linear-gradient(90deg, #f0fdf4 0%, white 100%);
         }
 
         .shift-result.partial {
-            border-left: 5px solid #FF9800;
-            background: linear-gradient(90deg, #fff3e0 0%, white 100%);
+            border-left: 5px solid #f59e0b;
+            background: linear-gradient(90deg, #fffbeb 0%, white 100%);
         }
 
         .shift-result.unavailable {
-            border-left: 5px solid #f44336;
-            background: linear-gradient(90deg, #ffebee 0%, white 100%);
+            border-left: 5px solid #ef4444;
+            background: linear-gradient(90deg, #fef2f2 0%, white 100%);
         }
 
         .date-info {
@@ -333,12 +333,12 @@
         }
 
         .shift-toggle-btn.on {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
+            background: linear-gradient(45deg, #22c55e, #16a34a);
             color: white;
         }
 
         .shift-toggle-btn.off {
-            background: linear-gradient(45deg, #f44336, #d32f2f);
+            background: linear-gradient(45deg, #ef4444, #dc2626);
             color: white;
         }
 
@@ -432,12 +432,12 @@
         }
 
         .calendar-popup .close-btn {
-            background: #f44336;
+            background: #ef4444;
             color: white;
         }
 
         .calendar-popup .close-btn:hover {
-            background: #d32f2f;
+            background: #dc2626;
         }
 
         /* イベント詳細表示スタイル */
@@ -467,23 +467,23 @@
             background: #f8f9fa;
             border-radius: 8px;
             padding: 12px;
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #3b82f6;
         }
 
         .event-item.all-day-event {
-            border-left-color: #4CAF50;
-            background: #f1f8e9;
+            border-left-color: #22c55e;
+            background: #f0fdf4;
         }
 
         .event-time {
             font-weight: bold;
-            color: #1976D2;
+            color: #2563eb;
             font-size: 0.9em;
             margin-bottom: 5px;
         }
 
         .all-day-event .event-time {
-            color: #388E3C;
+            color: #16a34a;
         }
 
         .event-title {
@@ -519,7 +519,7 @@
 
         .error {
             text-align: center;
-            color: #f44336;
+            color: #ef4444;
             padding: 20px;
         }
 
@@ -560,12 +560,12 @@
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #334155;
         }
 
         .exception-date-group h4 {
             margin: 0 0 15px 0;
-            color: #667eea;
+            color: #334155;
             font-size: 1.1em;
         }
 
@@ -587,12 +587,12 @@
         }
 
         .add-exception-btn {
-            background: #4CAF50;
+            background: #22c55e;
             color: white;
         }
 
         .add-exception-btn:hover {
-            background: #45a049;
+            background: #16a34a;
         }
 
         .dialog-actions {
@@ -612,25 +612,25 @@
         }
 
         .calculate-with-exceptions-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
             color: white;
         }
 
         .calculate-with-exceptions-btn:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            background: linear-gradient(135deg, #2d3a4a 0%, #3d4f63 100%);
         }
 
         .cancel-exceptions-btn {
-            background: #f44336;
+            background: #ef4444;
             color: white;
         }
 
         .cancel-exceptions-btn:hover {
-            background: #d32f2f;
+            background: #dc2626;
         }
 
         .remove-exception-btn {
-            background: #f44336;
+            background: #ef4444;
             color: white;
             padding: 5px 10px;
             font-size: 0.85em;
@@ -638,7 +638,7 @@
         }
 
         .remove-exception-btn:hover {
-            background: #d32f2f;
+            background: #dc2626;
         }
 
         /* 時間帯編集機能スタイル */
@@ -647,12 +647,12 @@
             padding: 15px;
             background: #f8f9fa;
             border-radius: 10px;
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid #3b82f6;
         }
 
         .time-edit-section h5 {
             margin: 0 0 15px 0;
-            color: #1976D2;
+            color: #2563eb;
             font-size: 1em;
             text-align: center;
         }
@@ -675,11 +675,11 @@
 
         .time-edit-input:focus {
             outline: none;
-            border-color: #2196F3;
+            border-color: #3b82f6;
         }
 
         .time-edit-btn {
-            background: #4CAF50;
+            background: #22c55e;
             color: white;
             border: none;
             padding: 8px 16px;
@@ -690,21 +690,21 @@
         }
 
         .time-edit-btn:hover {
-            background: #45a049;
+            background: #16a34a;
             transform: translateY(-1px);
         }
 
         .time-reset-btn {
-            background: #ff9800;
+            background: #f59e0b;
             color: white;
         }
 
         .time-reset-btn:hover {
-            background: #f57c00;
+            background: #d97706;
         }
 
         .custom-time-indicator {
-            background: linear-gradient(135deg, #ff9800, #f57c00);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
@@ -713,7 +713,7 @@
         }
 
         .time-badge {
-            background: #2196F3;
+            background: #3b82f6;
             color: white;
             padding: 8px 15px;
             border-radius: 20px;
@@ -722,11 +722,11 @@
         }
 
         .time-badge.partial {
-            background: #FF9800;
+            background: #f59e0b;
         }
 
         .time-badge.unavailable {
-            background: #f44336;
+            background: #ef4444;
         }
 
         .summary-stats {
@@ -753,7 +753,7 @@
         .stat-number {
             font-size: 2.5em;
             font-weight: bold;
-            color: #2196F3;
+            color: #3b82f6;
             display: block;
         }
 
@@ -764,15 +764,15 @@
         }
 
         .current-settings {
-            background: #e8f5e8;
+            background: #f0fdf4;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
-            border-left: 5px solid #4CAF50;
+            border-left: 5px solid #22c55e;
         }
 
         .current-settings h4 {
-            color: #2e7d32;
+            color: #15803d;
             margin-bottom: 10px;
         }
 
@@ -783,7 +783,7 @@
             margin: 3px;
             border-radius: 15px;
             font-size: 0.9em;
-            border: 1px solid #c8e6c9;
+            border: 1px solid #dcfce7;
         }
 
         @media (max-width: 768px) {
@@ -844,12 +844,12 @@
         }
 
         .tab-button:hover {
-            color: #2196F3;
+            color: #3b82f6;
         }
 
         .tab-button.active {
-            color: #2196F3;
-            border-bottom-color: #2196F3;
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
             font-weight: 600;
         }
 
@@ -869,7 +869,7 @@
         .month-title {
             font-size: 1.8em;
             font-weight: 600;
-            color: #1976D2;
+            color: #2563eb;
             text-align: center;
             margin-bottom: 20px;
             padding: 15px;
@@ -888,7 +888,7 @@
         }
 
         .calendar-header {
-            background: #1976D2;
+            background: #2563eb;
             color: white;
             padding: 15px;
             text-align: center;
@@ -919,11 +919,11 @@
         }
 
         .calendar-day.available {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
+            background: linear-gradient(135deg, #22c55e, #16a34a);
             color: white;
             font-weight: bold;
             transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
         }
 
         .calendar-day.unavailable {
@@ -975,7 +975,7 @@
         }
 
         .legend-available {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
+            background: linear-gradient(135deg, #22c55e, #16a34a);
         }
 
         .legend-unavailable {
@@ -1213,8 +1213,8 @@
                             <!-- カレンダー表示エリア -->
                             <div id="calendarView" style="display: none;">
                                 <!-- 提出者情報ヘッダー -->
-                                <div id="submitterHeader" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #2196F3;">
-                                    <h3 style="margin: 0 0 15px 0; color: #1976D2;">📅 シフト希望提出書</h3>
+                                <div id="submitterHeader" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #3b82f6;">
+                                    <h3 style="margin: 0 0 15px 0; color: #2563eb;">📅 シフト希望提出書</h3>
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <div style="text-align: left;">
                                             <div style="font-size: 1.1em; margin-bottom: 5px;">
@@ -1267,7 +1267,7 @@
                                 <button class="btn btn-secondary" onclick="exportToCSV()">
                                     📊 CSV出力
                                 </button>
-                                <button class="btn" onclick="testWithDummyData()" style="background: #FF9800; margin-left: 10px;">
+                                <button class="btn" onclick="testWithDummyData()" style="background: #f59e0b; margin-left: 10px;">
                                     🧪 ダミーデータでテスト
                                 </button>
                             </div>
@@ -2595,10 +2595,10 @@
             if (viewType === 'calendar') {
                 calendarView.style.display = 'block';
                 listView.style.display = 'none';
-                calendarBtn.style.background = '#2196F3';
+                calendarBtn.style.background = '#3b82f6';
                 calendarBtn.style.color = 'white';
-                listBtn.style.background = '#e3f2fd';
-                listBtn.style.color = '#1976D2';
+                listBtn.style.background = '#eff6ff';
+                listBtn.style.color = '#2563eb';
 
                 // カレンダーを描画
                 if (window.currentShiftsData) {
@@ -2608,10 +2608,10 @@
             } else {
                 calendarView.style.display = 'none';
                 listView.style.display = 'block';
-                listBtn.style.background = '#2196F3';
+                listBtn.style.background = '#3b82f6';
                 listBtn.style.color = 'white';
-                calendarBtn.style.background = '#e3f2fd';
-                calendarBtn.style.color = '#1976D2';
+                calendarBtn.style.background = '#eff6ff';
+                calendarBtn.style.color = '#2563eb';
             }
         }
 

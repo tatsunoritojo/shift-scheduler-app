@@ -15,8 +15,8 @@ const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
 // Worker colors for timeline
 const WORKER_COLORS = [
-    '#4caf50', '#2196F3', '#ff9800', '#9c27b0', '#e91e63',
-    '#00bcd4', '#ff5722', '#795548', '#607d8b', '#8bc34a',
+    '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899',
+    '#06b6d4', '#f97316', '#78716c', '#64748b', '#84cc16',
 ];
 
 async function init() {

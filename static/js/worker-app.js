@@ -369,7 +369,7 @@ function isAllDayEvent(event) {
 
 function getCalendarColor(calendarId) {
     const cal = calendarList.find(c => c.id === calendarId);
-    return cal ? cal.backgroundColor : '#1976D2';
+    return cal ? cal.backgroundColor : '#3b82f6';
 }
 
 function getCalendarName(calendarId) {
