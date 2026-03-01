@@ -141,12 +141,16 @@ def upsert_user(google_id, email, display_name, invitation_token=None):
         # Invitation-based assignment
         _accept_invitation(user, invitation_token)
     elif not user.organization_id:
-        # Bootstrap: assign to first org if it exists and create membership
-        org = Organization.query.first()
-        if org:
-            user.organization_id = org.id
-            user.role = role
-            _ensure_membership(user, org.id, role)
+        # Bootstrap: only auto-assign for env-configured admin/owner emails
+        admin_emails = [e.strip() for e in current_app.config.get('ADMIN_EMAIL', '').split(',') if e.strip()]
+        owner_emails = [e.strip() for e in current_app.config.get('OWNER_EMAIL', '').split(',') if e.strip()]
+        if email in admin_emails or email in owner_emails:
+            org = Organization.query.first()
+            if org:
+                user.organization_id = org.id
+                user.role = role
+                _ensure_membership(user, org.id, role)
+        # Otherwise: user remains without organization (must be invited)
 
     # Sync role from membership (authoritative source)
     membership = OrganizationMember.query.filter_by(

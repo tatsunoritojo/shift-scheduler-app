@@ -86,7 +86,11 @@ def callback():
 
     auth_logger.info("LOGIN_SUCCESS: user_id=%s email=%s role=%s", user.id, user.email, user.role)
 
-    # Redirect based on role
+    # Redirect based on org membership
+    if not user.organization_id:
+        auth_logger.info("LOGIN_NO_ORG: user_id=%s redirected to /no-organization", user.id)
+        return redirect('/no-organization')
+
     if user.role == 'admin':
         return redirect('/admin')
     elif user.role == 'owner':
@@ -150,4 +154,5 @@ def me():
         "email": user.email,
         "display_name": user.display_name,
         "role": user.role,
+        "organization_id": user.organization_id,
     })

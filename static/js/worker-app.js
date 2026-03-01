@@ -4,6 +4,8 @@ import { calculateAvailableSlots, calculateDetailedSlots } from './modules/shift
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
 import { showToast } from './modules/notification.js';
 import { escapeHtml } from './modules/escape-html.js';
+import { showConfirmDialog } from './modules/ui-dialogs.js';
+import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt as _formatSubmittedAt } from './modules/event-utils.js';
 
 let currentUser = null;
 let currentPeriod = null;
@@ -100,9 +102,8 @@ function resetCalcSettings() {
 }
 
 function formatSubmittedAt(isoStr) {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 提出`;
+    const base = _formatSubmittedAt(isoStr);
+    return base ? `${base} 提出` : '';
 }
 
 function setupStaticHandlers() {
@@ -439,15 +440,7 @@ function recalculateSlots() {
 // --- Event cache helpers ---
 
 function getEventsForDate(dateStr) {
-    return cachedCalendarEvents.filter(e => {
-        const eventStart = (e.start || '').substring(0, 10);
-        const eventEnd = (e.end || '').substring(0, 10);
-        return eventStart === dateStr || (eventStart < dateStr && eventEnd > dateStr);
-    });
-}
-
-function isAllDayEvent(event) {
-    return event.start && event.start.length === 10;
+    return _getEventsForDate(cachedCalendarEvents, dateStr);
 }
 
 function getCalendarColor(calendarId) {
@@ -893,28 +886,6 @@ async function submitAvailability() {
             }
         }
     );
-}
-
-function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.className = 'confirm-dialog-overlay';
-    overlay.innerHTML = `
-        <div class="confirm-dialog">
-            <h3>${title}</h3>
-            <p>${message}</p>
-            <div class="confirm-dialog-actions">
-                <button class="btn btn-outline" id="confirm-cancel">キャンセル</button>
-                <button class="btn ${btnClass}" id="confirm-ok">${btnLabel}</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
-    overlay.querySelector('#confirm-ok').onclick = () => {
-        overlay.remove();
-        onConfirm();
-    };
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

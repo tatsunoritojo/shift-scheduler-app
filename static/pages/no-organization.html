@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>組織未参加 - シフリー</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        .no-org-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .no-org-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            padding: 48px 40px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+        }
+        .no-org-card h1 {
+            color: var(--color-neutral-800);
+            font-size: 1.5em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .no-org-card .description {
+            color: var(--color-neutral-500);
+            margin-bottom: 32px;
+            font-size: 0.95em;
+            line-height: 1.7;
+        }
+        .no-org-card .steps {
+            text-align: left;
+            background: var(--color-neutral-50);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            margin-bottom: 32px;
+        }
+        .no-org-card .steps li {
+            color: var(--color-neutral-600);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .no-org-card .steps li:last-child {
+            margin-bottom: 0;
+        }
+        .logout-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1.5px solid var(--color-neutral-200);
+            border-radius: var(--radius-lg);
+            padding: 12px 28px;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: var(--color-neutral-600);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .logout-btn:hover {
+            border-color: var(--color-neutral-300);
+            box-shadow: var(--shadow-md);
+        }
+        .user-email {
+            color: var(--color-neutral-400);
+            font-size: 0.82em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-org-container">
+        <div class="no-org-card">
+            <h1>組織に参加していません</h1>
+            <p class="description">
+                シフリーを利用するには、組織の管理者から招待リンクを受け取る必要があります。
+            </p>
+            <ol class="steps">
+                <li>組織の管理者に招待を依頼してください</li>
+                <li>受け取った招待リンクを開いてください</li>
+                <li>Googleアカウントでログインすると、組織に参加できます</li>
+            </ol>
+            <a href="/auth/logout" class="logout-btn">ログアウト</a>
+            <div class="user-email" id="user-email"></div>
+        </div>
+    </div>
+    <script>
+        fetch('/auth/me')
+            .then(r => r.json())
+            .then(data => {
+                if (data.email) {
+                    document.getElementById('user-email').textContent =
+                        'ログイン中: ' + data.email;
+                }
+            })
+            .catch(() => {});
+    </script>
+    <script src="/static/js/init.js"></script>
+</body>
+</html>

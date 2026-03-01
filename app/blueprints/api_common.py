@@ -16,6 +16,8 @@ def index():
     if user_id:
         user = get_current_user()
         if user:
+            if not user.organization_id:
+                return redirect('/no-organization')
             if user.role == 'admin':
                 return redirect('/admin')
             elif user.role == 'owner':
@@ -51,11 +53,23 @@ def login_page():
     return current_app.send_static_file('pages/login.html')
 
 
+@api_common_bp.route('/no-organization')
+def no_organization_page():
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    if user.organization_id:
+        return redirect('/')
+    return current_app.send_static_file('pages/no-organization.html')
+
+
 @api_common_bp.route('/worker')
 def worker_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
+    if not user.organization_id:
+        return redirect('/no-organization')
     if user.role != 'worker':
         return redirect('/')
     return current_app.send_static_file('pages/worker.html')
@@ -66,6 +80,8 @@ def admin_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
+    if not user.organization_id:
+        return redirect('/no-organization')
     if user.role != 'admin':
         return redirect('/')
     return current_app.send_static_file('pages/admin.html')
@@ -76,6 +92,8 @@ def owner_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
+    if not user.organization_id:
+        return redirect('/no-organization')
     if user.role != 'owner':
         return redirect('/')
     return current_app.send_static_file('pages/owner.html')

@@ -45,8 +45,14 @@ def create_app(config_name=None):
     cors_origins = app.config.get('CORS_ALLOWED_ORIGINS')
     if cors_origins:
         cors.init_app(app, origins=cors_origins, supports_credentials=True)
+    elif app.debug or app.config.get('TESTING'):
+        cors.init_app(app)  # Allow all origins in dev/test only
     else:
-        cors.init_app(app)
+        # Production: no CORS_ALLOWED_ORIGINS → same-origin only (no CORS headers)
+        logging.getLogger(__name__).warning(
+            "CORS_ALLOWED_ORIGINS not set in production — cross-origin requests will be blocked"
+        )
+        cors.init_app(app, origins=[])
 
     # Import all models so they are registered with SQLAlchemy
     from app import models  # noqa: F401
