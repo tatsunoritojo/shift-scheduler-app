@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import logging
 import os
 
-from app.extensions import db, cors
+from app.extensions import db, cors, limiter, server_session
 from app.config import config_by_name
 
 
@@ -38,7 +38,14 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
-    cors.init_app(app)
+    app.config['SESSION_SQLALCHEMY'] = db
+    server_session.init_app(app)
+    limiter.init_app(app)
+    cors_origins = app.config.get('CORS_ALLOWED_ORIGINS')
+    if cors_origins:
+        cors.init_app(app, origins=cors_origins, supports_credentials=True)
+    else:
+        cors.init_app(app)
 
     # Import all models so they are registered with SQLAlchemy
     from app import models  # noqa: F401
@@ -58,7 +65,8 @@ def create_app(config_name=None):
     app.register_blueprint(api_worker_bp)
     app.register_blueprint(api_owner_bp)
 
-    # Register error handlers
+    # Register security headers and error handlers
+    _register_security_headers(app)
     _register_error_handlers(app)
 
     # Create tables
@@ -66,6 +74,28 @@ def create_app(config_name=None):
         db.create_all()
 
     return app
+
+
+def _register_security_headers(app):
+    """Add security headers to all responses."""
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if not app.debug:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data:; "
+            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com"
+        )
+        return response
 
 
 def _register_error_handlers(app):
@@ -78,6 +108,10 @@ def _register_error_handlers(app):
     @app.errorhandler(405)
     def method_not_allowed(e):
         return jsonify({"error": "Method not allowed"}), 405
+
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        return jsonify({"error": "Too many requests"}), 429
 
     @app.errorhandler(500)
     def internal_server_error(e):
