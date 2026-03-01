@@ -2,7 +2,7 @@
 
 Google Calendarと連携し、シフトの提出・作成・承認をワンストップで管理するWebアプリケーション（PWA対応）。
 
-**🔗 https://shift-scheduler-app-flame.vercel.app**
+**🔗 https://shifree.vercel.app**
 
 ## 概要
 
