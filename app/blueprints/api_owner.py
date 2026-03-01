@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
 from app.models.shift import ShiftSchedule, ShiftScheduleEntry, ShiftPeriod
 from app.services.shift_service import get_worker_hours_summary
@@ -49,6 +49,7 @@ def get_schedule_detail(schedule_id):
 
 @api_owner_bp.route('/schedules/<int:schedule_id>/approve', methods=['POST'])
 @require_role('owner')
+@limiter.limit("10 per minute")
 def approve(schedule_id):
     user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)
@@ -65,6 +66,7 @@ def approve(schedule_id):
 
 @api_owner_bp.route('/schedules/<int:schedule_id>/reject', methods=['POST'])
 @require_role('owner')
+@limiter.limit("10 per minute")
 def reject(schedule_id):
     user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)

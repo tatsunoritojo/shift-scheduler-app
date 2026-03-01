@@ -11,3 +11,4 @@ google-api-python-client==2.134.0
 requests==2.32.4
 psycopg2-binary==2.9.9
 Flask-Limiter==3.8.0
+cryptography>=42.0.0

@@ -96,13 +96,8 @@
         </main>
     </div>
 
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.575.0/dist/umd/lucide.min.js" integrity="sha384-GzE8qT1LzDfRNjtvLN/dXDLPlJOB3BBom3Twb9/RwHkXCgNl6OU1pBxM9397HWGU" crossorigin="anonymous"></script>
     <script type="module" src="/static/js/worker-app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js');
-        }
-        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
-    </script>
+    <script src="/static/js/init.js"></script>
 </body>
 </html>

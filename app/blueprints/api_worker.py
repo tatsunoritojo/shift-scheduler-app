@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, session, current_app
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
 from app.models.shift import ShiftPeriod, ShiftSubmission
 from app.models.user import User
@@ -119,6 +119,7 @@ def get_my_submission(period_id):
 
 @api_worker_bp.route('/periods/<int:period_id>/availability', methods=['POST'])
 @require_role('worker')
+@limiter.limit("20 per minute")
 def submit_availability(period_id):
     user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)
