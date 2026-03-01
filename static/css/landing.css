@@ -1,0 +1,440 @@
+/* ============================================
+   Landing Page Styles
+   ============================================ */
+
+/* --- Layout --- */
+.lp-body {
+    background: #fff;
+    color: var(--color-neutral-800);
+    line-height: 1.7;
+}
+
+.lp-section {
+    padding: 72px 24px;
+}
+
+.lp-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* --- Hero --- */
+.lp-hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px 96px;
+    overflow: hidden;
+}
+
+.lp-hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(to bottom, transparent, #fff);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.lp-hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+#hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.lp-hero-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 16px;
+}
+
+.lp-hero-brand {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-primary-500);
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+}
+
+.lp-hero-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-neutral-900);
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.lp-hero-sub {
+    font-size: 1rem;
+    color: var(--color-neutral-500);
+    margin-bottom: 32px;
+    line-height: 1.7;
+}
+
+/* --- CTA Button --- */
+.lp-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-primary-500);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 16px 36px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.lp-cta:hover {
+    background: var(--color-primary-600);
+    box-shadow: var(--shadow-lg);
+}
+
+.lp-cta svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* --- Section Title --- */
+.lp-section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-neutral-900);
+    text-align: center;
+    margin-bottom: 48px;
+    letter-spacing: -0.01em;
+}
+
+/* --- How it works (Steps + Screenshots) --- */
+.lp-howto {
+    background: var(--color-neutral-50);
+}
+
+.lp-step-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    margin-bottom: 64px;
+}
+
+.lp-step-block:last-child {
+    margin-bottom: 0;
+}
+
+.lp-step-text {
+    text-align: center;
+    max-width: 400px;
+}
+
+.lp-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.lp-step-text h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-neutral-800);
+    margin-bottom: 8px;
+}
+
+.lp-step-text p {
+    font-size: 0.92rem;
+    color: var(--color-neutral-500);
+    margin: 0;
+}
+
+/* Phone frame mockup */
+.lp-phone-frame {
+    position: relative;
+    width: 240px;
+    border-radius: 28px;
+    background: var(--color-neutral-900);
+    padding: 12px 10px;
+    box-shadow: var(--shadow-xl);
+}
+
+.lp-phone-notch {
+    width: 80px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-neutral-700);
+    margin: 0 auto 8px;
+}
+
+.lp-screenshot {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    border-radius: 18px;
+    background: var(--color-neutral-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.lp-screenshot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 18px;
+}
+
+.lp-screenshot-pc {
+    aspect-ratio: 16 / 10;
+    border-radius: 0 0 8px 8px;
+}
+
+.lp-ss-label {
+    font-size: 0.8rem;
+    color: var(--color-neutral-400);
+    font-weight: 500;
+}
+
+/* Devices overlay (PC + phone) */
+.lp-devices {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+}
+
+.lp-devices .lp-device-back {
+    width: 100%;
+    max-width: 340px;
+}
+
+.lp-devices .lp-device-front {
+    position: absolute;
+    bottom: -16px;
+    right: -20px;
+    width: 130px;
+    box-shadow: var(--shadow-xl), 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.lp-devices .lp-device-front .lp-phone-notch {
+    width: 50px;
+    height: 4px;
+    margin-bottom: 4px;
+}
+
+/* Browser frame mockup */
+.lp-browser-frame {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 12px;
+    background: var(--color-neutral-900);
+    padding: 0 0 8px;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+.lp-browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+}
+
+.lp-browser-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-neutral-700);
+}
+
+.lp-browser-url {
+    flex: 1;
+    margin-left: 8px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: var(--color-neutral-800);
+    font-size: 0.7rem;
+    color: var(--color-neutral-500);
+    font-family: system-ui, sans-serif;
+}
+
+.lp-browser-frame .lp-screenshot {
+    margin: 0 8px 0;
+    width: calc(100% - 16px);
+    border-radius: 4px 4px 8px 8px;
+}
+
+.lp-browser-frame .lp-screenshot img {
+    border-radius: 4px 4px 8px 8px;
+}
+
+/* --- Why section (features) --- */
+.lp-features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.lp-feature-card {
+    background: #fff;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-sm);
+    padding: 32px 28px;
+    border: 1px solid var(--color-neutral-100);
+}
+
+.lp-feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    background: var(--color-primary-50);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.lp-feature-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--color-primary-500);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.lp-feature-card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-neutral-800);
+    margin-bottom: 8px;
+}
+
+.lp-feature-card p {
+    font-size: 0.95rem;
+    color: var(--color-neutral-500);
+    margin: 0;
+    line-height: 1.7;
+}
+
+/* --- Footer CTA --- */
+.lp-footer-cta {
+    text-align: center;
+    padding: 80px 24px;
+}
+
+.lp-footer-cta .lp-section-title {
+    margin-bottom: 24px;
+}
+
+.lp-login-link {
+    display: block;
+    margin-top: 20px;
+    font-size: 0.82rem;
+}
+
+.lp-login-link a {
+    color: var(--color-neutral-400);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.lp-login-link a:hover {
+    color: var(--color-primary-500);
+}
+
+/* --- Responsive: Desktop --- */
+@media (min-width: 768px) {
+    .lp-hero-title {
+        font-size: 2.2rem;
+    }
+
+    .lp-section {
+        padding: 96px 40px;
+    }
+
+    .lp-section-title {
+        font-size: 1.6rem;
+    }
+
+    .lp-step-block {
+        flex-direction: row;
+        gap: 48px;
+        text-align: left;
+    }
+
+    .lp-step-block .lp-step-text {
+        text-align: left;
+        flex: 1;
+    }
+
+    .lp-step-reverse {
+        flex-direction: row-reverse;
+    }
+
+    .lp-step-reverse .lp-step-text {
+        text-align: right;
+    }
+
+    .lp-phone-frame {
+        width: 260px;
+        flex-shrink: 0;
+    }
+
+    .lp-browser-frame {
+        max-width: 480px;
+        flex-shrink: 0;
+    }
+
+    .lp-devices {
+        max-width: 420px;
+        flex-shrink: 0;
+    }
+
+    .lp-devices .lp-device-back {
+        max-width: 420px;
+    }
+
+    .lp-devices .lp-device-front {
+        width: 160px;
+        bottom: -24px;
+        right: -32px;
+    }
+
+    .lp-features-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .lp-footer-cta {
+        padding: 96px 40px;
+    }
+}

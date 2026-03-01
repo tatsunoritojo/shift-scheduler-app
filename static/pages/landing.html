@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シフカレ - Googleカレンダー連携シフト管理</title>
+    <meta name="description" content="アプリ不要。Googleカレンダーに確定シフトが届く、シンプルなシフト管理ツール。">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/landing.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+</head>
+<body class="lp-body">
+
+    <!-- ===== 1. Hero ===== -->
+    <section class="lp-hero" id="hero">
+        <canvas id="hero-canvas"></canvas>
+        <div class="lp-container lp-hero-content">
+            <img src="/static/icons/icon-192.png" alt="シフカレ" class="lp-hero-icon">
+            <p class="lp-hero-brand">シフカレ</p>
+            <h1 class="lp-hero-title">毎月、シフトに追われていませんか？</h1>
+            <p class="lp-hero-sub">シフト希望の収集から確定まで、Googleカレンダー1つで完結します。</p>
+            <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer" class="lp-cta">
+                開発者に相談する
+                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+        </div>
+    </section>
+
+    <!-- ===== 2. How it works (3 steps + screenshots) ===== -->
+    <section class="lp-section lp-howto">
+        <div class="lp-container">
+            <h2 class="lp-section-title">シフト管理、こうなります。</h2>
+
+            <!-- Step 1 -->
+            <div class="lp-step-block">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">1</span>
+                    <h3>営業時間を入力</h3>
+                    <p>Googleカレンダーに営業時間を入れるだけ。アプリが自動で読み取ります。</p>
+                </div>
+                <div class="lp-phone-frame">
+                    <div class="lp-phone-notch"></div>
+                    <div class="lp-screenshot" id="ss-hours">
+                        <span class="lp-ss-label">営業時間の入力</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="lp-step-block lp-step-reverse">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">2</span>
+                    <h3>従業員にシフト提出を依頼</h3>
+                    <p>ワンタップで全員に通知。「今月のシフト出してね」の連絡はもう要りません。</p>
+                </div>
+                <div class="lp-phone-frame">
+                    <div class="lp-phone-notch"></div>
+                    <div class="lp-screenshot" id="ss-notify">
+                        <span class="lp-ss-label">提出依頼の通知</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="lp-step-block">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">3</span>
+                    <h3>従業員がシフト希望を入力</h3>
+                    <p>カレンダーから希望日をタップするだけ。アプリのインストールは不要です。</p>
+                </div>
+                <div class="lp-phone-frame">
+                    <div class="lp-phone-notch"></div>
+                    <div class="lp-screenshot" id="ss-worker">
+                        <span class="lp-ss-label">スタッフ提出画面</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="lp-step-block lp-step-reverse">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">4</span>
+                    <h3>管理者が確認して承認</h3>
+                    <p>提出されたシフト希望を一覧で確認。承認・却下をワンタップで。<br>スマホからでも隙間時間にサッと処理できます。</p>
+                </div>
+                <div class="lp-devices">
+                    <div class="lp-browser-frame lp-device-back">
+                        <div class="lp-browser-bar">
+                            <span class="lp-browser-dot"></span>
+                            <span class="lp-browser-dot"></span>
+                            <span class="lp-browser-dot"></span>
+                            <div class="lp-browser-url">shifukare.app/admin</div>
+                        </div>
+                        <div class="lp-screenshot lp-screenshot-pc" id="ss-admin-pc">
+                            <span class="lp-ss-label">管理者画面（PC）</span>
+                        </div>
+                    </div>
+                    <div class="lp-phone-frame lp-device-front">
+                        <div class="lp-phone-notch"></div>
+                        <div class="lp-screenshot" id="ss-admin-sp">
+                            <span class="lp-ss-label">管理者画面（スマホ）</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="lp-step-block">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">5</span>
+                    <h3>確定シフトがカレンダーに届く</h3>
+                    <p>承認されたシフトはGoogleカレンダーに自動反映。全員がいつでも確認できます。</p>
+                </div>
+                <div class="lp-phone-frame">
+                    <div class="lp-phone-notch"></div>
+                    <div class="lp-screenshot" id="ss-calendar">
+                        <span class="lp-ss-label">Googleカレンダー</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 3. Why シフカレ ===== -->
+    <section class="lp-section">
+        <div class="lp-container">
+            <h2 class="lp-section-title">なぜ、シフカレ？</h2>
+            <div class="lp-features-grid">
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- zap -->
+                        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <h3>無料で、今すぐ始められる</h3>
+                    <p>Googleアカウントだけで即日スタート。初期費用も月額費用もありません。</p>
+                </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- smartphone -->
+                        <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    </div>
+                    <h3>スマホだけで完結</h3>
+                    <p>スタッフの提出も、管理者の承認も、スマホだけでOK。パソコンがなくてもシフト管理ができます。</p>
+                </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- user -->
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <h3>開発者に直接つながる</h3>
+                    <p>大企業のサポートセンターではなく、作った本人に相談できます。要望も即反映。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 4. Footer CTA ===== -->
+    <section class="lp-footer-cta">
+        <div class="lp-container">
+            <h2 class="lp-section-title">気になったら、作った人に聞いてください。</h2>
+            <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer" class="lp-cta">
+                開発者に相談する
+                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+            <div class="lp-login-link">
+                <a href="/login">ログインはこちら →</a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js');
+    }
+
+    // ============================================
+    // Hero: Flow Field (Perlin noise)
+    // ============================================
+    (() => {
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        const hero = document.getElementById('hero');
+        let W, H, animId;
+
+        function resize() {
+            W = hero.offsetWidth;
+            H = hero.offsetHeight;
+            canvas.width = W;
+            canvas.height = H;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // --- Perlin noise ---
+        const perm = new Uint8Array(512);
+        {
+            const p = new Uint8Array(256);
+            for (let i = 0; i < 256; i++) p[i] = i;
+            for (let i = 255; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [p[i], p[j]] = [p[j], p[i]];
+            }
+            for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+        }
+        const grad2 = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+        function noise(x, y) {
+            const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+            const xf = x - Math.floor(x), yf = y - Math.floor(y);
+            const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+            const aa = perm[perm[X] + Y] & 7, ab = perm[perm[X] + Y + 1] & 7;
+            const ba = perm[perm[X + 1] + Y] & 7, bb = perm[perm[X + 1] + Y + 1] & 7;
+            const dot = (g, dx, dy) => g[0] * dx + g[1] * dy;
+            const x1 = dot(grad2[aa], xf, yf) * (1 - u) + dot(grad2[ba], xf - 1, yf) * u;
+            const x2 = dot(grad2[ab], xf, yf - 1) * (1 - u) + dot(grad2[bb], xf - 1, yf - 1) * u;
+            return x1 * (1 - v) + x2 * v;
+        }
+
+        // --- Particles ---
+        const COUNT = 600;
+        let particles = [];
+        let t = 0;
+        let vortices = [];
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W, y: Math.random() * H,
+                    px: 0, py: 0,
+                    age: Math.random() * 200,
+                    maxAge: 150 + Math.random() * 100,
+                });
+            }
+        }
+
+        resize();
+        initParticles();
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+
+        // --- Vortex on touch/click ---
+        function addVortex(e) {
+            const r = hero.getBoundingClientRect();
+            if (e.touches) {
+                for (const touch of e.touches)
+                    vortices.push({ x: touch.clientX - r.left, y: touch.clientY - r.top, t: 0 });
+            } else {
+                vortices.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: 0 });
+            }
+        }
+        hero.addEventListener('click', addVortex);
+        hero.addEventListener('touchstart', addVortex, { passive: true });
+
+        // --- Draw ---
+        function draw() {
+            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            ctx.fillRect(0, 0, W, H);
+            t += 0.003;
+
+            vortices = vortices.filter(v => { v.t += 0.008; return v.t < 1; });
+
+            for (const p of particles) {
+                p.age++;
+                if (p.age > p.maxAge) {
+                    p.x = Math.random() * W; p.y = Math.random() * H;
+                    p.px = p.x; p.py = p.y; p.age = 0;
+                    continue;
+                }
+
+                let angle = noise(p.x * 0.003, p.y * 0.003 + t) * Math.PI * 4;
+
+                for (const v of vortices) {
+                    const dx = p.x - v.x, dy = p.y - v.y;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d < 180 && d > 0) {
+                        const s = (1 - v.t) * (1 - d / 180) * 3;
+                        angle += (Math.atan2(dy, dx) + Math.PI * 0.5) * s;
+                    }
+                }
+
+                p.px = p.x; p.py = p.y;
+                p.x += Math.cos(angle) * 1.5;
+                p.y += Math.sin(angle) * 1.5;
+
+                if (p.x < 0 || p.x > W || p.y < 0 || p.y > H) {
+                    p.x = Math.random() * W; p.y = Math.random() * H;
+                    p.px = p.x; p.py = p.y; p.age = 0;
+                    continue;
+                }
+
+                const life = p.age / p.maxAge;
+                const alpha = life < 0.1 ? life / 0.1 : life > 0.8 ? (1 - life) / 0.2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(p.px, p.py);
+                ctx.lineTo(p.x, p.y);
+                ctx.strokeStyle = `rgba(59,130,246,${alpha * 0.35})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            animId = requestAnimationFrame(draw);
+        }
+        draw();
+    })();
+    </script>
+</body>
+</html>
