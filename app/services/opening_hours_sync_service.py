@@ -1,4 +1,5 @@
 from datetime import datetime, date, timedelta
+from flask import current_app
 
 from app.extensions import db
 from app.models.opening_hours import OpeningHoursException, OpeningHoursCalendarSync, SyncOperationLog
@@ -91,7 +92,8 @@ def export_opening_hours_to_calendar(org_id, credentials, start_date, end_date):
                 else:
                     stats['skipped'] += 1
         except Exception as e:
-            stats['errors'].append({'date': current.isoformat(), 'error': str(e)})
+            current_app.logger.error(f"Sync export error for {current.isoformat()}: {e}")
+            stats['errors'].append({'date': current.isoformat(), 'error': '同期エラー'})
 
         current += timedelta(days=1)
 
@@ -121,7 +123,8 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             calendar_id='primary', query='開校時間'
         )
     except Exception as e:
-        stats['errors'].append({'error': f'Failed to fetch events: {e}'})
+        current_app.logger.error(f"Failed to fetch events: {e}")
+        stats['errors'].append({'error': 'カレンダーイベントの取得に失敗しました'})
         log = SyncOperationLog(
             organization_id=org_id,
             operation_type='import',
@@ -181,7 +184,8 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
                 db.session.add(exc)
                 stats['imported'] += 1
         except Exception as e:
-            stats['errors'].append({'event': event.get('id', '?'), 'error': str(e)})
+            current_app.logger.error(f"Sync import error for event {event.get('id', '?')}: {e}")
+            stats['errors'].append({'event': event.get('id', '?'), 'error': '取込エラー'})
 
     log = SyncOperationLog(
         organization_id=org_id,

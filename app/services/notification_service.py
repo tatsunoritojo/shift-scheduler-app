@@ -1,5 +1,6 @@
 import smtplib
 import os
+from html import escape as html_escape
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import current_app
@@ -38,10 +39,12 @@ def send_email(to_email, subject, body_html):
 
 def notify_approval_requested(owner_email, period_name, admin_name):
     """Notify owner that a schedule needs approval."""
+    safe_period = html_escape(period_name)
+    safe_admin = html_escape(admin_name)
     subject = f"[シフト管理] 承認依頼: {period_name}"
     body = f"""
     <h3>シフトスケジュールの承認依頼</h3>
-    <p>{admin_name} さんがシフトスケジュール「{period_name}」の承認を依頼しています。</p>
+    <p>{safe_admin} さんがシフトスケジュール「{safe_period}」の承認を依頼しています。</p>
     <p>システムにログインして確認してください。</p>
     """
     return send_email(owner_email, subject, body)
@@ -49,12 +52,13 @@ def notify_approval_requested(owner_email, period_name, admin_name):
 
 def notify_approval_result(admin_email, period_name, action, comment=None):
     """Notify admin of approval/rejection result."""
+    safe_period = html_escape(period_name)
     action_text = '承認' if action == 'approved' else '差戻し'
     subject = f"[シフト管理] {action_text}: {period_name}"
     body = f"""
     <h3>シフトスケジュールが{action_text}されました</h3>
-    <p>シフトスケジュール「{period_name}」が{action_text}されました。</p>
+    <p>シフトスケジュール「{safe_period}」が{action_text}されました。</p>
     """
     if comment:
-        body += f"<p>コメント: {comment}</p>"
+        body += f"<p>コメント: {html_escape(comment)}</p>"
     return send_email(admin_email, subject, body)

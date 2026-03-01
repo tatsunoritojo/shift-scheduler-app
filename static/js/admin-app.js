@@ -2,6 +2,7 @@ import { api, getCurrentUser } from './modules/api-client.js';
 import { showToast } from './modules/notification.js';
 import { renderCalendar } from './modules/calendar-grid.js';
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
+import { escapeHtml } from './modules/escape-html.js';
 
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
@@ -487,7 +488,7 @@ async function loadExceptions(highlightRange) {
                         <td>${e.exception_date}</td>
                         <td>${e.is_closed ? '休校' : `${e.start_time}-${e.end_time}`}</td>
                         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
-                        <td>${e.reason || ''}</td>
+                        <td>${escapeHtml(e.reason)}</td>
                         <td><button class="btn btn-danger" style="padding:4px 12px;font-size:0.85em;"
                             onclick="deleteException(${e.id})">削除</button></td>
                     </tr>`;
@@ -643,7 +644,7 @@ async function loadPeriods() {
             <tbody>
                 ${data.map(p => `
                     <tr>
-                        <td>${p.name}</td>
+                        <td>${escapeHtml(p.name)}</td>
                         <td>${p.start_date} 〜 ${p.end_date}</td>
                         <td><span class="badge badge-${p.status}">${statusLabels[p.status] || p.status}</span></td>
                         <td>
@@ -693,7 +694,7 @@ async function loadBuilderPeriodSelect() {
     const periods = await api.get('/api/admin/periods');
     const select = document.getElementById('builder-period-select');
     select.innerHTML = '<option value="">選択してください</option>' +
-        periods.map(p => `<option value="${p.id}">${p.name} (${p.start_date} 〜 ${p.end_date})</option>`).join('');
+        periods.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.start_date} 〜 ${p.end_date})</option>`).join('');
 }
 
 window.loadBuilderData = async function() {
@@ -817,7 +818,7 @@ function updateBuilderPeriodTitle(period) {
         container.insertBefore(el, container.firstChild);
     }
     if (period) {
-        el.innerHTML = `<div class="guide-box" style="padding:12px 20px;margin-bottom:16px;"><strong style="font-size:1.05em;">${period.name}</strong><span style="margin-left:12px;color:var(--color-neutral-500);font-size:0.9em;">${period.start_date} 〜 ${period.end_date}</span></div>`;
+        el.innerHTML = `<div class="guide-box" style="padding:12px 20px;margin-bottom:16px;"><strong style="font-size:1.05em;">${escapeHtml(period.name)}</strong><span style="margin-left:12px;color:var(--color-neutral-500);font-size:0.9em;">${period.start_date} 〜 ${period.end_date}</span></div>`;
     } else {
         el.innerHTML = '';
     }
@@ -909,7 +910,7 @@ function renderAdminEventsSection(dateStr) {
         if (isAllDayEvent(event)) {
             html += `
                 <div class="event-chip event-chip-allday">
-                    <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                    <span class="event-chip-title">${escapeHtml(event.summary || 'No Title')}</span>
                     <span class="event-chip-time">終日</span>
                 </div>
             `;
@@ -919,7 +920,7 @@ function renderAdminEventsSection(dateStr) {
             html += `
                 <div class="event-chip event-chip-timed">
                     <span class="event-chip-time">${startTime} - ${endTime}</span>
-                    <span class="event-chip-title">${event.summary || 'No Title'}</span>
+                    <span class="event-chip-title">${escapeHtml(event.summary || 'No Title')}</span>
                 </div>
             `;
         }
@@ -1028,7 +1029,7 @@ function createWorkerCard(worker, dateStr, idx) {
         <div class="admin-worker-card-header">
             <div style="display:flex;align-items:center;gap:8px;">
                 <span class="admin-worker-dot" style="background:${color};"></span>
-                <span class="admin-worker-name">${worker.user_name}</span>
+                <span class="admin-worker-name">${escapeHtml(worker.user_name)}</span>
             </div>
     `;
 
@@ -1108,7 +1109,7 @@ function renderAdminCoverageTimeline(dateStr, data, container) {
         const wEnd = timeToMinutes(w.assigned_end || w.end_time || oh.end_time);
         const left = Math.max(0, ((wStart - totalStart) / totalRange) * 100);
         const width = Math.min(100 - left, ((wEnd - wStart) / totalRange) * 100);
-        html += `<div class="tl-block" style="left:${left}%;width:${width}%;background:${color};opacity:0.7;" title="${w.user_name}"></div>`;
+        html += `<div class="tl-block" style="left:${left}%;width:${width}%;background:${color};opacity:0.7;" title="${escapeHtml(w.user_name)}"></div>`;
     });
     html += '</div>';
 
@@ -1129,7 +1130,7 @@ function renderAdminCoverageTimeline(dateStr, data, container) {
         html += '<div class="timeline-legend">';
         assignedWorkers.forEach((w, idx) => {
             const color = WORKER_COLORS[idx % WORKER_COLORS.length];
-            html += `<span class="tl-legend-item"><span class="tl-legend-dot" style="background:${color};"></span>${w.user_name}</span>`;
+            html += `<span class="tl-legend-item"><span class="tl-legend-dot" style="background:${color};"></span>${escapeHtml(w.user_name)}</span>`;
         });
         html += '</div>';
     }
@@ -1210,7 +1211,7 @@ function renderSubmissionsSummary(submissions) {
         return `
             <div class="mb-8" style="padding:6px 0;border-bottom:1px solid var(--color-neutral-100);">
                 <div class="flex-between">
-                    <span>${s.user_name || s.user_email}</span>
+                    <span>${escapeHtml(s.user_name || s.user_email)}</span>
                     <span class="badge badge-${s.status}">${s.status === 'submitted' ? '提出済' : s.status}</span>
                 </div>
                 ${timeLabel ? `<div style="color:#999;font-size:0.78em;margin-top:2px;">提出: ${timeLabel}</div>` : ''}
@@ -1245,7 +1246,7 @@ function renderHoursSummary() {
 
     container.innerHTML = Object.values(summary).map(s => `
         <div class="flex-between mb-8">
-            <span>${s.name}</span>
+            <span>${escapeHtml(s.name)}</span>
             <span style="font-weight:600;">${s.hours.toFixed(1)}h (${s.shifts}日)</span>
         </div>
     `).join('');

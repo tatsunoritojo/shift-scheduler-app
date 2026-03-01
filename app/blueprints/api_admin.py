@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, session
-from datetime import datetime
+from flask import Blueprint, request, jsonify, session, current_app
+from datetime import datetime, timedelta
 
 from app.extensions import db
 from app.middleware.auth_middleware import require_role, get_current_user
@@ -204,11 +204,14 @@ def sync_export_opening_hours():
     end = parse_date(data['end_date'])
     if not start or not end:
         return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+    if (end - start).days > 90:
+        return jsonify({"error": "日付範囲は最大90日までです"}), 400
 
     try:
         credentials = get_credentials_for_user(user)
     except Exception as e:
-        return jsonify({"error": f"認証エラー: {e}"}), 401
+        current_app.logger.error(f"Credential error: {e}")
+        return jsonify({"error": "認証エラーが発生しました。再ログインしてください。"}), 401
 
     if not credentials:
         return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
@@ -232,11 +235,14 @@ def sync_import_opening_hours():
     end = parse_date(data['end_date'])
     if not start or not end:
         return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+    if (end - start).days > 90:
+        return jsonify({"error": "日付範囲は最大90日までです"}), 400
 
     try:
         credentials = get_credentials_for_user(user)
     except Exception as e:
-        return jsonify({"error": f"認証エラー: {e}"}), 401
+        current_app.logger.error(f"Credential error: {e}")
+        return jsonify({"error": "認証エラーが発生しました。再ログインしてください。"}), 401
 
     if not credentials:
         return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
@@ -521,7 +527,8 @@ def _sync_schedule_to_calendar(schedule, admin_user):
     try:
         credentials = get_credentials_for_user(admin_user)
     except Exception as e:
-        return [{"error": f"Failed to get admin credentials: {e}"}]
+        current_app.logger.error(f"Failed to get admin credentials: {e}")
+        return [{"error": "認証情報の取得に失敗しました"}]
 
     if not credentials:
         return [{"error": "Admin has no OAuth credentials"}]
