@@ -1,9 +1,12 @@
 from datetime import time
 
+from app.utils.validators import validate_time_str
+
 
 def time_to_minutes(t):
     """Convert a time object or 'HH:MM' string to minutes since midnight."""
     if isinstance(t, str):
+        validate_time_str(t, 'time')
         parts = t.split(':')
         return int(parts[0]) * 60 + int(parts[1])
     if isinstance(t, time):

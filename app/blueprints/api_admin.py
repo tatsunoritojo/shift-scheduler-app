@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, session, current_app
 from datetime import datetime, timedelta
 
-from app.extensions import db
+from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
 from app.models.organization import Organization
 from app.models.opening_hours import OpeningHours, OpeningHoursException, SyncOperationLog
@@ -341,6 +341,7 @@ def get_periods():
 
 @api_admin_bp.route('/periods', methods=['POST'])
 @require_role('admin')
+@limiter.limit("20 per minute")
 def create_period():
     user = get_current_user()
     org = _get_or_create_org(user)
@@ -499,6 +500,7 @@ def get_schedule(period_id):
 
 @api_admin_bp.route('/periods/<int:period_id>/schedule', methods=['POST'])
 @require_role('admin')
+@limiter.limit("30 per minute")
 def save_period_schedule(period_id):
     user = get_current_user()
     org = _get_or_create_org(user)
@@ -521,6 +523,7 @@ def save_period_schedule(period_id):
 
 @api_admin_bp.route('/periods/<int:period_id>/schedule/submit', methods=['POST'])
 @require_role('admin')
+@limiter.limit("10 per minute")
 def submit_schedule_for_approval(period_id):
     user = get_current_user()
     org = _get_or_create_org(user)

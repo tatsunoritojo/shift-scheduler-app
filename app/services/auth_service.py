@@ -1,3 +1,5 @@
+import logging
+
 from flask import current_app, session
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -8,6 +10,8 @@ from googleapiclient.discovery import build
 
 from app.extensions import db
 from app.models.user import User, UserToken
+
+auth_svc_logger = logging.getLogger('auth')
 
 
 def get_client_config():
@@ -90,6 +94,11 @@ def upsert_user(google_id, email, display_name):
     role = determine_role(email)
 
     if user:
+        if user.role != role:
+            auth_svc_logger.warning(
+                "ROLE_CHANGE: user_id=%s email=%s old_role=%s new_role=%s",
+                user.id, email, user.role, role,
+            )
         user.email = email
         user.display_name = display_name
         user.role = role
@@ -117,16 +126,19 @@ def upsert_user(google_id, email, display_name):
 
 
 def save_refresh_token(user, refresh_token, scopes=None):
-    """Save or update a user's refresh token."""
+    """Save or update a user's refresh token (encrypted)."""
+    from app.utils.crypto import encrypt_token
+
+    encrypted = encrypt_token(refresh_token)
     token = UserToken.query.filter_by(user_id=user.id).first()
     if token:
-        token.refresh_token = refresh_token
+        token.refresh_token = encrypted
         if scopes:
             token.scopes = ','.join(scopes) if isinstance(scopes, (list, set)) else scopes
     else:
         token = UserToken(
             user_id=user.id,
-            refresh_token=refresh_token,
+            refresh_token=encrypted,
             scopes=','.join(scopes) if isinstance(scopes, (list, set)) else scopes,
         )
         db.session.add(token)
@@ -137,17 +149,44 @@ def save_refresh_token(user, refresh_token, scopes=None):
         raise
 
 
+def _decrypt_refresh_token(token_record):
+    """Decrypt refresh token with transparent migration for plaintext tokens."""
+    from app.utils.crypto import decrypt_token, encrypt_token
+
+    stored = token_record.refresh_token
+    if not stored:
+        return None
+
+    # Try to decrypt (encrypted token)
+    plaintext = decrypt_token(stored)
+    if plaintext is not None:
+        return plaintext
+
+    # Decryption failed — assume it's a plaintext token (legacy), migrate it
+    auth_svc_logger.info(
+        "Migrating plaintext refresh token for user_id=%s to encrypted",
+        token_record.user_id,
+    )
+    token_record.refresh_token = encrypt_token(stored)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return stored
+
+
 def get_credentials_for_user(user):
     """Build Google Credentials for a user, refreshing if needed."""
     token = UserToken.query.filter_by(user_id=user.id).first()
     if not token:
         return None
 
+    refresh_token = _decrypt_refresh_token(token)
     session_creds = session.get('credentials', {})
 
     creds_data = {
         'token': session_creds.get('token'),
-        'refresh_token': token.refresh_token,
+        'refresh_token': refresh_token,
         'token_uri': 'https://oauth2.googleapis.com/token',
         'client_id': current_app.config['GOOGLE_CLIENT_ID'],
         'client_secret': current_app.config['GOOGLE_CLIENT_SECRET'],

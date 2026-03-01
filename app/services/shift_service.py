@@ -5,6 +5,8 @@ from app.models.shift import (
     ShiftSchedule, ShiftScheduleEntry,
 )
 from app.models.opening_hours import OpeningHours, OpeningHoursException
+from app.models.user import User
+from app.utils.validators import validate_time_str, validate_text_length
 
 
 def get_opening_hours_for_date(org_id, target_date):
@@ -44,6 +46,14 @@ def get_opening_hours_for_period(org_id, start_date, end_date):
 
 def create_or_update_submission(period_id, user_id, slots_data, notes=None):
     """Create or update a shift submission with slots."""
+    # Validate text lengths
+    validate_text_length(notes, 'notes', 5000)
+
+    # Load period for date range validation
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period:
+        raise ValueError(f"Period {period_id} not found")
+
     submission = ShiftSubmission.query.filter_by(
         shift_period_id=period_id, user_id=user_id
     ).first()
@@ -70,15 +80,38 @@ def create_or_update_submission(period_id, user_id, slots_data, notes=None):
             slot_date = date.fromisoformat(slot['slot_date'])
         except (ValueError, KeyError, TypeError):
             raise ValueError(f"Invalid slot_date: {slot.get('slot_date')}")
+
+        # Validate slot_date is within period range
+        if slot_date < period.start_date or slot_date > period.end_date:
+            raise ValueError(
+                f"slot_date {slot_date.isoformat()} is outside period range "
+                f"({period.start_date.isoformat()} - {period.end_date.isoformat()})"
+            )
+
+        # Validate time strings if provided
+        start_time = slot.get('start_time')
+        end_time = slot.get('end_time')
+        if start_time:
+            validate_time_str(start_time, 'start_time')
+        if end_time:
+            validate_time_str(end_time, 'end_time')
+
+        auto_start = slot.get('auto_calculated_start')
+        auto_end = slot.get('auto_calculated_end')
+        if auto_start:
+            validate_time_str(auto_start, 'auto_calculated_start')
+        if auto_end:
+            validate_time_str(auto_end, 'auto_calculated_end')
+
         s = ShiftSubmissionSlot(
             submission_id=submission.id,
             slot_date=slot_date,
             is_available=slot.get('is_available', False),
-            start_time=slot.get('start_time'),
-            end_time=slot.get('end_time'),
+            start_time=start_time,
+            end_time=end_time,
             is_custom_time=slot.get('is_custom_time', False),
-            auto_calculated_start=slot.get('auto_calculated_start'),
-            auto_calculated_end=slot.get('auto_calculated_end'),
+            auto_calculated_start=auto_start,
+            auto_calculated_end=auto_end,
             notes=slot.get('notes'),
         )
         db.session.add(s)
@@ -102,8 +135,41 @@ def get_submissions_for_period(period_id):
     return result
 
 
-def save_schedule(period_id, created_by, entries_data):
+def save_schedule(period_id, created_by, entries_data, organization_id=None):
     """Create or update a shift schedule."""
+    # Check for duplicate: reject if non-draft, non-rejected schedule exists for this period
+    existing = ShiftSchedule.query.filter(
+        ShiftSchedule.shift_period_id == period_id,
+        ShiftSchedule.status.notin_(['draft', 'rejected']),
+    ).first()
+    if existing:
+        raise ValueError(
+            f"A schedule with status '{existing.status}' already exists for this period. "
+            "Cannot create a new schedule."
+        )
+
+    # Load period for date range validation
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period:
+        raise ValueError(f"Period {period_id} not found")
+
+    # Validate all entry user_ids if organization_id is provided
+    if organization_id and entries_data:
+        user_ids = list({entry['user_id'] for entry in entries_data})
+        valid_users = User.query.filter(
+            User.id.in_(user_ids),
+            User.organization_id == organization_id,
+            User.is_active.is_(True),
+            User.role == 'worker',
+        ).all()
+        valid_user_ids = {u.id for u in valid_users}
+        invalid_ids = set(user_ids) - valid_user_ids
+        if invalid_ids:
+            raise ValueError(
+                f"Invalid user_ids: {sorted(invalid_ids)}. "
+                "Users must exist, belong to this organization, be active, and have worker role."
+            )
+
     schedule = ShiftSchedule.query.filter_by(
         shift_period_id=period_id, status='draft'
     ).first()
@@ -124,6 +190,18 @@ def save_schedule(period_id, created_by, entries_data):
             shift_date = date.fromisoformat(entry['shift_date'])
         except (ValueError, KeyError, TypeError):
             raise ValueError(f"Invalid shift_date: {entry.get('shift_date')}")
+
+        # Validate shift_date is within period range
+        if shift_date < period.start_date or shift_date > period.end_date:
+            raise ValueError(
+                f"shift_date {shift_date.isoformat()} is outside period range "
+                f"({period.start_date.isoformat()} - {period.end_date.isoformat()})"
+            )
+
+        # Validate time strings
+        validate_time_str(entry['start_time'], 'start_time')
+        validate_time_str(entry['end_time'], 'end_time')
+
         e = ShiftScheduleEntry(
             schedule_id=schedule.id,
             user_id=entry['user_id'],
