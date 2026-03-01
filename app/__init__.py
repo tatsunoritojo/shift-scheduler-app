@@ -58,6 +58,8 @@ def create_app(config_name=None):
     from app.blueprints.api_admin import api_admin_bp
     from app.blueprints.api_worker import api_worker_bp
     from app.blueprints.api_owner import api_owner_bp
+    from app.blueprints.api_cron import api_cron_bp
+    from app.blueprints.api_dashboard import api_dashboard_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_calendar_bp)
@@ -65,6 +67,8 @@ def create_app(config_name=None):
     app.register_blueprint(api_admin_bp)
     app.register_blueprint(api_worker_bp)
     app.register_blueprint(api_owner_bp)
+    app.register_blueprint(api_cron_bp)
+    app.register_blueprint(api_dashboard_bp)
 
     # Register security headers and error handlers
     _register_security_headers(app)
