@@ -18,6 +18,7 @@ from app.services.opening_hours_sync_service import (
     export_opening_hours_to_calendar,
     import_opening_hours_from_calendar,
 )
+from app.utils.validators import validate_time_str, validate_text_length
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -65,20 +66,29 @@ def update_opening_hours():
         if dow is None or dow < 0 or dow > 6:
             continue
 
+        # Validate time strings
+        start_time = item.get('start_time', '09:00')
+        end_time = item.get('end_time', '21:00')
+        try:
+            validate_time_str(start_time, 'start_time')
+            validate_time_str(end_time, 'end_time')
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
         existing = OpeningHours.query.filter_by(
             organization_id=org.id, day_of_week=dow
         ).first()
 
         if existing:
-            existing.start_time = item.get('start_time', '09:00')
-            existing.end_time = item.get('end_time', '21:00')
+            existing.start_time = start_time
+            existing.end_time = end_time
             existing.is_closed = item.get('is_closed', False)
         else:
             oh = OpeningHours(
                 organization_id=org.id,
                 day_of_week=dow,
-                start_time=item.get('start_time', '09:00'),
-                end_time=item.get('end_time', '21:00'),
+                start_time=start_time,
+                end_time=end_time,
                 is_closed=item.get('is_closed', False),
             )
             db.session.add(oh)
@@ -124,11 +134,23 @@ def create_exception():
     if source not in ('manual', 'calendar'):
         return jsonify({"error": "Invalid source. Allowed: manual, calendar"}), 400
 
+    # Validate time strings if provided
+    exc_start_time = data.get('start_time')
+    exc_end_time = data.get('end_time')
+    try:
+        if exc_start_time:
+            validate_time_str(exc_start_time, 'start_time')
+        if exc_end_time:
+            validate_time_str(exc_end_time, 'end_time')
+        validate_text_length(data.get('reason'), 'reason', 2000)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
     exc = OpeningHoursException(
         organization_id=org.id,
         exception_date=exc_date,
-        start_time=data.get('start_time'),
-        end_time=data.get('end_time'),
+        start_time=exc_start_time,
+        end_time=exc_end_time,
         is_closed=data.get('is_closed', False),
         reason=data.get('reason'),
         source=source,
@@ -153,10 +175,17 @@ def update_exception(exc_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "Request body is required"}), 400
-    if data.get('start_time') is not None:
-        exc.start_time = data['start_time']
-    if data.get('end_time') is not None:
-        exc.end_time = data['end_time']
+    try:
+        if data.get('start_time') is not None:
+            validate_time_str(data['start_time'], 'start_time')
+            exc.start_time = data['start_time']
+        if data.get('end_time') is not None:
+            validate_time_str(data['end_time'], 'end_time')
+            exc.end_time = data['end_time']
+        if 'reason' in data:
+            validate_text_length(data['reason'], 'reason', 2000)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     if 'is_closed' in data:
         exc.is_closed = data['is_closed']
     if 'reason' in data:
@@ -325,8 +354,15 @@ def create_period():
 
     if not start or not end:
         return jsonify({"error": "start_date and end_date required (YYYY-MM-DD)"}), 400
+    if start >= end:
+        return jsonify({"error": "start_date must be before end_date"}), 400
     if not data.get('name'):
         return jsonify({"error": "name is required"}), 400
+
+    try:
+        validate_text_length(data['name'], 'name', 200)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     deadline = None
     if data.get('submission_deadline'):
@@ -378,6 +414,12 @@ def update_period(period_id):
         except ValueError:
             pass
 
+    if data.get('name'):
+        try:
+            validate_text_length(data['name'], 'name', 200)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
     from app.utils.validators import parse_date
     if data.get('start_date'):
         d = parse_date(data['start_date'])
@@ -387,6 +429,10 @@ def update_period(period_id):
         d = parse_date(data['end_date'])
         if d:
             period.end_date = d
+
+    # Validate date order after any updates
+    if period.start_date >= period.end_date:
+        return jsonify({"error": "start_date must be before end_date"}), 400
 
     try:
         db.session.commit()
@@ -465,7 +511,7 @@ def save_period_schedule(period_id):
     entries = data.get('entries', [])
 
     try:
-        schedule = save_schedule(period_id, user.id, entries)
+        schedule = save_schedule(period_id, user.id, entries, organization_id=org.id)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     result = schedule.to_dict()
@@ -547,7 +593,7 @@ def _sync_schedule_to_calendar(schedule, admin_user):
             calendar_id = worker.email
             event_id = create_event(
                 credentials, calendar_id, summary, start_dt, end_dt,
-                description=f"シフト管理システムにより自動作成"
+                description="シフリーにより自動作成"
             )
             entry.calendar_event_id = event_id
             entry.synced_at = datetime.utcnow()

@@ -6,6 +6,13 @@ from email.mime.multipart import MIMEMultipart
 from flask import current_app
 
 
+def _sanitize_subject(subject):
+    """Remove characters that could be used for SMTP header injection."""
+    if not subject:
+        return subject
+    return subject.replace('\r', '').replace('\n', '').replace('\x00', '')
+
+
 def send_email(to_email, subject, body_html):
     """Send an email notification. Silently fails if SMTP not configured."""
     smtp_host = os.environ.get('SMTP_HOST')
@@ -41,7 +48,7 @@ def notify_approval_requested(owner_email, period_name, admin_name):
     """Notify owner that a schedule needs approval."""
     safe_period = html_escape(period_name)
     safe_admin = html_escape(admin_name)
-    subject = f"[シフト管理] 承認依頼: {period_name}"
+    subject = _sanitize_subject(f"[シフリー] 承認依頼: {period_name}")
     body = f"""
     <h3>シフトスケジュールの承認依頼</h3>
     <p>{safe_admin} さんがシフトスケジュール「{safe_period}」の承認を依頼しています。</p>
@@ -54,7 +61,7 @@ def notify_approval_result(admin_email, period_name, action, comment=None):
     """Notify admin of approval/rejection result."""
     safe_period = html_escape(period_name)
     action_text = '承認' if action == 'approved' else '差戻し'
-    subject = f"[シフト管理] {action_text}: {period_name}"
+    subject = _sanitize_subject(f"[シフリー] {action_text}: {period_name}")
     body = f"""
     <h3>シフトスケジュールが{action_text}されました</h3>
     <p>シフトスケジュール「{safe_period}」が{action_text}されました。</p>

@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: /
 
-Sitemap: https://shift-scheduler-app-flame.vercel.app/static/sitemap.xml
+Sitemap: https://shifree.vercel.app/static/sitemap.xml
