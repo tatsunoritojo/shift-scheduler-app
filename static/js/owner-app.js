@@ -5,7 +5,29 @@ import { escapeHtml } from './modules/escape-html.js';
 let currentUser = null;
 let currentScheduleId = null;
 
+function setupStaticHandlers() {
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        location.href = '/auth/logout';
+    });
+    document.getElementById('btn-back-pending').addEventListener('click', () => showPendingList());
+    document.getElementById('btn-approve').addEventListener('click', () => approveSchedule());
+    document.getElementById('btn-reject').addEventListener('click', () => rejectSchedule());
+}
+
+function setupDelegatedHandlers() {
+    document.getElementById('pending-list').addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        const action = target.dataset.action;
+        if (action === 'viewSchedule') {
+            viewSchedule(Number(target.dataset.id));
+        }
+    });
+}
+
 async function init() {
+    setupStaticHandlers();
+    setupDelegatedHandlers();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -28,7 +50,7 @@ async function loadPendingApprovals() {
 
         container.classList.remove('loading');
         container.innerHTML = approvals.map(a => `
-            <div class="card" style="cursor:pointer;" onclick="window.viewSchedule(${a.id})">
+            <div class="card" style="cursor:pointer;" data-action="viewSchedule" data-id="${a.id}">
                 <div class="flex-between">
                     <div>
                         <strong>${a.period ? escapeHtml(a.period.name) : 'スケジュール #' + a.id}</strong>
@@ -47,7 +69,7 @@ async function loadPendingApprovals() {
     }
 }
 
-window.viewSchedule = async function(scheduleId) {
+async function viewSchedule(scheduleId) {
     currentScheduleId = scheduleId;
 
     try {
@@ -135,15 +157,15 @@ window.viewSchedule = async function(scheduleId) {
     } catch (e) {
         showToast('スケジュールの読み込みに失敗しました', 'error');
     }
-};
+}
 
-window.showPendingList = function() {
+function showPendingList() {
     document.getElementById('pending-list').style.display = 'block';
     document.getElementById('schedule-detail').style.display = 'none';
     currentScheduleId = null;
-};
+}
 
-window.approveSchedule = async function() {
+async function approveSchedule() {
     if (!currentScheduleId) return;
     const comment = document.getElementById('approval-comment').value;
 
@@ -163,9 +185,9 @@ window.approveSchedule = async function() {
             }
         }
     );
-};
+}
 
-window.rejectSchedule = async function() {
+async function rejectSchedule() {
     if (!currentScheduleId) return;
     const comment = document.getElementById('approval-comment').value;
     if (!comment) {
@@ -189,7 +211,7 @@ window.rejectSchedule = async function() {
             }
         }
     );
-};
+}
 
 function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
     const overlay = document.createElement('div');

@@ -38,13 +38,13 @@ async function loadSyncStatus() {
             container.innerHTML = `
                 <span class="sync-status-icon synced"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
                 <span class="sync-status-text">最終同期: <strong>${dateStr}</strong> ${typeLabel} ${rangeLabel}</span>
-                <button class="sync-status-link" onclick="showSyncLogs()">履歴</button>
+                <button class="sync-status-link" data-action="showSyncLogs">履歴</button>
             `;
         } else {
             container.innerHTML = `
                 <span class="sync-status-icon not-synced"><i data-lucide="minus" style="width:16px;height:16px;"></i></span>
                 <span class="sync-status-text">まだ同期されていません</span>
-                <button class="sync-status-link" onclick="showSyncLogs()">履歴</button>
+                <button class="sync-status-link" data-action="showSyncLogs">履歴</button>
             `;
         }
         if (window.lucide) lucide.createIcons();
@@ -55,7 +55,7 @@ async function loadSyncStatus() {
     }
 }
 
-window.showSyncLogs = async function() {
+async function showSyncLogs() {
     try {
         const logs = await api.get('/api/admin/opening-hours/sync/logs');
 
@@ -109,7 +109,7 @@ window.showSyncLogs = async function() {
     } catch (e) {
         showToast('同期履歴の取得に失敗しました', 'error');
     }
-};
+}
 
 // --- Import Preview Calendar ---
 
@@ -176,7 +176,7 @@ function renderImportPreview(startDateStr, endDateStr) {
             }
 
             if (inRange) {
-                html += `<div class="${cellClass} preview-clickable" onclick="showSettingsDayPopup('${dateStr}')"><div class="preview-day-num">${day}</div>${timeLabel ? `<div class="preview-day-time">${timeLabel}</div>` : ''}</div>`;
+                html += `<div class="${cellClass} preview-clickable" data-action="showSettingsDayPopup" data-date="${dateStr}"><div class="preview-day-num">${day}</div>${timeLabel ? `<div class="preview-day-time">${timeLabel}</div>` : ''}</div>`;
             } else {
                 html += `<div class="${cellClass}"><div class="preview-day-num">${day}</div></div>`;
             }
@@ -220,16 +220,15 @@ function openManualAndScroll(sectionId) {
     }
 }
 
-window.openManualSettings = function() { openManualAndScroll('manual-settings-details'); };
-window.goToAddException = function() { openManualAndScroll('section-add-exception'); };
-window.goToExceptionsList = function() { openManualAndScroll('section-exceptions-list'); };
-window.goToOpeningHours = function() { openManualAndScroll('section-opening-hours'); };
+function goToAddException() { openManualAndScroll('section-add-exception'); }
+function goToExceptionsList() { openManualAndScroll('section-exceptions-list'); }
+function goToOpeningHours() { openManualAndScroll('section-opening-hours'); }
 
 function generatePeriodName(startStr, endStr) {
     return `${startStr}〜${endStr} 自習室シフト`;
 }
 
-window.goToCreatePeriod = function() {
+function goToCreatePeriod() {
     // Pre-fill period form from preview range
     if (lastPreviewRange) {
         const nameField = document.getElementById('period-name');
@@ -242,7 +241,7 @@ window.goToCreatePeriod = function() {
         if (endField && !endField.value) endField.value = lastPreviewRange.end;
     }
     switchTab('periods');
-};
+}
 
 function initSyncDateRange() {
     const now = new Date();
@@ -255,7 +254,7 @@ function initSyncDateRange() {
 
 // --- Settings Day Popup ---
 
-window.showSettingsDayPopup = function(dateStr) {
+function showSettingsDayPopup(dateStr) {
     closeSettingsDayPopup();
 
     const exc = exceptionsData.find(e => e.exception_date === dateStr);
@@ -287,7 +286,7 @@ window.showSettingsDayPopup = function(dateStr) {
     popup.innerHTML = `
         <div class="day-popup-header">
             <span class="day-popup-date">${dayLabel}</span>
-            <button class="day-popup-close" onclick="closeSettingsDayPopup()">&times;</button>
+            <button class="day-popup-close" data-action="closeSettingsDayPopup">&times;</button>
         </div>
         <div class="day-popup-section">
             <div class="day-popup-label">ステータス</div>
@@ -310,10 +309,10 @@ window.showSettingsDayPopup = function(dateStr) {
         </div>
         <div class="day-popup-section" style="border-bottom:none;">
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-primary" onclick="saveSettingsPopup('${dateStr}', ${exc ? exc.id : 'null'})">
+                <button class="btn btn-primary" data-action="saveSettingsPopup" data-date="${dateStr}" data-exc-id="${exc ? exc.id : 'null'}">
                     <i data-lucide="save" style="width:15px;height:15px;"></i> ${exc ? '更新' : '例外として保存'}
                 </button>
-                ${exc ? `<button class="btn btn-danger" onclick="deleteSettingsPopup(${exc.id})"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> 削除</button>` : ''}
+                ${exc ? `<button class="btn btn-danger" data-action="deleteSettingsPopup" data-exc-id="${exc.id}"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> 削除</button>` : ''}
             </div>
         </div>
     `;
@@ -325,7 +324,7 @@ window.showSettingsDayPopup = function(dateStr) {
         overlay.classList.add('visible');
         popup.classList.add('visible');
     });
-};
+}
 
 function closeSettingsDayPopup() {
     const overlay = document.getElementById('settings-day-popup-overlay');
@@ -335,9 +334,8 @@ function closeSettingsDayPopup() {
     if (popup) popup.classList.remove('visible');
     setTimeout(() => overlay.remove(), 200);
 }
-window.closeSettingsDayPopup = closeSettingsDayPopup;
 
-window.saveSettingsPopup = async function(dateStr, excId) {
+async function saveSettingsPopup(dateStr, excId) {
     const startTime = document.getElementById('settings-popup-start').value;
     const endTime = document.getElementById('settings-popup-end').value;
     const isClosed = document.getElementById('settings-popup-closed').checked;
@@ -368,9 +366,9 @@ window.saveSettingsPopup = async function(dateStr, excId) {
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
-window.deleteSettingsPopup = async function(excId) {
+async function deleteSettingsPopup(excId) {
     try {
         await api.delete(`/api/admin/opening-hours/exceptions/${excId}`);
         showToast('削除しました', 'success');
@@ -380,9 +378,75 @@ window.deleteSettingsPopup = async function(excId) {
     } catch (e) {
         showToast(`削除に失敗しました: ${e.message}`, 'error');
     }
-};
+}
+
+function setupStaticHandlers() {
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        location.href = '/auth/logout';
+    });
+
+    // Tab buttons
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Sync buttons
+    document.getElementById('btn-import-hours').addEventListener('click', () => importOpeningHours());
+    document.getElementById('btn-export-hours').addEventListener('click', () => exportOpeningHours());
+
+    // Preview action buttons
+    document.getElementById('btn-go-create-period').addEventListener('click', () => goToCreatePeriod());
+    document.getElementById('btn-go-add-exception').addEventListener('click', () => goToAddException());
+    document.getElementById('btn-go-exceptions-list').addEventListener('click', () => goToExceptionsList());
+    document.getElementById('btn-go-opening-hours').addEventListener('click', () => goToOpeningHours());
+
+    // Manual settings
+    document.getElementById('btn-save-opening-hours').addEventListener('click', () => saveOpeningHours());
+    document.getElementById('btn-add-exception').addEventListener('click', () => addException());
+
+    // Periods
+    document.getElementById('btn-create-period').addEventListener('click', () => createPeriod());
+
+    // Builder
+    document.getElementById('builder-period-select').addEventListener('change', () => loadBuilderData());
+    document.getElementById('btn-save-schedule').addEventListener('click', () => saveSchedule());
+    document.getElementById('btn-submit-approval').addEventListener('click', () => submitForApproval());
+    document.getElementById('confirm-btn').addEventListener('click', () => confirmSchedule());
+    document.getElementById('btn-refresh-builder').addEventListener('click', () => loadBuilderData());
+}
+
+function setupDelegatedHandlers() {
+    // Click delegation for dynamically generated elements
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        const action = target.dataset.action;
+        switch (action) {
+            case 'showSyncLogs': showSyncLogs(); break;
+            case 'showSettingsDayPopup': showSettingsDayPopup(target.dataset.date); break;
+            case 'closeSettingsDayPopup': closeSettingsDayPopup(); break;
+            case 'saveSettingsPopup': saveSettingsPopup(target.dataset.date, target.dataset.excId === 'null' ? null : Number(target.dataset.excId)); break;
+            case 'deleteSettingsPopup': deleteSettingsPopup(Number(target.dataset.excId)); break;
+            case 'deleteException': deleteException(Number(target.dataset.id)); break;
+            case 'updatePeriodStatus': updatePeriodStatus(Number(target.dataset.id), target.dataset.status); break;
+            case 'closeAdminDayPopup': closeAdminDayPopup(); break;
+            case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
+        }
+    });
+
+    // Change delegation for dynamically generated time inputs
+    document.addEventListener('change', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        if (target.dataset.action === 'applyWorkerTime') {
+            applyWorkerTime(Number(target.dataset.userId), target.dataset.date);
+        }
+    });
+}
 
 async function init() {
+    setupStaticHandlers();
+    setupDelegatedHandlers();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -406,14 +470,14 @@ async function init() {
 }
 
 // --- Tab switching ---
-window.switchTab = function(tabName) {
+function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
     if (tabName === 'builder') loadBuilderPeriodSelect();
-};
+}
 
 // --- Opening Hours ---
 async function loadOpeningHours() {
@@ -441,7 +505,7 @@ async function loadOpeningHours() {
     grid.innerHTML = rows.join('');
 }
 
-window.saveOpeningHours = async function() {
+async function saveOpeningHours() {
     const hours = [];
     for (let dow = 0; dow < 7; dow++) {
         hours.push({
@@ -457,7 +521,7 @@ window.saveOpeningHours = async function() {
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
 // --- Exceptions ---
 async function loadExceptions(highlightRange) {
@@ -490,7 +554,7 @@ async function loadExceptions(highlightRange) {
                         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                         <td>${escapeHtml(e.reason)}</td>
                         <td><button class="btn btn-danger" style="padding:4px 12px;font-size:0.85em;"
-                            onclick="deleteException(${e.id})">削除</button></td>
+                            data-action="deleteException" data-id="${e.id}">削除</button></td>
                     </tr>`;
                 }).join('')}
             </tbody>
@@ -498,7 +562,7 @@ async function loadExceptions(highlightRange) {
     `;
 }
 
-window.addException = async function() {
+async function addException() {
     const data = {
         exception_date: document.getElementById('exc-date').value,
         start_time: document.getElementById('exc-start').value,
@@ -515,9 +579,9 @@ window.addException = async function() {
     } catch (e) {
         showToast(`追加に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
-window.deleteException = async function(id) {
+async function deleteException(id) {
     try {
         await api.delete(`/api/admin/opening-hours/exceptions/${id}`);
         showToast('例外日を削除しました', 'success');
@@ -526,7 +590,7 @@ window.deleteException = async function(id) {
     } catch (e) {
         showToast(`削除に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
 // --- Opening Hours Calendar Sync ---
 
@@ -566,7 +630,7 @@ function showSyncResult(result, type) {
     `;
 }
 
-window.exportOpeningHours = async function() {
+async function exportOpeningHours() {
     const startDate = document.getElementById('sync-start-date').value;
     const endDate = document.getElementById('sync-end-date').value;
     if (!startDate || !endDate) {
@@ -592,9 +656,9 @@ window.exportOpeningHours = async function() {
             }
         }
     );
-};
+}
 
-window.importOpeningHours = async function() {
+async function importOpeningHours() {
     const startDate = document.getElementById('sync-start-date').value;
     const endDate = document.getElementById('sync-end-date').value;
     if (!startDate || !endDate) {
@@ -622,7 +686,7 @@ window.importOpeningHours = async function() {
             }
         }
     );
-};
+}
 
 // --- Periods ---
 async function loadPeriods() {
@@ -648,8 +712,8 @@ async function loadPeriods() {
                         <td>${p.start_date} 〜 ${p.end_date}</td>
                         <td><span class="badge badge-${p.status}">${statusLabels[p.status] || p.status}</span></td>
                         <td>
-                            ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" onclick="updatePeriodStatus(${p.id}, 'open')">募集開始</button>` : ''}
-                            ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" onclick="updatePeriodStatus(${p.id}, 'closed')">締切</button>` : ''}
+                            ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
+                            ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -658,7 +722,7 @@ async function loadPeriods() {
     `;
 }
 
-window.createPeriod = async function() {
+async function createPeriod() {
     const data = {
         name: document.getElementById('period-name').value,
         start_date: document.getElementById('period-start').value,
@@ -677,9 +741,9 @@ window.createPeriod = async function() {
     } catch (e) {
         showToast(`作成に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
-window.updatePeriodStatus = async function(id, status) {
+async function updatePeriodStatus(id, status) {
     try {
         await api.put(`/api/admin/periods/${id}`, { status });
         showToast('ステータスを更新しました', 'success');
@@ -687,7 +751,7 @@ window.updatePeriodStatus = async function(id, status) {
     } catch (e) {
         showToast(`更新に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
 // --- Builder ---
 async function loadBuilderPeriodSelect() {
@@ -697,7 +761,7 @@ async function loadBuilderPeriodSelect() {
         periods.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.start_date} 〜 ${p.end_date})</option>`).join('');
 }
 
-window.loadBuilderData = async function() {
+async function loadBuilderData() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) {
         document.getElementById('builder-content').style.display = 'none';
@@ -759,7 +823,7 @@ window.loadBuilderData = async function() {
         if (thisGeneration !== builderLoadGeneration) return;
         showToast('データの読み込みに失敗しました', 'error');
     }
-};
+}
 
 // --- Aggregation ---
 
@@ -952,7 +1016,7 @@ function showAdminDayPopup(dateStr, data) {
     popup.innerHTML = `
         <div class="day-popup-header">
             <span class="day-popup-date">${dayLabel}</span>
-            <button class="day-popup-close" onclick="window.closeAdminDayPopup()">&times;</button>
+            <button class="day-popup-close" data-action="closeAdminDayPopup">&times;</button>
         </div>
     `;
 
@@ -1037,7 +1101,7 @@ function createWorkerCard(worker, dateStr, idx) {
         const activeClass = worker.is_assigned ? ' active' : '';
         html += `
             <button class="day-popup-toggle${activeClass}"
-                onclick="window.toggleWorkerAssignment(${worker.user_id}, '${dateStr}')">
+                data-action="toggleWorkerAssignment" data-user-id="${worker.user_id}" data-date="${dateStr}">
                 <span class="toggle-track"><span class="toggle-thumb"></span></span>
                 <span class="toggle-label">${worker.is_assigned ? 'ON' : 'OFF'}</span>
             </button>
@@ -1060,10 +1124,10 @@ function createWorkerCard(worker, dateStr, idx) {
         html += `
             <div class="admin-worker-assigned-time">
                 <input type="time" class="form-control popup-time-input" value="${aStart}"
-                    id="assigned-start-${worker.user_id}" onchange="window.applyWorkerTime(${worker.user_id}, '${dateStr}')">
+                    id="assigned-start-${worker.user_id}" data-action="applyWorkerTime" data-user-id="${worker.user_id}" data-date="${dateStr}">
                 <span class="time-separator">〜</span>
                 <input type="time" class="form-control popup-time-input" value="${aEnd}"
-                    id="assigned-end-${worker.user_id}" onchange="window.applyWorkerTime(${worker.user_id}, '${dateStr}')">
+                    id="assigned-end-${worker.user_id}" data-action="applyWorkerTime" data-user-id="${worker.user_id}" data-date="${dateStr}">
             </div>
         `;
     }
@@ -1080,7 +1144,6 @@ function closeAdminDayPopup() {
     if (popup) popup.classList.remove('visible');
     setTimeout(() => overlay.remove(), 200);
 }
-window.closeAdminDayPopup = closeAdminDayPopup;
 
 // --- Coverage Timeline ---
 
@@ -1140,7 +1203,7 @@ function renderAdminCoverageTimeline(dateStr, data, container) {
 
 // --- Worker Assignment Toggle ---
 
-window.toggleWorkerAssignment = function(userId, dateStr) {
+function toggleWorkerAssignment(userId, dateStr) {
     const idx = scheduleEntries.findIndex(e => e.user_id === userId && e.shift_date === dateStr);
     if (idx >= 0) {
         scheduleEntries.splice(idx, 1);
@@ -1164,11 +1227,11 @@ window.toggleWorkerAssignment = function(userId, dateStr) {
     // Re-open popup for this date
     const newData = dayAggregatedData[dateStr];
     if (newData) showAdminDayPopup(dateStr, newData);
-};
+}
 
 // --- Apply Worker Time Change ---
 
-window.applyWorkerTime = function(userId, dateStr) {
+function applyWorkerTime(userId, dateStr) {
     const startInput = document.getElementById(`assigned-start-${userId}`);
     const endInput = document.getElementById(`assigned-end-${userId}`);
     if (!startInput || !endInput) return;
@@ -1190,7 +1253,7 @@ window.applyWorkerTime = function(userId, dateStr) {
     if (tlContainer && newData) {
         renderAdminCoverageTimeline(dateStr, newData, tlContainer);
     }
-};
+}
 
 // --- Sidebar renderers ---
 
@@ -1252,7 +1315,7 @@ function renderHoursSummary() {
     `).join('');
 }
 
-window.saveSchedule = async function() {
+async function saveSchedule() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
     try {
@@ -1261,9 +1324,9 @@ window.saveSchedule = async function() {
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
-};
+}
 
-window.submitForApproval = async function() {
+async function submitForApproval() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
 
@@ -1287,9 +1350,9 @@ window.submitForApproval = async function() {
             }
         }
     );
-};
+}
 
-window.confirmSchedule = async function() {
+async function confirmSchedule() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
 
@@ -1310,7 +1373,7 @@ window.confirmSchedule = async function() {
             }
         }
     );
-};
+}
 
 function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
     const overlay = document.createElement('div');

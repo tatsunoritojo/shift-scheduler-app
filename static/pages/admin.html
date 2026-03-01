@@ -15,14 +15,14 @@
             <div class="user-info">
                 <span id="user-name"></span>
                 <span class="role-badge">管理者</span>
-                <button class="logout-btn" onclick="location.href='/auth/logout'"><i data-lucide="log-out" style="width:14px;height:14px;"></i> ログアウト</button>
+                <button class="logout-btn" id="btn-logout"><i data-lucide="log-out" style="width:14px;height:14px;"></i> ログアウト</button>
             </div>
         </header>
         <main class="main-content">
             <div class="tab-bar">
-                <button class="tab-btn active" data-tab="settings" onclick="switchTab('settings')">設定</button>
-                <button class="tab-btn" data-tab="periods" onclick="switchTab('periods')">シフト期間</button>
-                <button class="tab-btn" data-tab="builder" onclick="switchTab('builder')">シフト構築</button>
+                <button class="tab-btn active" data-tab="settings">設定</button>
+                <button class="tab-btn" data-tab="periods">シフト期間</button>
+                <button class="tab-btn" data-tab="builder">シフト構築</button>
             </div>
 
             <!-- Settings Tab -->
@@ -56,8 +56,8 @@
                             <label>終了日</label>
                             <input type="date" id="sync-end-date" class="form-control" style="width:auto;">
                         </div>
-                        <button class="btn btn-outline" onclick="importOpeningHours()"><i data-lucide="download" style="width:15px;height:15px;"></i> インポート（カレンダー→例外リスト）</button>
-                        <button class="btn btn-primary" onclick="exportOpeningHours()"><i data-lucide="upload" style="width:15px;height:15px;"></i> エクスポート（設定→カレンダー）</button>
+                        <button class="btn btn-outline" id="btn-import-hours"><i data-lucide="download" style="width:15px;height:15px;"></i> インポート（カレンダー→例外リスト）</button>
+                        <button class="btn btn-primary" id="btn-export-hours"><i data-lucide="upload" style="width:15px;height:15px;"></i> エクスポート（設定→カレンダー）</button>
                     </div>
                     <div id="sync-result" style="display:none;" class="mt-8"></div>
                 </div>
@@ -71,10 +71,10 @@
                         </div>
                     </div>
                     <div id="import-preview-actions" style="display:none;flex-wrap:wrap;" class="flex gap-8 mt-16">
-                        <button class="btn btn-primary" onclick="goToCreatePeriod()"><i data-lucide="arrow-right" style="width:15px;height:15px;"></i> OK → シフト期間を作成</button>
-                        <button class="btn btn-outline" onclick="goToAddException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> シフトを追加</button>
-                        <button class="btn btn-outline" onclick="goToExceptionsList()"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
-                        <button class="btn btn-outline" onclick="goToOpeningHours()"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
+                        <button class="btn btn-primary" id="btn-go-create-period"><i data-lucide="arrow-right" style="width:15px;height:15px;"></i> OK → シフト期間を作成</button>
+                        <button class="btn btn-outline" id="btn-go-add-exception"><i data-lucide="plus" style="width:15px;height:15px;"></i> シフトを追加</button>
+                        <button class="btn btn-outline" id="btn-go-exceptions-list"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
+                        <button class="btn btn-outline" id="btn-go-opening-hours"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
                     </div>
                 </div>
 
@@ -86,7 +86,7 @@
                             <h3>曜日別の開校時間</h3>
                             <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの開校時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
                             <div id="opening-hours-grid"></div>
-                            <button class="btn btn-primary mt-16" onclick="saveOpeningHours()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                            <button class="btn btn-primary mt-16" id="btn-save-opening-hours"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                         </div>
 
                         <div class="card mb-24" id="section-add-exception">
@@ -100,7 +100,7 @@
                                     <input type="checkbox" id="exc-closed"> 休校
                                 </label>
                                 <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
-                                <button class="btn btn-primary" onclick="addException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
+                                <button class="btn btn-primary" id="btn-add-exception"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
                             </div>
                         </div>
 
@@ -146,7 +146,7 @@
                             <div class="field-hint">この日時を過ぎると提出できなくなります（任意）</div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="createPeriod()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 作成</button>
+                    <button class="btn btn-primary" id="btn-create-period"><i data-lucide="plus" style="width:15px;height:15px;"></i> 作成</button>
                 </div>
 
                 <div class="card">
@@ -162,7 +162,7 @@
                     <p class="help-text mb-16">アルバイトが提出したシフト希望をもとに、実際のシフトスケジュールを組み立てます。カレンダーの日付をクリックして、スタッフの割当を行ってください。</p>
                     <div class="form-group">
                         <label>シフト期間を選択</label>
-                        <select id="builder-period-select" class="form-control" onchange="loadBuilderData()">
+                        <select id="builder-period-select" class="form-control">
                             <option value="">選択してください</option>
                         </select>
                     </div>
@@ -176,9 +176,9 @@
                                 <div class="flex-between mb-16">
                                     <h3>スケジュール</h3>
                                     <div class="flex gap-8">
-                                        <button class="btn btn-primary" onclick="saveSchedule()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
-                                        <button class="btn btn-warning" onclick="submitForApproval()"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
-                                        <button class="btn btn-success" id="confirm-btn" style="display:none;" onclick="confirmSchedule()"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
+                                        <button class="btn btn-primary" id="btn-save-schedule"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                                        <button class="btn btn-warning" id="btn-submit-approval"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
+                                        <button class="btn btn-success" id="confirm-btn" style="display:none;"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
                                     </div>
                                 </div>
                                 <p class="help-text mb-8">「保存」で下書き保存、「承認申請」で事業主に確認を依頼、承認後に「確定・カレンダー同期」でGoogleカレンダーに反映します。</p>
@@ -201,7 +201,7 @@
                             <div class="card">
                                 <div class="flex-between mb-8">
                                     <h3 style="margin-bottom:0;">提出状況</h3>
-                                    <button class="btn btn-outline btn-sm" onclick="loadBuilderData()" title="最新の提出データを再読み込み"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i></button>
+                                    <button class="btn btn-outline btn-sm" id="btn-refresh-builder" title="最新の提出データを再読み込み"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i></button>
                                 </div>
                                 <p class="help-text mb-8">アルバイトは期間中に何度でも再提出できます。日時は最終提出時刻です。</p>
                                 <div id="submissions-summary"></div>
