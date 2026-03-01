@@ -36,6 +36,16 @@ def landing_page():
     return current_app.send_static_file('pages/landing.html')
 
 
+@api_common_bp.route('/robots.txt')
+def robots():
+    return current_app.send_static_file('robots.txt')
+
+
+@api_common_bp.route('/sitemap.xml')
+def sitemap():
+    return current_app.send_static_file('sitemap.xml')
+
+
 @api_common_bp.route('/login')
 def login_page():
     return current_app.send_static_file('pages/login.html')
