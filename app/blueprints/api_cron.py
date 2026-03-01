@@ -9,6 +9,7 @@ import os
 import logging
 
 from flask import Blueprint, jsonify, request
+from app.utils.errors import error_response
 
 api_cron_bp = Blueprint('api_cron', __name__)
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def _verify_cron_secret():
 def process_tasks():
     """Process pending async tasks.  Protected by CRON_SECRET."""
     if not _verify_cron_secret():
-        return jsonify({'error': 'Unauthorized'}), 401
+        return error_response('Unauthorized', 401, code="AUTH_REQUIRED")
 
     from app.services.task_runner import process_pending_tasks
     stats = process_pending_tasks(batch_size=20)

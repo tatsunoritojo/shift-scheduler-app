@@ -73,8 +73,9 @@ class TestMemberRemoval:
         assert resp.status_code == 204
         db_session.refresh(member)
         assert member.is_active is False
+        # User account remains active (only membership is deactivated)
         db_session.refresh(worker_user)
-        assert worker_user.is_active is False
+        assert worker_user.is_active is True
 
     def test_cannot_remove_self(self, client, auth, admin_user, db_session):
         db_session.commit()

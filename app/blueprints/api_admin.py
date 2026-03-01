@@ -19,6 +19,7 @@ from app.services.opening_hours_sync_service import (
     import_opening_hours_from_calendar,
 )
 from app.utils.validators import validate_time_str, validate_text_length
+from app.utils.errors import error_response
 from app.models.membership import OrganizationMember, InvitationToken
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
@@ -60,12 +61,12 @@ def update_opening_hours():
     data = request.get_json(silent=True)
 
     if not data or not isinstance(data, list):
-        return jsonify({"error": "Expected array of opening hours"}), 400
+        return error_response("Expected array of opening hours", 400)
 
     for item in data:
         dow = item.get('day_of_week')
         if not isinstance(dow, int) or dow < 0 or dow > 6:
-            return jsonify({"error": "day_of_week must be an integer between 0 and 6", "code": "VALIDATION_ERROR"}), 400
+            return error_response("day_of_week must be an integer between 0 and 6", 400, code="VALIDATION_ERROR")
 
         # Validate time strings
         start_time = item.get('start_time', '09:00')
@@ -74,7 +75,7 @@ def update_opening_hours():
             validate_time_str(start_time, 'start_time')
             validate_time_str(end_time, 'end_time')
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response(str(e), 400, code="VALIDATION_ERROR")
 
         existing = OpeningHours.query.filter_by(
             organization_id=org.id, day_of_week=dow
@@ -98,7 +99,7 @@ def update_opening_hours():
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     hours = OpeningHours.query.filter_by(organization_id=org.id).order_by(OpeningHours.day_of_week).all()
     return jsonify([h.to_dict() for h in hours])
 
@@ -124,16 +125,16 @@ def create_exception():
     data = request.get_json(silent=True)
 
     if not data or not data.get('exception_date'):
-        return jsonify({"error": "exception_date is required"}), 400
+        return error_response("exception_date is required", 400)
 
     from app.utils.validators import parse_date
     exc_date = parse_date(data['exception_date'])
     if not exc_date:
-        return jsonify({"error": "Invalid date format"}), 400
+        return error_response("Invalid date format", 400)
 
     source = data.get('source', 'manual')
     if source not in ('manual', 'calendar'):
-        return jsonify({"error": "Invalid source. Allowed: manual, calendar"}), 400
+        return error_response("Invalid source. Allowed: manual, calendar", 400)
 
     # Validate time strings if provided
     exc_start_time = data.get('start_time')
@@ -145,7 +146,7 @@ def create_exception():
             validate_time_str(exc_end_time, 'end_time')
         validate_text_length(data.get('reason'), 'reason', 2000)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
 
     exc = OpeningHoursException(
         organization_id=org.id,
@@ -161,7 +162,7 @@ def create_exception():
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(exc.to_dict()), 201
 
 
@@ -172,10 +173,10 @@ def update_exception(exc_id):
     org = _get_or_create_org(user)
     exc = db.session.get(OpeningHoursException, exc_id)
     if not exc or exc.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
     try:
         if data.get('start_time') is not None:
             validate_time_str(data['start_time'], 'start_time')
@@ -186,7 +187,7 @@ def update_exception(exc_id):
         if 'reason' in data:
             validate_text_length(data['reason'], 'reason', 2000)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
     if 'is_closed' in data:
         exc.is_closed = data['is_closed']
     if 'reason' in data:
@@ -196,7 +197,7 @@ def update_exception(exc_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(exc.to_dict())
 
 
@@ -207,13 +208,13 @@ def delete_exception(exc_id):
     org = _get_or_create_org(user)
     exc = db.session.get(OpeningHoursException, exc_id)
     if not exc or exc.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     db.session.delete(exc)
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return '', 204
 
 
@@ -227,24 +228,24 @@ def sync_export_opening_hours():
     data = request.get_json(silent=True)
 
     if not data or not data.get('start_date') or not data.get('end_date'):
-        return jsonify({"error": "start_date and end_date are required"}), 400
+        return error_response("start_date and end_date are required", 400)
 
     from app.utils.validators import parse_date
     start = parse_date(data['start_date'])
     end = parse_date(data['end_date'])
     if not start or not end:
-        return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+        return error_response("Invalid date format (YYYY-MM-DD)", 400)
     if (end - start).days > 90:
-        return jsonify({"error": "日付範囲は最大90日までです"}), 400
+        return error_response("日付範囲は最大90日までです", 400)
 
     try:
         credentials = get_credentials_for_user(user)
     except Exception as e:
         current_app.logger.error(f"Credential error: {e}")
-        return jsonify({"error": "認証エラーが発生しました。再ログインしてください。"}), 401
+        return error_response("認証エラーが発生しました。再ログインしてください。", 401, code="AUTH_REQUIRED")
 
     if not credentials:
-        return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
+        return error_response("Google認証情報がありません。再ログインしてください。", 401, code="AUTH_REQUIRED")
 
     result = export_opening_hours_to_calendar(org.id, credentials, start, end)
     return jsonify(result)
@@ -258,24 +259,24 @@ def sync_import_opening_hours():
     data = request.get_json(silent=True)
 
     if not data or not data.get('start_date') or not data.get('end_date'):
-        return jsonify({"error": "start_date and end_date are required"}), 400
+        return error_response("start_date and end_date are required", 400)
 
     from app.utils.validators import parse_date
     start = parse_date(data['start_date'])
     end = parse_date(data['end_date'])
     if not start or not end:
-        return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+        return error_response("Invalid date format (YYYY-MM-DD)", 400)
     if (end - start).days > 90:
-        return jsonify({"error": "日付範囲は最大90日までです"}), 400
+        return error_response("日付範囲は最大90日までです", 400)
 
     try:
         credentials = get_credentials_for_user(user)
     except Exception as e:
         current_app.logger.error(f"Credential error: {e}")
-        return jsonify({"error": "認証エラーが発生しました。再ログインしてください。"}), 401
+        return error_response("認証エラーが発生しました。再ログインしてください。", 401, code="AUTH_REQUIRED")
 
     if not credentials:
-        return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
+        return error_response("Google認証情報がありません。再ログインしてください。", 401, code="AUTH_REQUIRED")
 
     result = import_opening_hours_from_calendar(org.id, credentials, start, end)
     return jsonify(result)
@@ -348,23 +349,23 @@ def create_period():
     org = _get_or_create_org(user)
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
 
     from app.utils.validators import parse_date
     start = parse_date(data.get('start_date'))
     end = parse_date(data.get('end_date'))
 
     if not start or not end:
-        return jsonify({"error": "start_date and end_date required (YYYY-MM-DD)"}), 400
+        return error_response("start_date and end_date required (YYYY-MM-DD)", 400)
     if start >= end:
-        return jsonify({"error": "start_date must be before end_date"}), 400
+        return error_response("start_date must be before end_date", 400)
     if not data.get('name'):
-        return jsonify({"error": "name is required"}), 400
+        return error_response("name is required", 400)
 
     try:
         validate_text_length(data['name'], 'name', 200)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
 
     deadline = None
     if data.get('submission_deadline'):
@@ -387,7 +388,7 @@ def create_period():
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(period.to_dict()), 201
 
 
@@ -398,17 +399,17 @@ def update_period(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
     if data.get('name'):
         period.name = data['name']
     if data.get('status'):
         allowed_statuses = ['draft', 'open', 'closed']
         if data['status'] not in allowed_statuses:
-            return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
+            return error_response(f"Invalid status. Allowed: {allowed_statuses}", 400)
         period.status = data['status']
     if data.get('submission_deadline'):
         try:
@@ -420,7 +421,7 @@ def update_period(period_id):
         try:
             validate_text_length(data['name'], 'name', 200)
         except ValueError as e:
-            return jsonify({"error": str(e)}), 400
+            return error_response(str(e), 400, code="VALIDATION_ERROR")
 
     from app.utils.validators import parse_date
     if data.get('start_date'):
@@ -434,13 +435,13 @@ def update_period(period_id):
 
     # Validate date order after any updates
     if period.start_date >= period.end_date:
-        return jsonify({"error": "start_date must be before end_date"}), 400
+        return error_response("start_date must be before end_date", 400)
 
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(period.to_dict())
 
 
@@ -453,7 +454,7 @@ def get_period_opening_hours(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     hours = get_opening_hours_for_period(
         period.organization_id, period.start_date, period.end_date
@@ -470,7 +471,7 @@ def get_period_submissions(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     return jsonify(get_submissions_for_period(period_id))
 
 
@@ -483,7 +484,7 @@ def get_schedule(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
@@ -507,16 +508,16 @@ def save_period_schedule(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
     entries = data.get('entries', [])
 
     try:
         schedule = save_schedule(period_id, user.id, entries, organization_id=org.id)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
     result = schedule.to_dict()
     result['entries'] = [e.to_dict() for e in schedule.entries.all()]
     return jsonify(result)
@@ -530,16 +531,16 @@ def submit_schedule_for_approval(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
     if not schedule:
-        return jsonify({"error": "No schedule found"}), 404
+        return error_response("No schedule found", 404, code="NOT_FOUND")
 
     result, error = submit_for_approval(schedule.id, user)
     if error:
-        return jsonify({"error": error}), 400
+        return error_response(error, 400)
     return jsonify(result.to_dict())
 
 
@@ -550,16 +551,16 @@ def confirm_period_schedule(period_id):
     org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
     if not schedule:
-        return jsonify({"error": "No schedule found"}), 404
+        return error_response("No schedule found", 404, code="NOT_FOUND")
 
     result, error = confirm_schedule(schedule.id, user)
     if error:
-        return jsonify({"error": error}), 400
+        return error_response(error, 400)
 
     # Sync to Google Calendar
     sync_results = _sync_schedule_to_calendar(result, user)
@@ -634,7 +635,7 @@ def get_worker_history(worker_id):
     org = _get_or_create_org(user)
     worker = db.session.get(User, worker_id)
     if not worker or worker.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     entries = ShiftScheduleEntry.query.filter_by(user_id=worker_id).order_by(
         ShiftScheduleEntry.shift_date.desc()
     ).limit(50).all()
@@ -661,15 +662,15 @@ def update_member_role(member_id):
     org = _get_or_create_org(user)
     member = db.session.get(OrganizationMember, member_id)
     if not member or member.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     data = request.get_json(silent=True)
     if not data or not data.get('role'):
-        return jsonify({"error": "role is required"}), 400
+        return error_response("role is required", 400)
 
     new_role = data['role']
     if new_role not in ('admin', 'owner', 'worker'):
-        return jsonify({"error": "Invalid role. Allowed: admin, owner, worker"}), 400
+        return error_response("Invalid role. Allowed: admin, owner, worker", 400)
 
     # Prevent removing last admin
     if member.role == 'admin' and new_role != 'admin':
@@ -677,7 +678,7 @@ def update_member_role(member_id):
             organization_id=org.id, role='admin', is_active=True
         ).count()
         if admin_count <= 1:
-            return jsonify({"error": "Cannot remove the last admin"}), 400
+            return error_response("Cannot remove the last admin", 400)
 
     member.role = new_role
     member.sync_to_user()
@@ -686,7 +687,7 @@ def update_member_role(member_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(member.to_dict())
 
 
@@ -697,11 +698,11 @@ def remove_member(member_id):
     org = _get_or_create_org(user)
     member = db.session.get(OrganizationMember, member_id)
     if not member or member.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     # Prevent self-removal
     if member.user_id == user.id:
-        return jsonify({"error": "Cannot remove yourself"}), 400
+        return error_response("Cannot remove yourself", 400)
 
     # Prevent removing last admin
     if member.role == 'admin':
@@ -709,16 +710,15 @@ def remove_member(member_id):
             organization_id=org.id, role='admin', is_active=True
         ).count()
         if admin_count <= 1:
-            return jsonify({"error": "Cannot remove the last admin"}), 400
+            return error_response("Cannot remove the last admin", 400)
 
     member.is_active = False
-    member.user.is_active = False
 
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return '', 204
 
 
@@ -742,16 +742,16 @@ def create_invitation():
     org = _get_or_create_org(user)
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
 
     role = data.get('role', 'worker')
     if role not in ('admin', 'owner', 'worker'):
-        return jsonify({"error": "Invalid role. Allowed: admin, owner, worker"}), 400
+        return error_response("Invalid role. Allowed: admin, owner, worker", 400)
 
     email = data.get('email')  # optional: restrict to specific email
     expires_hours = data.get('expires_hours', 72)
     if not isinstance(expires_hours, (int, float)) or expires_hours < 1 or expires_hours > 720:
-        return jsonify({"error": "expires_hours must be between 1 and 720"}), 400
+        return error_response("expires_hours must be between 1 and 720", 400)
 
     token = InvitationToken(
         organization_id=org.id,
@@ -766,7 +766,7 @@ def create_invitation():
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(token.to_dict()), 201
 
 
@@ -777,10 +777,10 @@ def revoke_invitation(token_id):
     org = _get_or_create_org(user)
     token = db.session.get(InvitationToken, token_id)
     if not token or token.organization_id != org.id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     if token.used_at:
-        return jsonify({"error": "Token already used"}), 400
+        return error_response("Token already used", 400)
 
     # Expire the token immediately
     token.expires_at = datetime.utcnow()
@@ -789,5 +789,5 @@ def revoke_invitation(token_id):
         db.session.commit()
     except Exception:
         db.session.rollback()
-        return jsonify({"error": "Database error"}), 500
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
     return '', 204

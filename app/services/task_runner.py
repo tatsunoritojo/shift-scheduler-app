@@ -49,10 +49,14 @@ def _handle_sync_calendar_event(payload):
     from app.services.calendar_service import create_event
     from app.services.auth_service import get_credentials_for_user
     from app.models.shift import ShiftScheduleEntry
+    from app.models.user import User
 
     user_id = payload['user_id']
     entry_id = payload['entry_id']
-    credentials = get_credentials_for_user(user_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        raise RuntimeError(f"User {user_id} not found")
+    credentials = get_credentials_for_user(user)
     if not credentials:
         raise RuntimeError(f"No Google credentials for user {user_id}")
 

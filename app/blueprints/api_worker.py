@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, session, current_app
 
 from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
+from app.utils.errors import error_response
 from app.models.shift import ShiftPeriod, ShiftSubmission
 from app.models.user import User
 from app.services.shift_service import (
@@ -43,7 +44,7 @@ def get_period_opening_hours(period_id):
     user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != user.organization_id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     hours = get_opening_hours_for_period(
         period.organization_id, period.start_date, period.end_date
@@ -60,17 +61,17 @@ def get_worker_calendars():
         credentials = get_credentials_for_user(user)
     except RuntimeError as e:
         current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return jsonify({"error": "認証情報の取得に失敗しました。再ログインしてください。"}), 500
+        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="AUTH_REQUIRED")
 
     if not credentials:
-        return jsonify({"error": "No credentials found"}), 404
+        return error_response("No credentials found", 404, code="NOT_FOUND")
 
     try:
         calendars = list_calendars(credentials)
         return jsonify(calendars)
     except Exception as e:
         current_app.logger.error(f"Calendar list error: {e}")
-        return jsonify({"error": "カレンダー一覧の取得に失敗しました。"}), 500
+        return error_response("カレンダー一覧の取得に失敗しました。", 500, code="INTERNAL_ERROR")
 
 
 @api_worker_bp.route('/calendar/events', methods=['GET'])
@@ -82,24 +83,24 @@ def get_worker_calendar_events():
         credentials = get_credentials_for_user(user)
     except RuntimeError as e:
         current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return jsonify({"error": "認証情報の取得に失敗しました。再ログインしてください。"}), 500
+        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="AUTH_REQUIRED")
 
     if not credentials:
-        return jsonify({"error": "No credentials found"}), 404
+        return error_response("No credentials found", 404, code="NOT_FOUND")
 
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
     calendar_id = request.args.get('calendarId', 'primary')
 
     if not start_date or not end_date:
-        return jsonify({"error": "startDate and endDate are required"}), 400
+        return error_response("startDate and endDate are required", 400, code="VALIDATION_ERROR")
 
     try:
         events = fetch_events(credentials, start_date, end_date, calendar_id)
         return jsonify(events)
     except Exception as e:
         current_app.logger.error(f"Calendar event fetch error: {e}")
-        return jsonify({"error": "カレンダーイベントの取得に失敗しました。"}), 500
+        return error_response("カレンダーイベントの取得に失敗しました。", 500, code="INTERNAL_ERROR")
 
 
 @api_worker_bp.route('/periods/<int:period_id>/availability', methods=['GET'])
@@ -124,20 +125,20 @@ def submit_availability(period_id):
     user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != user.organization_id:
-        return jsonify({"error": "Period not found"}), 404
+        return error_response("Period not found", 404, code="NOT_FOUND")
     if period.status != 'open':
-        return jsonify({"error": "Period is not open for submissions"}), 400
+        return error_response("Period is not open for submissions", 400, code="VALIDATION_ERROR")
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body is required"}), 400
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
     slots = data.get('slots', [])
     notes = data.get('notes')
 
     try:
         submission = create_or_update_submission(period_id, user.id, slots, notes)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
     result = submission.to_dict()
     result['slots'] = [s.to_dict() for s in submission.slots.all()]
     return jsonify(result), 201

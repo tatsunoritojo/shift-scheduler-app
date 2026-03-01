@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 
 from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
+from app.utils.errors import error_response
 from app.models.shift import ShiftSchedule, ShiftScheduleEntry, ShiftPeriod
 from app.services.shift_service import get_worker_hours_summary
 from app.services.approval_service import approve_schedule, reject_schedule
@@ -35,7 +36,7 @@ def get_schedule_detail(schedule_id):
     user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)
     if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     data = schedule.to_dict()
     data['period'] = schedule.period.to_dict() if schedule.period else None
@@ -54,13 +55,13 @@ def approve(schedule_id):
     user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)
     if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     data = request.get_json(silent=True) or {}
     comment = data.get('comment')
 
     result, error = approve_schedule(schedule_id, user, comment)
     if error:
-        return jsonify({"error": error}), 400
+        return error_response(error, 400)
     return jsonify(result.to_dict())
 
 
@@ -71,11 +72,11 @@ def reject(schedule_id):
     user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)
     if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
     data = request.get_json(silent=True) or {}
     comment = data.get('comment')
 
     result, error = reject_schedule(schedule_id, user, comment)
     if error:
-        return jsonify({"error": error}), 400
+        return error_response(error, 400)
     return jsonify(result.to_dict())

@@ -5,6 +5,7 @@ import requests as http_requests
 from flask import Blueprint, redirect, request, url_for, session, jsonify, current_app
 
 from app.extensions import db, limiter
+from app.utils.errors import error_response
 from app.services.auth_service import (
     create_oauth_flow, extract_user_info, upsert_user, save_refresh_token,
 )
@@ -20,7 +21,7 @@ def accept_invite(token):
 
     invite = InvitationToken.query.filter_by(token=token).first()
     if not invite or not invite.is_valid:
-        return jsonify({"error": "Invalid or expired invitation"}), 400
+        return error_response("Invalid or expired invitation", 400, code="BAD_REQUEST")
 
     # If email-restricted, inform the user
     session['invitation_token'] = token
@@ -48,7 +49,7 @@ def callback():
     request_state = request.args.get('state', '')
     if not state or not hmac.compare_digest(str(state), str(request_state)):
         auth_logger.warning("LOGIN_FAILED: OAuth state mismatch from %s", request.remote_addr)
-        return jsonify({"error": "State mismatch"}), 400
+        return error_response("State mismatch", 400, code="BAD_REQUEST")
 
     flow = create_oauth_flow(state=state)
 
@@ -56,14 +57,14 @@ def callback():
         flow.fetch_token(authorization_response=request.url)
     except Exception as e:
         auth_logger.warning("LOGIN_FAILED: Token fetch failed from %s: %s", request.remote_addr, e)
-        return jsonify({"error": "認証に失敗しました。もう一度お試しください。"}), 500
+        return error_response("認証に失敗しました。もう一度お試しください。", 500, code="INTERNAL_ERROR")
 
     credentials = flow.credentials
     google_id, email, display_name = extract_user_info(credentials)
 
     if not google_id:
         auth_logger.warning("LOGIN_FAILED: Could not extract user info from %s", request.remote_addr)
-        return jsonify({"error": "Failed to extract user info"}), 500
+        return error_response("Failed to extract user info", 500, code="INTERNAL_ERROR")
 
     # Check for invitation token
     invitation = _resolve_invitation(email)
@@ -143,7 +144,7 @@ def me():
     from app.middleware.auth_middleware import get_current_user
     user = get_current_user()
     if not user:
-        return jsonify({"error": "Not authenticated"}), 401
+        return error_response("Not authenticated", 401, code="AUTH_REQUIRED")
     return jsonify({
         "id": user.id,
         "email": user.email,
