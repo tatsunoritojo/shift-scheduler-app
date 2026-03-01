@@ -5,6 +5,7 @@ unauthorized invocation.  Vercel Cron or an external cron service
 hits this endpoint periodically.
 """
 
+import hmac
 import os
 import logging
 
@@ -24,7 +25,8 @@ def _verify_cron_secret():
         return current_app.debug
 
     auth = request.headers.get('Authorization', '')
-    return auth == f'Bearer {secret}'
+    expected = f'Bearer {secret}'
+    return hmac.compare_digest(auth, expected)
 
 
 @api_cron_bp.route('/api/cron/process-tasks', methods=['POST'])
