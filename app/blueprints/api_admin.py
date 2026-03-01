@@ -19,6 +19,7 @@ from app.services.opening_hours_sync_service import (
     import_opening_hours_from_calendar,
 )
 from app.utils.validators import validate_time_str, validate_text_length
+from app.models.membership import OrganizationMember, InvitationToken
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -638,3 +639,155 @@ def get_worker_history(worker_id):
         ShiftScheduleEntry.shift_date.desc()
     ).limit(50).all()
     return jsonify([e.to_dict() for e in entries])
+
+
+# --- Organization Members ---
+
+@api_admin_bp.route('/members', methods=['GET'])
+@require_role('admin')
+def get_members():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    members = OrganizationMember.query.filter_by(
+        organization_id=org.id, is_active=True
+    ).all()
+    return jsonify([m.to_dict() for m in members])
+
+
+@api_admin_bp.route('/members/<int:member_id>/role', methods=['PUT'])
+@require_role('admin')
+def update_member_role(member_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    member = db.session.get(OrganizationMember, member_id)
+    if not member or member.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
+
+    data = request.get_json(silent=True)
+    if not data or not data.get('role'):
+        return jsonify({"error": "role is required"}), 400
+
+    new_role = data['role']
+    if new_role not in ('admin', 'owner', 'worker'):
+        return jsonify({"error": "Invalid role. Allowed: admin, owner, worker"}), 400
+
+    # Prevent removing last admin
+    if member.role == 'admin' and new_role != 'admin':
+        admin_count = OrganizationMember.query.filter_by(
+            organization_id=org.id, role='admin', is_active=True
+        ).count()
+        if admin_count <= 1:
+            return jsonify({"error": "Cannot remove the last admin"}), 400
+
+    member.role = new_role
+    member.sync_to_user()
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(member.to_dict())
+
+
+@api_admin_bp.route('/members/<int:member_id>', methods=['DELETE'])
+@require_role('admin')
+def remove_member(member_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    member = db.session.get(OrganizationMember, member_id)
+    if not member or member.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
+
+    # Prevent self-removal
+    if member.user_id == user.id:
+        return jsonify({"error": "Cannot remove yourself"}), 400
+
+    # Prevent removing last admin
+    if member.role == 'admin':
+        admin_count = OrganizationMember.query.filter_by(
+            organization_id=org.id, role='admin', is_active=True
+        ).count()
+        if admin_count <= 1:
+            return jsonify({"error": "Cannot remove the last admin"}), 400
+
+    member.is_active = False
+    member.user.is_active = False
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
+    return '', 204
+
+
+# --- Invitation Tokens ---
+
+@api_admin_bp.route('/invitations', methods=['GET'])
+@require_role('admin')
+def get_invitations():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    tokens = InvitationToken.query.filter_by(
+        organization_id=org.id
+    ).order_by(InvitationToken.created_at.desc()).limit(50).all()
+    return jsonify([t.to_dict() for t in tokens])
+
+
+@api_admin_bp.route('/invitations', methods=['POST'])
+@require_role('admin')
+def create_invitation():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    role = data.get('role', 'worker')
+    if role not in ('admin', 'owner', 'worker'):
+        return jsonify({"error": "Invalid role. Allowed: admin, owner, worker"}), 400
+
+    email = data.get('email')  # optional: restrict to specific email
+    expires_hours = data.get('expires_hours', 72)
+    if not isinstance(expires_hours, (int, float)) or expires_hours < 1 or expires_hours > 720:
+        return jsonify({"error": "expires_hours must be between 1 and 720"}), 400
+
+    token = InvitationToken(
+        organization_id=org.id,
+        role=role,
+        email=email.strip().lower() if email else None,
+        created_by=user.id,
+        expires_at=datetime.utcnow() + timedelta(hours=expires_hours),
+    )
+    db.session.add(token)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
+    return jsonify(token.to_dict()), 201
+
+
+@api_admin_bp.route('/invitations/<int:token_id>', methods=['DELETE'])
+@require_role('admin')
+def revoke_invitation(token_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    token = db.session.get(InvitationToken, token_id)
+    if not token or token.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
+
+    if token.used_at:
+        return jsonify({"error": "Token already used"}), 400
+
+    # Expire the token immediately
+    token.expires_at = datetime.utcnow()
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
+    return '', 204

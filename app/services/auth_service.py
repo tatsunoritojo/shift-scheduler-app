@@ -75,7 +75,25 @@ def extract_user_info(credentials):
 
 
 def determine_role(email):
-    """Determine user role based on email and config."""
+    """Determine user role from DB membership, falling back to env config for bootstrap.
+
+    Priority:
+    1. Existing OrganizationMember record → that role
+    2. ADMIN_EMAIL / OWNER_EMAIL env vars → for initial bootstrap only
+    3. Default → 'worker'
+    """
+    from app.models.membership import OrganizationMember
+
+    # Check existing membership first
+    user = User.query.filter_by(email=email).first()
+    if user:
+        membership = OrganizationMember.query.filter_by(
+            user_id=user.id, is_active=True
+        ).first()
+        if membership:
+            return membership.role
+
+    # Fallback to env config (bootstrap)
     admin_emails = [e.strip() for e in current_app.config.get('ADMIN_EMAIL', '').split(',') if e.strip()]
     owner_emails = [e.strip() for e in current_app.config.get('OWNER_EMAIL', '').split(',') if e.strip()]
 
@@ -86,9 +104,15 @@ def determine_role(email):
     return 'worker'
 
 
-def upsert_user(google_id, email, display_name):
-    """Create or update a user record. Returns the User."""
+def upsert_user(google_id, email, display_name, invitation_token=None):
+    """Create or update a user record.
+
+    If *invitation_token* is provided (an InvitationToken instance),
+    the user is assigned to the token's org with the token's role.
+    Otherwise, existing membership is preserved or env-config bootstrap applies.
+    """
     from app.models.organization import Organization
+    from app.models.membership import OrganizationMember, InvitationToken
 
     user = User.query.filter_by(google_id=google_id).first()
     role = determine_role(email)
@@ -110,12 +134,27 @@ def upsert_user(google_id, email, display_name):
             role=role,
         )
         db.session.add(user)
+        db.session.flush()  # get user.id
 
-    # Assign to default organization if not set
-    if not user.organization_id:
+    # --- Org / membership assignment ---
+    if invitation_token and invitation_token.is_valid:
+        # Invitation-based assignment
+        _accept_invitation(user, invitation_token)
+    elif not user.organization_id:
+        # Bootstrap: assign to first org if it exists and create membership
         org = Organization.query.first()
         if org:
             user.organization_id = org.id
+            user.role = role
+            _ensure_membership(user, org.id, role)
+
+    # Sync role from membership (authoritative source)
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, is_active=True
+    ).first()
+    if membership:
+        user.role = membership.role
+        user.organization_id = membership.organization_id
 
     try:
         db.session.commit()
@@ -123,6 +162,53 @@ def upsert_user(google_id, email, display_name):
         db.session.rollback()
         raise
     return user
+
+
+def _accept_invitation(user, token):
+    """Accept an invitation token: assign user to org with the specified role."""
+    from app.models.membership import OrganizationMember
+    from datetime import datetime
+
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=token.organization_id
+    ).first()
+
+    if membership:
+        membership.role = token.role
+        membership.is_active = True
+    else:
+        membership = OrganizationMember(
+            user_id=user.id,
+            organization_id=token.organization_id,
+            role=token.role,
+            invited_by=token.created_by,
+        )
+        db.session.add(membership)
+
+    user.organization_id = token.organization_id
+    user.role = token.role
+
+    # Mark token as used
+    token.used_at = datetime.utcnow()
+    token.used_by = user.id
+
+
+def _ensure_membership(user, org_id, role):
+    """Create an OrganizationMember record if one doesn't exist."""
+    from app.models.membership import OrganizationMember
+
+    existing = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=org_id
+    ).first()
+    if not existing:
+        db.session.add(OrganizationMember(
+            user_id=user.id,
+            organization_id=org_id,
+            role=role,
+        ))
+    elif not existing.is_active:
+        existing.is_active = True
+        existing.role = role
 
 
 def save_refresh_token(user, refresh_token, scopes=None):

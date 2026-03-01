@@ -4,13 +4,27 @@ import requests as http_requests
 
 from flask import Blueprint, redirect, request, url_for, session, jsonify, current_app
 
-from app.extensions import limiter
+from app.extensions import db, limiter
 from app.services.auth_service import (
     create_oauth_flow, extract_user_info, upsert_user, save_refresh_token,
 )
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 auth_logger = logging.getLogger('auth')
+
+
+@auth_bp.route('/invite/<token>')
+def accept_invite(token):
+    """Store invitation token in session and redirect to OAuth login."""
+    from app.models.membership import InvitationToken
+
+    invite = InvitationToken.query.filter_by(token=token).first()
+    if not invite or not invite.is_valid:
+        return jsonify({"error": "Invalid or expired invitation"}), 400
+
+    # If email-restricted, inform the user
+    session['invitation_token'] = token
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/google/login')
@@ -51,7 +65,10 @@ def callback():
         auth_logger.warning("LOGIN_FAILED: Could not extract user info from %s", request.remote_addr)
         return jsonify({"error": "Failed to extract user info"}), 500
 
-    user = upsert_user(google_id, email, display_name)
+    # Check for invitation token
+    invitation = _resolve_invitation(email)
+
+    user = upsert_user(google_id, email, display_name, invitation_token=invitation)
 
     if credentials.refresh_token:
         save_refresh_token(user, credentials.refresh_token, credentials.scopes)
@@ -60,6 +77,7 @@ def callback():
     session.clear()
     session.permanent = True
     session['user_id'] = user.id
+    session.pop('invitation_token', None)  # Clean up
     session['credentials'] = {
         'token': credentials.token,
         'refresh_token': credentials.refresh_token,
@@ -74,6 +92,28 @@ def callback():
         return redirect('/owner')
     else:
         return redirect('/worker')
+
+
+def _resolve_invitation(email):
+    """Look up invitation token from session, validate email match."""
+    from app.models.membership import InvitationToken
+
+    token_str = session.get('invitation_token')
+    if not token_str:
+        return None
+
+    invite = InvitationToken.query.filter_by(token=token_str).first()
+    if not invite or not invite.is_valid:
+        return None
+
+    # If token is email-restricted, check the email matches
+    if invite.email and invite.email.lower() != email.lower():
+        current_app.logger.warning(
+            f"Invitation token email mismatch: expected={invite.email}, got={email}"
+        )
+        return None
+
+    return invite
 
 
 @auth_bp.route('/logout')

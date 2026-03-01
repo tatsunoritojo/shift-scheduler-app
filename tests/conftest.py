@@ -10,6 +10,7 @@ from app.extensions import db as _db
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.shift import ShiftPeriod, ShiftSchedule, ShiftScheduleEntry
+from app.models.membership import OrganizationMember, InvitationToken
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +69,13 @@ def _make_user(session, org, *, email, role, display_name=None):
         organization_id=org.id,
     )
     session.add(user)
+    session.flush()
+    # Also create OrganizationMember (authoritative source for RBAC)
+    session.add(OrganizationMember(
+        user_id=user.id,
+        organization_id=org.id,
+        role=role,
+    ))
     session.flush()
     return user
 
