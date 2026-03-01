@@ -11,6 +11,11 @@ class BaseConfig:
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
 
+    # Server-side session (Flask-Session with SQLAlchemy backend)
+    SESSION_TYPE = 'sqlalchemy'
+    SESSION_SQLALCHEMY_TABLE = 'sessions'
+    SESSION_USE_SIGNER = True
+
     # Database
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -39,6 +44,10 @@ class BaseConfig:
         self.ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
         self.OWNER_EMAIL = os.environ.get('OWNER_EMAIL', '')
 
+        # CORS: allowed origins (comma-separated)
+        cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+        self.CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins.split(',') if o.strip()] if cors_origins else None
+
     @staticmethod
     def _get_database_url():
         database_url = os.environ.get('DATABASE_URL')
@@ -51,6 +60,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     SESSION_COOKIE_SECURE = False  # Allow HTTP in dev
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-do-not-use-in-production')
+    CORS_ALLOWED_ORIGINS = None  # Allow all in dev
 
     @property
     def SQLALCHEMY_DATABASE_URI(self):

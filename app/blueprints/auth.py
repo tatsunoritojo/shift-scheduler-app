@@ -1,5 +1,6 @@
 from flask import Blueprint, redirect, request, url_for, session, jsonify, current_app
 
+from app.extensions import limiter
 from app.services.auth_service import (
     create_oauth_flow, extract_user_info, upsert_user, save_refresh_token,
 )
@@ -8,6 +9,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 
 @auth_bp.route('/google/login')
+@limiter.limit("10 per minute")
 def login():
     flow = create_oauth_flow()
     authorization_url, state = flow.authorization_url(
@@ -20,6 +22,7 @@ def login():
 
 
 @auth_bp.route('/google/callback')
+@limiter.limit("10 per minute")
 def callback():
     state = session.get('state')
     if not state or state != request.args.get('state'):
@@ -43,6 +46,7 @@ def callback():
     if credentials.refresh_token:
         save_refresh_token(user, credentials.refresh_token, credentials.scopes)
 
+    session.permanent = True
     session['user_id'] = user.id
     session['credentials'] = {
         'token': credentials.token,
