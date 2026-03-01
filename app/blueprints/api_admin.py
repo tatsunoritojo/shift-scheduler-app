@@ -63,8 +63,8 @@ def update_opening_hours():
 
     for item in data:
         dow = item.get('day_of_week')
-        if dow is None or dow < 0 or dow > 6:
-            continue
+        if not isinstance(dow, int) or dow < 0 or dow > 6:
+            return jsonify({"error": "day_of_week must be an integer between 0 and 6", "code": "VALIDATION_ERROR"}), 400
 
         # Validate time strings
         start_time = item.get('start_time', '09:00')
