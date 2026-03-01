@@ -21,13 +21,384 @@ const WORKER_COLORS = [
     '#06b6d4', '#f97316', '#78716c', '#64748b', '#84cc16',
 ];
 
+// --- Sync Status & Logs ---
+
+async function loadSyncStatus() {
+    const container = document.getElementById('sync-status');
+    if (!container) return null;
+    try {
+        const data = await api.get('/api/admin/opening-hours/sync/status');
+        if (data.last_sync) {
+            const s = data.last_sync;
+            const at = new Date(s.performed_at);
+            const dateStr = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+            const typeLabel = s.operation_type === 'import' ? 'インポート' : 'エクスポート';
+            const rangeLabel = `${s.start_date} 〜 ${s.end_date}`;
+            container.innerHTML = `
+                <span class="sync-status-icon synced"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
+                <span class="sync-status-text">最終同期: <strong>${dateStr}</strong> ${typeLabel} ${rangeLabel}</span>
+                <button class="sync-status-link" onclick="showSyncLogs()">履歴</button>
+            `;
+        } else {
+            container.innerHTML = `
+                <span class="sync-status-icon not-synced"><i data-lucide="minus" style="width:16px;height:16px;"></i></span>
+                <span class="sync-status-text">まだ同期されていません</span>
+                <button class="sync-status-link" onclick="showSyncLogs()">履歴</button>
+            `;
+        }
+        if (window.lucide) lucide.createIcons();
+        return data;
+    } catch (e) {
+        container.innerHTML = '<span style="color:var(--color-neutral-400);font-size:0.9em;">ステータスを取得できませんでした</span>';
+        return null;
+    }
+}
+
+window.showSyncLogs = async function() {
+    try {
+        const logs = await api.get('/api/admin/opening-hours/sync/logs');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-dialog-overlay';
+
+        let tableRows = '';
+        if (!logs || logs.length === 0) {
+            tableRows = '<tr><td colspan="4" style="text-align:center;color:var(--color-neutral-400);padding:20px;">同期履歴はありません</td></tr>';
+        } else {
+            tableRows = logs.map(log => {
+                const at = new Date(log.performed_at);
+                const dateStr = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+                const typeLabel = log.operation_type === 'import' ? 'インポート' : 'エクスポート';
+                const range = `${log.start_date} 〜 ${log.end_date}`;
+                const summary = log.result_summary || {};
+                const parts = [];
+                if (log.operation_type === 'import') {
+                    if (summary.imported) parts.push(`取込${summary.imported}`);
+                    if (summary.updated) parts.push(`更新${summary.updated}`);
+                    if (summary.skipped) parts.push(`skip${summary.skipped}`);
+                } else {
+                    if (summary.created) parts.push(`作成${summary.created}`);
+                    if (summary.updated) parts.push(`更新${summary.updated}`);
+                    if (summary.deleted) parts.push(`削除${summary.deleted}`);
+                    if (summary.skipped) parts.push(`skip${summary.skipped}`);
+                }
+                if (summary.errors && summary.errors.length > 0) parts.push(`err${summary.errors.length}`);
+                const summaryStr = parts.join(' / ') || '-';
+                return `<tr><td>${dateStr}</td><td><span class="badge ${log.operation_type === 'import' ? 'badge-calendar' : 'badge-manual'}">${typeLabel}</span></td><td>${range}</td><td>${summaryStr}</td></tr>`;
+            }).join('');
+        }
+
+        overlay.innerHTML = `
+            <div class="confirm-dialog" style="max-width:600px;">
+                <h3>同期履歴</h3>
+                <div style="max-height:400px;overflow-y:auto;">
+                    <table class="sync-log-table">
+                        <thead><tr><th>日時</th><th>種別</th><th>範囲</th><th>結果</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+                <div class="confirm-dialog-actions">
+                    <button class="btn btn-outline" id="sync-logs-close">閉じる</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#sync-logs-close').onclick = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    } catch (e) {
+        showToast('同期履歴の取得に失敗しました', 'error');
+    }
+};
+
+// --- Import Preview Calendar ---
+
+let exceptionsData = [];
+
+function renderImportPreview(startDateStr, endDateStr) {
+    const container = document.getElementById('import-preview');
+    const actionsEl = document.getElementById('import-preview-actions');
+    if (!container) return;
+
+    lastPreviewRange = { start: startDateStr, end: endDateStr };
+
+    const excMap = {};
+    (exceptionsData || []).forEach(e => { excMap[e.exception_date] = e; });
+
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+
+    // Iterate month by month
+    let html = '';
+    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    const lastMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0);
+
+    while (cur <= lastMonth) {
+        const year = cur.getFullYear();
+        const month = cur.getMonth();
+        html += `<div class="preview-month-title">${year}年${month + 1}月</div>`;
+        html += '<div class="preview-calendar-grid">';
+
+        // Header
+        WEEKDAY_NAMES.forEach(name => {
+            html += `<div class="preview-calendar-header">${name}</div>`;
+        });
+
+        // Empty cells before first day
+        const firstDow = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDow; i++) {
+            html += '<div class="preview-calendar-cell empty"></div>';
+        }
+
+        // Days
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new Date(year, month, day);
+            const dateStr = d.toISOString().slice(0, 10);
+            const inRange = dateStr >= startDateStr && dateStr <= endDateStr;
+            const exc = excMap[dateStr];
+
+            let cellClass = 'preview-calendar-cell';
+            let timeLabel = '';
+
+            if (!inRange) {
+                cellClass += ' out-of-range';
+            } else if (exc) {
+                if (exc.is_closed) {
+                    cellClass += ' preview-closed';
+                    timeLabel = '休校';
+                } else {
+                    cellClass += exc.source === 'calendar' ? ' preview-calendar-source' : ' preview-manual-source';
+                    timeLabel = `${exc.start_time}〜${exc.end_time}`;
+                }
+            } else {
+                cellClass += ' preview-default';
+            }
+
+            if (inRange) {
+                html += `<div class="${cellClass} preview-clickable" onclick="showSettingsDayPopup('${dateStr}')"><div class="preview-day-num">${day}</div>${timeLabel ? `<div class="preview-day-time">${timeLabel}</div>` : ''}</div>`;
+            } else {
+                html += `<div class="${cellClass}"><div class="preview-day-num">${day}</div></div>`;
+            }
+        }
+
+        html += '</div>';
+        cur = new Date(year, month + 1, 1);
+    }
+
+    // Legend
+    html += `
+        <div class="preview-legend">
+            <span class="preview-legend-item"><span class="preview-legend-dot preview-calendar-source"></span>カレンダー取込</span>
+            <span class="preview-legend-item"><span class="preview-legend-dot preview-manual-source"></span>手動設定</span>
+            <span class="preview-legend-item"><span class="preview-legend-dot preview-closed"></span>休校</span>
+            <span class="preview-legend-item"><span class="preview-legend-dot preview-default"></span>曜日デフォルト</span>
+        </div>
+    `;
+
+    container.innerHTML = html;
+    if (actionsEl) actionsEl.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+}
+
+let lastPreviewRange = null;
+
+function refreshPreviewIfVisible() {
+    if (lastPreviewRange) {
+        renderImportPreview(lastPreviewRange.start, lastPreviewRange.end);
+    }
+}
+
+function openManualAndScroll(sectionId) {
+    const details = document.getElementById('manual-settings-details');
+    if (details) {
+        details.open = true;
+        setTimeout(() => {
+            const target = document.getElementById(sectionId);
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+}
+
+window.openManualSettings = function() { openManualAndScroll('manual-settings-details'); };
+window.goToAddException = function() { openManualAndScroll('section-add-exception'); };
+window.goToExceptionsList = function() { openManualAndScroll('section-exceptions-list'); };
+window.goToOpeningHours = function() { openManualAndScroll('section-opening-hours'); };
+
+function generatePeriodName(startStr, endStr) {
+    return `${startStr}〜${endStr} 自習室シフト`;
+}
+
+window.goToCreatePeriod = function() {
+    // Pre-fill period form from preview range
+    if (lastPreviewRange) {
+        const nameField = document.getElementById('period-name');
+        const startField = document.getElementById('period-start');
+        const endField = document.getElementById('period-end');
+        if (nameField && !nameField.value) {
+            nameField.value = generatePeriodName(lastPreviewRange.start, lastPreviewRange.end);
+        }
+        if (startField && !startField.value) startField.value = lastPreviewRange.start;
+        if (endField && !endField.value) endField.value = lastPreviewRange.end;
+    }
+    switchTab('periods');
+};
+
+function initSyncDateRange() {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    const fmt = d => d.toISOString().slice(0, 10);
+    document.getElementById('sync-start-date').value = fmt(nextMonth);
+    document.getElementById('sync-end-date').value = fmt(lastDay);
+}
+
+// --- Settings Day Popup ---
+
+window.showSettingsDayPopup = function(dateStr) {
+    closeSettingsDayPopup();
+
+    const exc = exceptionsData.find(e => e.exception_date === dateStr);
+    const d = new Date(dateStr);
+    const dayLabel = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_NAMES[d.getDay()]})`;
+
+    const sourceLabel = exc
+        ? (exc.source === 'calendar' ? 'カレンダー取込' : '手動設定')
+        : '曜日デフォルト';
+    const sourceBadge = exc
+        ? (exc.source === 'calendar' ? 'badge-calendar' : 'badge-manual')
+        : 'badge-draft';
+
+    const startVal = exc && !exc.is_closed ? (exc.start_time || '09:00') : '09:00';
+    const endVal = exc && !exc.is_closed ? (exc.end_time || '21:00') : '21:00';
+    const isClosed = exc ? exc.is_closed : false;
+    const reason = exc ? (exc.reason || '') : '';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'day-popup-overlay';
+    overlay.id = 'settings-day-popup-overlay';
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSettingsDayPopup();
+    });
+
+    const popup = document.createElement('div');
+    popup.className = 'day-popup';
+
+    popup.innerHTML = `
+        <div class="day-popup-header">
+            <span class="day-popup-date">${dayLabel}</span>
+            <button class="day-popup-close" onclick="closeSettingsDayPopup()">&times;</button>
+        </div>
+        <div class="day-popup-section">
+            <div class="day-popup-label">ステータス</div>
+            <span class="badge ${sourceBadge}">${sourceLabel}</span>
+        </div>
+        <div class="day-popup-section">
+            <div class="day-popup-label">開校時間</div>
+            <div class="day-popup-time-edit">
+                <input type="time" class="form-control popup-time-input" id="settings-popup-start" value="${startVal}">
+                <span class="time-separator">〜</span>
+                <input type="time" class="form-control popup-time-input" id="settings-popup-end" value="${endVal}">
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;">
+                <input type="checkbox" id="settings-popup-closed" ${isClosed ? 'checked' : ''}> 休校
+            </label>
+        </div>
+        <div class="day-popup-section">
+            <div class="day-popup-label">理由（任意）</div>
+            <input type="text" class="form-control" id="settings-popup-reason" value="${reason}" placeholder="例: 祝日、特別営業">
+        </div>
+        <div class="day-popup-section" style="border-bottom:none;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="saveSettingsPopup('${dateStr}', ${exc ? exc.id : 'null'})">
+                    <i data-lucide="save" style="width:15px;height:15px;"></i> ${exc ? '更新' : '例外として保存'}
+                </button>
+                ${exc ? `<button class="btn btn-danger" onclick="deleteSettingsPopup(${exc.id})"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> 削除</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    if (window.lucide) lucide.createIcons();
+    requestAnimationFrame(() => {
+        overlay.classList.add('visible');
+        popup.classList.add('visible');
+    });
+};
+
+function closeSettingsDayPopup() {
+    const overlay = document.getElementById('settings-day-popup-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('visible');
+    const popup = overlay.querySelector('.day-popup');
+    if (popup) popup.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 200);
+}
+window.closeSettingsDayPopup = closeSettingsDayPopup;
+
+window.saveSettingsPopup = async function(dateStr, excId) {
+    const startTime = document.getElementById('settings-popup-start').value;
+    const endTime = document.getElementById('settings-popup-end').value;
+    const isClosed = document.getElementById('settings-popup-closed').checked;
+    const reason = document.getElementById('settings-popup-reason').value;
+
+    try {
+        if (excId) {
+            await api.put(`/api/admin/opening-hours/exceptions/${excId}`, {
+                start_time: isClosed ? null : startTime,
+                end_time: isClosed ? null : endTime,
+                is_closed: isClosed,
+                reason: reason,
+            });
+            showToast('更新しました', 'success');
+        } else {
+            await api.post('/api/admin/opening-hours/exceptions', {
+                exception_date: dateStr,
+                start_time: isClosed ? null : startTime,
+                end_time: isClosed ? null : endTime,
+                is_closed: isClosed,
+                reason: reason,
+            });
+            showToast('例外日を追加しました', 'success');
+        }
+        closeSettingsDayPopup();
+        await loadExceptions();
+        refreshPreviewIfVisible();
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+};
+
+window.deleteSettingsPopup = async function(excId) {
+    try {
+        await api.delete(`/api/admin/opening-hours/exceptions/${excId}`);
+        showToast('削除しました', 'success');
+        closeSettingsDayPopup();
+        await loadExceptions();
+        refreshPreviewIfVisible();
+    } catch (e) {
+        showToast(`削除に失敗しました: ${e.message}`, 'error');
+    }
+};
+
 async function init() {
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
-        await loadOpeningHours();
-        await loadExceptions();
-        await loadPeriods();
+        initSyncDateRange();
+        const [statusData] = await Promise.all([
+            loadSyncStatus(),
+            loadOpeningHours(),
+            loadExceptions(),
+            loadPeriods(),
+        ]);
+        // Show preview calendar based on calendar exceptions range
+        if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
+            renderImportPreview(
+                statusData.calendar_exceptions.min_date,
+                statusData.calendar_exceptions.max_date
+            );
+        }
     } catch (e) {
         console.error('Init error:', e);
     }
@@ -88,28 +459,39 @@ window.saveOpeningHours = async function() {
 };
 
 // --- Exceptions ---
-async function loadExceptions() {
+async function loadExceptions(highlightRange) {
     const data = await api.get('/api/admin/opening-hours/exceptions');
+    exceptionsData = data || [];
     const container = document.getElementById('exceptions-list');
 
     if (!data || data.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>例外日はまだ設定されていません</p><p class="empty-state-hint">祝日や休校日を上のフォームから追加できます</p></div>';
+        container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>例外日はまだ設定されていません</p><p class="empty-state-hint">カレンダーからインポートするか、上のフォームから追加してください</p></div>';
         return;
+    }
+
+    function isInHighlightRange(dateStr) {
+        if (!highlightRange) return false;
+        return dateStr >= highlightRange.start && dateStr <= highlightRange.end;
     }
 
     container.innerHTML = `
         <table class="data-table">
-            <thead><tr><th>日付</th><th>時間</th><th>理由</th><th></th></tr></thead>
+            <thead><tr><th>日付</th><th>時間</th><th>ソース</th><th>理由</th><th></th></tr></thead>
             <tbody>
-                ${data.map(e => `
-                    <tr>
+                ${data.map(e => {
+                    const rowClass = isInHighlightRange(e.exception_date) ? ' class="exception-row-new"' : '';
+                    const badgeClass = e.source === 'calendar' ? 'badge-calendar' : 'badge-manual';
+                    const badgeLabel = e.source === 'calendar' ? 'カレンダー' : '手動';
+                    return `
+                    <tr${rowClass}>
                         <td>${e.exception_date}</td>
                         <td>${e.is_closed ? '休校' : `${e.start_time}-${e.end_time}`}</td>
+                        <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                         <td>${e.reason || ''}</td>
                         <td><button class="btn btn-danger" style="padding:4px 12px;font-size:0.85em;"
                             onclick="deleteException(${e.id})">削除</button></td>
-                    </tr>
-                `).join('')}
+                    </tr>`;
+                }).join('')}
             </tbody>
         </table>
     `;
@@ -128,6 +510,7 @@ window.addException = async function() {
         await api.post('/api/admin/opening-hours/exceptions', data);
         showToast('例外日を追加しました', 'success');
         await loadExceptions();
+        refreshPreviewIfVisible();
     } catch (e) {
         showToast(`追加に失敗しました: ${e.message}`, 'error');
     }
@@ -138,9 +521,106 @@ window.deleteException = async function(id) {
         await api.delete(`/api/admin/opening-hours/exceptions/${id}`);
         showToast('例外日を削除しました', 'success');
         await loadExceptions();
+        refreshPreviewIfVisible();
     } catch (e) {
         showToast(`削除に失敗しました: ${e.message}`, 'error');
     }
+};
+
+// --- Opening Hours Calendar Sync ---
+
+function formatSyncResult(result, type) {
+    const parts = [];
+    if (type === 'export') {
+        if (result.created) parts.push(`作成: ${result.created}件`);
+        if (result.updated) parts.push(`更新: ${result.updated}件`);
+        if (result.deleted) parts.push(`削除: ${result.deleted}件`);
+        if (result.skipped) parts.push(`スキップ: ${result.skipped}件`);
+    } else {
+        if (result.imported) parts.push(`取込: ${result.imported}件`);
+        if (result.updated) parts.push(`更新: ${result.updated}件`);
+        if (result.skipped) parts.push(`スキップ: ${result.skipped}件`);
+    }
+    if (result.errors && result.errors.length > 0) {
+        parts.push(`エラー: ${result.errors.length}件`);
+    }
+    return parts.join('　');
+}
+
+function showSyncResult(result, type) {
+    const container = document.getElementById('sync-result');
+    const hasErrors = result.errors && result.errors.length > 0;
+    const summary = formatSyncResult(result, type);
+    const importedCount = (result.imported || 0) + (result.updated || 0);
+    const showNextStep = type === 'import' && !hasErrors && importedCount > 0;
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div style="padding:12px;border-radius:8px;background:${hasErrors ? '#fef2f2' : '#f0fdf4'};border:1px solid ${hasErrors ? '#fecaca' : '#bbf7d0'};">
+            <strong>${type === 'export' ? 'エクスポート' : 'インポート'}結果:</strong> ${summary}
+            ${hasErrors ? `<div style="margin-top:8px;color:#b91c1c;font-size:0.85em;">${result.errors.map(e => `<div>${e.date || e.event || ''}: ${e.error}</div>`).join('')}</div>` : ''}
+            ${showNextStep ? `<div style="margin-top:10px;padding:10px 12px;background:var(--color-primary-50);border-radius:6px;font-size:0.88em;color:var(--color-neutral-700);">
+                <strong>次のステップ:</strong> 下のプレビューで取込み結果を確認してください。問題なければ「シフト期間」タブへ進みます。
+            </div>` : ''}
+        </div>
+    `;
+}
+
+window.exportOpeningHours = async function() {
+    const startDate = document.getElementById('sync-start-date').value;
+    const endDate = document.getElementById('sync-end-date').value;
+    if (!startDate || !endDate) {
+        showToast('開始日と終了日を入力してください', 'warning');
+        return;
+    }
+    showConfirmDialog(
+        'エクスポート確認',
+        `${startDate} 〜 ${endDate} の開校時間をGoogleカレンダーに書き出します。カレンダー上の既存「開校時間」イベントは更新されます。`,
+        'btn-primary', 'エクスポート',
+        async () => {
+            try {
+                showToast('エクスポート中...', 'info');
+                const result = await api.post('/api/admin/opening-hours/sync/export', {
+                    start_date: startDate,
+                    end_date: endDate,
+                });
+                showSyncResult(result, 'export');
+                showToast('エクスポートが完了しました', 'success');
+                await loadSyncStatus();
+            } catch (e) {
+                showToast(`エクスポートに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+};
+
+window.importOpeningHours = async function() {
+    const startDate = document.getElementById('sync-start-date').value;
+    const endDate = document.getElementById('sync-end-date').value;
+    if (!startDate || !endDate) {
+        showToast('開始日と終了日を入力してください', 'warning');
+        return;
+    }
+    showConfirmDialog(
+        'インポート確認',
+        `${startDate} 〜 ${endDate} の「開校時間」イベントをGoogleカレンダーから取込み、例外リストに<strong>保存</strong>します。手動設定済みの日は上書きされません。`,
+        'btn-primary', 'インポート',
+        async () => {
+            try {
+                showToast('インポート中...', 'info');
+                const result = await api.post('/api/admin/opening-hours/sync/import', {
+                    start_date: startDate,
+                    end_date: endDate,
+                });
+                showSyncResult(result, 'import');
+                showToast('インポートが完了しました', 'success');
+                await loadSyncStatus();
+                await loadExceptions({ start: startDate, end: endDate });
+                renderImportPreview(startDate, endDate);
+            } catch (e) {
+                showToast(`インポートに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 };
 
 // --- Periods ---

@@ -4,7 +4,7 @@ from datetime import datetime
 from app.extensions import db
 from app.middleware.auth_middleware import require_role, get_current_user
 from app.models.organization import Organization
-from app.models.opening_hours import OpeningHours, OpeningHoursException
+from app.models.opening_hours import OpeningHours, OpeningHoursException, SyncOperationLog
 from app.models.shift import ShiftPeriod, ShiftSchedule, ShiftScheduleEntry
 from app.models.user import User
 from app.services.shift_service import (
@@ -14,6 +14,10 @@ from app.services.shift_service import (
 from app.services.approval_service import submit_for_approval, confirm_schedule
 from app.services.auth_service import get_credentials_for_user
 from app.services.calendar_service import create_event
+from app.services.opening_hours_sync_service import (
+    export_opening_hours_to_calendar,
+    import_opening_hours_from_calendar,
+)
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -124,6 +128,26 @@ def create_exception():
     return jsonify(exc.to_dict()), 201
 
 
+@api_admin_bp.route('/opening-hours/exceptions/<int:exc_id>', methods=['PUT'])
+@require_role('admin')
+def update_exception(exc_id):
+    exc = db.session.get(OpeningHoursException, exc_id)
+    if not exc:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json()
+    if data.get('start_time') is not None:
+        exc.start_time = data['start_time']
+    if data.get('end_time') is not None:
+        exc.end_time = data['end_time']
+    if 'is_closed' in data:
+        exc.is_closed = data['is_closed']
+    if 'reason' in data:
+        exc.reason = data['reason']
+    exc.updated_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify(exc.to_dict())
+
+
 @api_admin_bp.route('/opening-hours/exceptions/<int:exc_id>', methods=['DELETE'])
 @require_role('admin')
 def delete_exception(exc_id):
@@ -133,6 +157,110 @@ def delete_exception(exc_id):
     db.session.delete(exc)
     db.session.commit()
     return '', 204
+
+
+# --- Opening Hours Calendar Sync ---
+
+@api_admin_bp.route('/opening-hours/sync/export', methods=['POST'])
+@require_role('admin')
+def sync_export_opening_hours():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json()
+
+    if not data or not data.get('start_date') or not data.get('end_date'):
+        return jsonify({"error": "start_date and end_date are required"}), 400
+
+    from app.utils.validators import parse_date
+    start = parse_date(data['start_date'])
+    end = parse_date(data['end_date'])
+    if not start or not end:
+        return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+
+    try:
+        credentials = get_credentials_for_user(user)
+    except Exception as e:
+        return jsonify({"error": f"認証エラー: {e}"}), 401
+
+    if not credentials:
+        return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
+
+    result = export_opening_hours_to_calendar(org.id, credentials, start, end)
+    return jsonify(result)
+
+
+@api_admin_bp.route('/opening-hours/sync/import', methods=['POST'])
+@require_role('admin')
+def sync_import_opening_hours():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json()
+
+    if not data or not data.get('start_date') or not data.get('end_date'):
+        return jsonify({"error": "start_date and end_date are required"}), 400
+
+    from app.utils.validators import parse_date
+    start = parse_date(data['start_date'])
+    end = parse_date(data['end_date'])
+    if not start or not end:
+        return jsonify({"error": "Invalid date format (YYYY-MM-DD)"}), 400
+
+    try:
+        credentials = get_credentials_for_user(user)
+    except Exception as e:
+        return jsonify({"error": f"認証エラー: {e}"}), 401
+
+    if not credentials:
+        return jsonify({"error": "Google認証情報がありません。再ログインしてください。"}), 401
+
+    result = import_opening_hours_from_calendar(org.id, credentials, start, end)
+    return jsonify(result)
+
+
+# --- Sync Status & Logs ---
+
+@api_admin_bp.route('/opening-hours/sync/status', methods=['GET'])
+@require_role('admin')
+def get_sync_status():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+
+    last_log = SyncOperationLog.query.filter_by(
+        organization_id=org.id
+    ).order_by(SyncOperationLog.performed_at.desc()).first()
+
+    from sqlalchemy import func
+    cal_stats = db.session.query(
+        func.count(OpeningHoursException.id),
+        func.min(OpeningHoursException.exception_date),
+        func.max(OpeningHoursException.exception_date),
+    ).filter(
+        OpeningHoursException.organization_id == org.id,
+        OpeningHoursException.source == 'calendar',
+    ).first()
+
+    result = {
+        'last_sync': last_log.to_dict() if last_log else None,
+        'calendar_exceptions': {
+            'count': cal_stats[0] if cal_stats else 0,
+            'min_date': cal_stats[1].isoformat() if cal_stats and cal_stats[1] else None,
+            'max_date': cal_stats[2].isoformat() if cal_stats and cal_stats[2] else None,
+        },
+    }
+    return jsonify(result)
+
+
+@api_admin_bp.route('/opening-hours/sync/logs', methods=['GET'])
+@require_role('admin')
+def get_sync_logs():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+
+    logs = SyncOperationLog.query.filter_by(
+        organization_id=org.id
+    ).order_by(SyncOperationLog.performed_at.desc()).limit(20).all()
+
+    return jsonify([log.to_dict() for log in logs])
 
 
 # --- Shift Periods ---

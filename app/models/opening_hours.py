@@ -62,3 +62,47 @@ class OpeningHoursException(db.Model):
 
     def __repr__(self):
         return f'<OpeningHoursException {self.exception_date}>'
+
+
+class OpeningHoursCalendarSync(db.Model):
+    __tablename__ = 'opening_hours_calendar_sync'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    sync_date = db.Column(db.Date, nullable=False)
+    calendar_event_id = db.Column(db.String(255), nullable=False)
+    start_time = db.Column(db.String(5), nullable=False)  # HH:MM
+    end_time = db.Column(db.String(5), nullable=False)     # HH:MM
+    synced_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('organization_id', 'sync_date', name='uq_calendar_sync_org_date'),
+    )
+
+    def __repr__(self):
+        return f'<OpeningHoursCalendarSync {self.sync_date}>'
+
+
+class SyncOperationLog(db.Model):
+    __tablename__ = 'sync_operation_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
+    operation_type = db.Column(db.String(10), nullable=False)  # 'import' or 'export'
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    result_summary = db.Column(db.JSON)
+    performed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'operation_type': self.operation_type,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'result_summary': self.result_summary,
+            'performed_at': self.performed_at.isoformat() if self.performed_at else None,
+        }
+
+    def __repr__(self):
+        return f'<SyncOperationLog {self.operation_type} {self.performed_at}>'

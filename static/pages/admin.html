@@ -35,28 +35,82 @@
                         <li><strong>シフト構築</strong>: 提出された希望をもとにシフトを組み、事業主に承認申請します</li>
                     </ol>
                 </div>
+
+                <!-- Calendar Sync Card (primary action) -->
                 <div class="card mb-24">
-                    <h3>開校時間設定</h3>
-                    <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの開校時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
-                    <div id="opening-hours-grid"></div>
-                    <button class="btn btn-primary mt-16" onclick="saveOpeningHours()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                    <h3><i data-lucide="calendar-sync" style="width:18px;height:18px;vertical-align:text-bottom;"></i> Googleカレンダー連携</h3>
+                    <div id="sync-status" class="sync-status mb-16">
+                        <span style="color:var(--color-neutral-400);font-size:0.9em;">読み込み中...</span>
+                    </div>
+                    <p class="mb-8" style="color:#666;font-size:0.9em;">Googleカレンダーと開校時間データを同期します。</p>
+                    <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.82em;">
+                        <strong>インポート</strong>: カレンダーの「開校時間」イベントを読み取り、例外リストに<strong>保存</strong>します。<br>
+                        <strong>エクスポート</strong>: 設定済みの開校時間をカレンダーに書き出します。
+                    </p>
+                    <div class="flex gap-8 mb-16" style="align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>開始日</label>
+                            <input type="date" id="sync-start-date" class="form-control" style="width:auto;">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>終了日</label>
+                            <input type="date" id="sync-end-date" class="form-control" style="width:auto;">
+                        </div>
+                        <button class="btn btn-outline" onclick="importOpeningHours()"><i data-lucide="download" style="width:15px;height:15px;"></i> インポート（カレンダー→例外リスト）</button>
+                        <button class="btn btn-primary" onclick="exportOpeningHours()"><i data-lucide="upload" style="width:15px;height:15px;"></i> エクスポート（設定→カレンダー）</button>
+                    </div>
+                    <div id="sync-result" style="display:none;" class="mt-8"></div>
                 </div>
 
-                <div class="card">
-                    <h3>開校時間の例外</h3>
-                    <p class="mb-16" style="color:#666;font-size:0.9em;">祝日・長期休暇・特別営業日など、通常と異なる日を個別に設定します</p>
-                    <div class="flex gap-8 mb-16">
-                        <input type="date" id="exc-date" class="form-control" style="width:auto;">
-                        <input type="time" id="exc-start" class="form-control" style="width:auto;" value="09:00">
-                        <input type="time" id="exc-end" class="form-control" style="width:auto;" value="21:00">
-                        <label style="display:flex;align-items:center;gap:4px;">
-                            <input type="checkbox" id="exc-closed"> 休校
-                        </label>
-                        <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
-                        <button class="btn btn-primary" onclick="addException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
+                <!-- Import Preview (visual calendar) -->
+                <div class="card mb-24" id="import-preview-card">
+                    <h3><i data-lucide="eye" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 開校時間プレビュー</h3>
+                    <div id="import-preview">
+                        <div class="empty-state" style="padding:32px 24px;">
+                            <p>カレンダーからインポートすると、取込み結果がカレンダー形式で表示されます</p>
+                        </div>
                     </div>
-                    <div id="exceptions-list"></div>
+                    <div id="import-preview-actions" style="display:none;flex-wrap:wrap;" class="flex gap-8 mt-16">
+                        <button class="btn btn-primary" onclick="goToCreatePeriod()"><i data-lucide="arrow-right" style="width:15px;height:15px;"></i> OK → シフト期間を作成</button>
+                        <button class="btn btn-outline" onclick="goToAddException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> シフトを追加</button>
+                        <button class="btn btn-outline" onclick="goToExceptionsList()"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
+                        <button class="btn btn-outline" onclick="goToOpeningHours()"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
+                    </div>
                 </div>
+
+                <!-- Manual Settings (collapsed) -->
+                <details class="settings-collapse" id="manual-settings-details">
+                    <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の開校時間・例外の管理）</summary>
+                    <div class="settings-collapse-body">
+                        <div class="card mb-24" id="section-opening-hours">
+                            <h3>曜日別の開校時間</h3>
+                            <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの開校時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
+                            <div id="opening-hours-grid"></div>
+                            <button class="btn btn-primary mt-16" onclick="saveOpeningHours()"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                        </div>
+
+                        <div class="card mb-24" id="section-add-exception">
+                            <h3>例外の手動追加</h3>
+                            <p class="mb-16" style="color:#666;font-size:0.9em;">祝日・長期休暇・特別営業日など、通常と異なる日を個別に設定します</p>
+                            <div class="flex gap-8 mb-16" style="flex-wrap:wrap;">
+                                <input type="date" id="exc-date" class="form-control" style="width:auto;">
+                                <input type="time" id="exc-start" class="form-control" style="width:auto;" value="09:00">
+                                <input type="time" id="exc-end" class="form-control" style="width:auto;" value="21:00">
+                                <label style="display:flex;align-items:center;gap:4px;">
+                                    <input type="checkbox" id="exc-closed"> 休校
+                                </label>
+                                <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
+                                <button class="btn btn-primary" onclick="addException()"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
+                            </div>
+                        </div>
+
+                        <div class="card" id="section-exceptions-list">
+                            <h3>例外一覧</h3>
+                            <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.82em;">優先順位: <strong>手動設定</strong> ＞ <strong>カレンダー取込</strong> ＞ <strong>曜日別の開校時間</strong></p>
+                            <div id="exceptions-list"></div>
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <!-- Periods Tab -->

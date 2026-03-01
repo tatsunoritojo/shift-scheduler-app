@@ -26,7 +26,7 @@ def get_client_config():
 
 def create_oauth_flow(state=None):
     """Create a Google OAuth flow."""
-    scopes = current_app.config['GOOGLE_SCOPES_READONLY']
+    scopes = current_app.config['GOOGLE_SCOPES_WRITE']
     flow = Flow.from_client_config(
         get_client_config(),
         scopes=scopes,
@@ -143,7 +143,7 @@ def get_credentials_for_user(user):
             'token_uri': 'https://oauth2.googleapis.com/token',
             'client_id': current_app.config['GOOGLE_CLIENT_ID'],
             'client_secret': current_app.config['GOOGLE_CLIENT_SECRET'],
-            'scopes': current_app.config['GOOGLE_SCOPES_READONLY'],
+            'scopes': current_app.config['GOOGLE_SCOPES_WRITE'],
         }
     else:
         creds_data['refresh_token'] = token.refresh_token
