@@ -55,7 +55,7 @@ def approve(schedule_id):
     schedule = db.session.get(ShiftSchedule, schedule_id)
     if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
         return jsonify({"error": "Not found"}), 404
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     comment = data.get('comment')
 
     result, error = approve_schedule(schedule_id, user, comment)
@@ -72,7 +72,7 @@ def reject(schedule_id):
     schedule = db.session.get(ShiftSchedule, schedule_id)
     if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
         return jsonify({"error": "Not found"}), 404
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     comment = data.get('comment')
 
     result, error = reject_schedule(schedule_id, user, comment)

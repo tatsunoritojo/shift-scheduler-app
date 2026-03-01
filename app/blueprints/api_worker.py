@@ -128,7 +128,7 @@ def submit_availability(period_id):
     if period.status != 'open':
         return jsonify({"error": "Period is not open for submissions"}), 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body is required"}), 400
     slots = data.get('slots', [])

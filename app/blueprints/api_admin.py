@@ -56,7 +56,7 @@ def get_opening_hours():
 def update_opening_hours():
     user = get_current_user()
     org = _get_or_create_org(user)
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data or not isinstance(data, list):
         return jsonify({"error": "Expected array of opening hours"}), 400
@@ -120,7 +120,7 @@ def get_exceptions():
 def create_exception():
     user = get_current_user()
     org = _get_or_create_org(user)
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data or not data.get('exception_date'):
         return jsonify({"error": "exception_date is required"}), 400
@@ -172,7 +172,7 @@ def update_exception(exc_id):
     exc = db.session.get(OpeningHoursException, exc_id)
     if not exc or exc.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body is required"}), 400
     try:
@@ -223,7 +223,7 @@ def delete_exception(exc_id):
 def sync_export_opening_hours():
     user = get_current_user()
     org = _get_or_create_org(user)
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data or not data.get('start_date') or not data.get('end_date'):
         return jsonify({"error": "start_date and end_date are required"}), 400
@@ -254,7 +254,7 @@ def sync_export_opening_hours():
 def sync_import_opening_hours():
     user = get_current_user()
     org = _get_or_create_org(user)
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data or not data.get('start_date') or not data.get('end_date'):
         return jsonify({"error": "start_date and end_date are required"}), 400
@@ -345,7 +345,7 @@ def get_periods():
 def create_period():
     user = get_current_user()
     org = _get_or_create_org(user)
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
@@ -399,7 +399,7 @@ def update_period(period_id):
     if not period or period.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body is required"}), 400
     if data.get('name'):
@@ -507,7 +507,7 @@ def save_period_schedule(period_id):
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body is required"}), 400
     entries = data.get('entries', [])
