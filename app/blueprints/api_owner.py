@@ -32,8 +32,9 @@ def get_pending_approvals():
 @api_owner_bp.route('/schedules/<int:schedule_id>', methods=['GET'])
 @require_role('owner')
 def get_schedule_detail(schedule_id):
+    user = get_current_user()
     schedule = db.session.get(ShiftSchedule, schedule_id)
-    if not schedule:
+    if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
         return jsonify({"error": "Not found"}), 404
 
     data = schedule.to_dict()
@@ -50,6 +51,9 @@ def get_schedule_detail(schedule_id):
 @require_role('owner')
 def approve(schedule_id):
     user = get_current_user()
+    schedule = db.session.get(ShiftSchedule, schedule_id)
+    if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
+        return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
     comment = data.get('comment')
 
@@ -63,6 +67,9 @@ def approve(schedule_id):
 @require_role('owner')
 def reject(schedule_id):
     user = get_current_user()
+    schedule = db.session.get(ShiftSchedule, schedule_id)
+    if not schedule or not schedule.period or schedule.period.organization_id != user.organization_id:
+        return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
     comment = data.get('comment')
 

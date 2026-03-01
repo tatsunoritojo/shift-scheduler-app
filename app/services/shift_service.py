@@ -66,9 +66,13 @@ def create_or_update_submission(period_id, user_id, slots_data, notes=None):
         ShiftSubmissionSlot.query.filter_by(submission_id=submission.id).delete()
 
     for slot in slots_data:
+        try:
+            slot_date = date.fromisoformat(slot['slot_date'])
+        except (ValueError, KeyError, TypeError):
+            raise ValueError(f"Invalid slot_date: {slot.get('slot_date')}")
         s = ShiftSubmissionSlot(
             submission_id=submission.id,
-            slot_date=date.fromisoformat(slot['slot_date']),
+            slot_date=slot_date,
             is_available=slot.get('is_available', False),
             start_time=slot.get('start_time'),
             end_time=slot.get('end_time'),
@@ -79,7 +83,11 @@ def create_or_update_submission(period_id, user_id, slots_data, notes=None):
         )
         db.session.add(s)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return submission
 
 
@@ -112,16 +120,24 @@ def save_schedule(period_id, created_by, entries_data):
         ShiftScheduleEntry.query.filter_by(schedule_id=schedule.id).delete()
 
     for entry in entries_data:
+        try:
+            shift_date = date.fromisoformat(entry['shift_date'])
+        except (ValueError, KeyError, TypeError):
+            raise ValueError(f"Invalid shift_date: {entry.get('shift_date')}")
         e = ShiftScheduleEntry(
             schedule_id=schedule.id,
             user_id=entry['user_id'],
-            shift_date=date.fromisoformat(entry['shift_date']),
+            shift_date=shift_date,
             start_time=entry['start_time'],
             end_time=entry['end_time'],
         )
         db.session.add(e)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return schedule
 
 

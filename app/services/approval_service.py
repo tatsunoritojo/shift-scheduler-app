@@ -18,7 +18,11 @@ def submit_for_approval(schedule_id, admin_user):
         action='submitted',
         performed_by=admin_user.id,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return None, "Database error"
 
     # Notify owner
     period = schedule.period
@@ -46,7 +50,11 @@ def approve_schedule(schedule_id, owner_user, comment=None):
         performed_by=owner_user.id,
         comment=comment,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return None, "Database error"
 
     # Notify admin
     creator = db.session.get(User, schedule.created_by)
@@ -72,7 +80,11 @@ def reject_schedule(schedule_id, owner_user, comment=None):
         performed_by=owner_user.id,
         comment=comment,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return None, "Database error"
 
     # Notify admin
     creator = db.session.get(User, schedule.created_by)
@@ -97,6 +109,10 @@ def confirm_schedule(schedule_id, admin_user):
         action='confirmed',
         performed_by=admin_user.id,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return None, "Database error"
 
     return schedule, None

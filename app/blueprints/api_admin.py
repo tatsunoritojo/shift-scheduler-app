@@ -23,17 +23,19 @@ api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
 
 def _get_or_create_org(user):
-    """Get user's organization or create a default one."""
+    """Get user's organization or create a new one for the user."""
     if user.organization_id:
         return db.session.get(Organization, user.organization_id)
-    org = Organization.query.first()
-    if not org:
-        org = Organization(name='Default', admin_email=user.email)
-        db.session.add(org)
+    # Create a new org for this user instead of assigning to an arbitrary existing one
+    org = Organization(name=f'{user.display_name or user.email} の組織', admin_email=user.email)
+    db.session.add(org)
+    db.session.flush()
+    user.organization_id = org.id
+    try:
         db.session.commit()
-    if not user.organization_id:
-        user.organization_id = org.id
-        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return org
 
 
@@ -81,7 +83,11 @@ def update_opening_hours():
             )
             db.session.add(oh)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     hours = OpeningHours.query.filter_by(organization_id=org.id).order_by(OpeningHours.day_of_week).all()
     return jsonify([h.to_dict() for h in hours])
 
@@ -114,6 +120,10 @@ def create_exception():
     if not exc_date:
         return jsonify({"error": "Invalid date format"}), 400
 
+    source = data.get('source', 'manual')
+    if source not in ('manual', 'calendar'):
+        return jsonify({"error": "Invalid source. Allowed: manual, calendar"}), 400
+
     exc = OpeningHoursException(
         organization_id=org.id,
         exception_date=exc_date,
@@ -121,20 +131,28 @@ def create_exception():
         end_time=data.get('end_time'),
         is_closed=data.get('is_closed', False),
         reason=data.get('reason'),
-        source=data.get('source', 'manual'),
+        source=source,
     )
     db.session.add(exc)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     return jsonify(exc.to_dict()), 201
 
 
 @api_admin_bp.route('/opening-hours/exceptions/<int:exc_id>', methods=['PUT'])
 @require_role('admin')
 def update_exception(exc_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
     exc = db.session.get(OpeningHoursException, exc_id)
-    if not exc:
+    if not exc or exc.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
     if data.get('start_time') is not None:
         exc.start_time = data['start_time']
     if data.get('end_time') is not None:
@@ -144,18 +162,28 @@ def update_exception(exc_id):
     if 'reason' in data:
         exc.reason = data['reason']
     exc.updated_at = datetime.utcnow()
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     return jsonify(exc.to_dict())
 
 
 @api_admin_bp.route('/opening-hours/exceptions/<int:exc_id>', methods=['DELETE'])
 @require_role('admin')
 def delete_exception(exc_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
     exc = db.session.get(OpeningHoursException, exc_id)
-    if not exc:
+    if not exc or exc.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
     db.session.delete(exc)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     return '', 204
 
 
@@ -282,6 +310,8 @@ def create_period():
     user = get_current_user()
     org = _get_or_create_org(user)
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
 
     from app.utils.validators import parse_date
     start = parse_date(data.get('start_date'))
@@ -305,25 +335,36 @@ def create_period():
         start_date=start,
         end_date=end,
         submission_deadline=deadline,
-        status=data.get('status', 'draft'),
+        status='draft',
         created_by=user.id,
     )
     db.session.add(period)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     return jsonify(period.to_dict()), 201
 
 
 @api_admin_bp.route('/periods/<int:period_id>', methods=['PUT'])
 @require_role('admin')
 def update_period(period_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
-    if not period:
+    if not period or period.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
 
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
     if data.get('name'):
         period.name = data['name']
     if data.get('status'):
+        allowed_statuses = ['draft', 'open', 'closed']
+        if data['status'] not in allowed_statuses:
+            return jsonify({"error": f"Invalid status. Allowed: {allowed_statuses}"}), 400
         period.status = data['status']
     if data.get('submission_deadline'):
         try:
@@ -341,7 +382,11 @@ def update_period(period_id):
         if d:
             period.end_date = d
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "Database error"}), 500
     return jsonify(period.to_dict())
 
 
@@ -350,8 +395,10 @@ def update_period(period_id):
 @api_admin_bp.route('/periods/<int:period_id>/opening-hours', methods=['GET'])
 @require_role('admin')
 def get_period_opening_hours(period_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
-    if not period:
+    if not period or period.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
 
     hours = get_opening_hours_for_period(
@@ -365,8 +412,10 @@ def get_period_opening_hours(period_id):
 @api_admin_bp.route('/periods/<int:period_id>/submissions', methods=['GET'])
 @require_role('admin')
 def get_period_submissions(period_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
     period = db.session.get(ShiftPeriod, period_id)
-    if not period:
+    if not period or period.organization_id != org.id:
         return jsonify({"error": "Not found"}), 404
     return jsonify(get_submissions_for_period(period_id))
 
@@ -376,6 +425,11 @@ def get_period_submissions(period_id):
 @api_admin_bp.route('/periods/<int:period_id>/schedule', methods=['GET'])
 @require_role('admin')
 def get_schedule(period_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
@@ -395,10 +449,19 @@ def get_schedule(period_id):
 @require_role('admin')
 def save_period_schedule(period_id):
     user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
     entries = data.get('entries', [])
 
-    schedule = save_schedule(period_id, user.id, entries)
+    try:
+        schedule = save_schedule(period_id, user.id, entries)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     result = schedule.to_dict()
     result['entries'] = [e.to_dict() for e in schedule.entries.all()]
     return jsonify(result)
@@ -408,6 +471,10 @@ def save_period_schedule(period_id):
 @require_role('admin')
 def submit_schedule_for_approval(period_id):
     user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
@@ -424,6 +491,10 @@ def submit_schedule_for_approval(period_id):
 @require_role('admin')
 def confirm_period_schedule(period_id):
     user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
@@ -477,7 +548,10 @@ def _sync_schedule_to_calendar(schedule, admin_user):
         except Exception as e:
             results.append({"user_id": entry.user_id, "error": str(e)})
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
     return results
 
 
@@ -499,6 +573,11 @@ def get_workers():
 @api_admin_bp.route('/workers/<int:worker_id>/history', methods=['GET'])
 @require_role('admin')
 def get_worker_history(worker_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    worker = db.session.get(User, worker_id)
+    if not worker or worker.organization_id != org.id:
+        return jsonify({"error": "Not found"}), 404
     entries = ShiftScheduleEntry.query.filter_by(user_id=worker_id).order_by(
         ShiftScheduleEntry.shift_date.desc()
     ).limit(50).all()
