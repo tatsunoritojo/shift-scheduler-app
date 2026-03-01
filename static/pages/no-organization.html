@@ -93,17 +93,7 @@
             <div class="user-email" id="user-email"></div>
         </div>
     </div>
-    <script>
-        fetch('/auth/me')
-            .then(r => r.json())
-            .then(data => {
-                if (data.email) {
-                    document.getElementById('user-email').textContent =
-                        'ログイン中: ' + data.email;
-                }
-            })
-            .catch(() => {});
-    </script>
+    <script src="/static/js/no-org.js"></script>
     <script src="/static/js/init.js"></script>
 </body>
 </html>
