@@ -103,7 +103,11 @@ def export_opening_hours_to_calendar(org_id, credentials, start_date, end_date):
         result_summary=stats,
     )
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return stats
 
 
@@ -126,7 +130,10 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             result_summary=stats,
         )
         db.session.add(log)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         return stats
 
     for event in events:
@@ -184,5 +191,9 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
         result_summary=stats,
     )
     db.session.add(log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return stats

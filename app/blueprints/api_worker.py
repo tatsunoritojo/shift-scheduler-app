@@ -40,8 +40,9 @@ def get_open_periods():
 @api_worker_bp.route('/periods/<int:period_id>/opening-hours', methods=['GET'])
 @require_role('worker')
 def get_period_opening_hours(period_id):
+    user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)
-    if not period:
+    if not period or period.organization_id != user.organization_id:
         return jsonify({"error": "Not found"}), 404
 
     hours = get_opening_hours_for_period(
@@ -117,16 +118,21 @@ def get_my_submission(period_id):
 def submit_availability(period_id):
     user = get_current_user()
     period = db.session.get(ShiftPeriod, period_id)
-    if not period:
+    if not period or period.organization_id != user.organization_id:
         return jsonify({"error": "Period not found"}), 404
     if period.status != 'open':
         return jsonify({"error": "Period is not open for submissions"}), 400
 
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
     slots = data.get('slots', [])
     notes = data.get('notes')
 
-    submission = create_or_update_submission(period_id, user.id, slots, notes)
+    try:
+        submission = create_or_update_submission(period_id, user.id, slots, notes)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     result = submission.to_dict()
     result['slots'] = [s.to_dict() for s in submission.slots.all()]
     return jsonify(result), 201

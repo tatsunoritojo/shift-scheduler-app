@@ -108,7 +108,11 @@ def upsert_user(google_id, email, display_name):
         if org:
             user.organization_id = org.id
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return user
 
 
@@ -126,7 +130,11 @@ def save_refresh_token(user, refresh_token, scopes=None):
             scopes=','.join(scopes) if isinstance(scopes, (list, set)) else scopes,
         )
         db.session.add(token)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
 
 def get_credentials_for_user(user):
