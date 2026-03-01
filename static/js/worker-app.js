@@ -48,7 +48,7 @@ function renderCalcSettingsPanel() {
                 <div class="calc-settings-input-group">
                     <input type="range" id="calc-buffer-time" class="calc-settings-range"
                         min="0" max="120" step="5" value="${settings.bufferTime}"
-                        oninput="document.getElementById('calc-buffer-val').textContent=this.value">
+                        data-action="updateDisplay" data-display="calc-buffer-val">
                     <span class="calc-settings-value"><span id="calc-buffer-val">${settings.bufferTime}</span> 分</span>
                 </div>
                 <div class="field-hint">予定の前後に確保する余裕時間です。通勤や準備の時間を考慮してください。</div>
@@ -58,29 +58,29 @@ function renderCalcSettingsPanel() {
                 <div class="calc-settings-input-group">
                     <input type="range" id="calc-mingap-time" class="calc-settings-range"
                         min="15" max="480" step="15" value="${settings.minGapTime}"
-                        oninput="document.getElementById('calc-mingap-val').textContent=this.value">
+                        data-action="updateDisplay" data-display="calc-mingap-val">
                     <span class="calc-settings-value"><span id="calc-mingap-val">${settings.minGapTime}</span> 分</span>
                 </div>
                 <div class="field-hint">空き時間がこの値より短い場合、勤務不可として除外されます。</div>
             </div>
             <div class="calc-settings-actions">
-                <button class="btn btn-primary btn-sm" onclick="window.applyCalcSettings()">適用</button>
-                <button class="btn btn-outline btn-sm" onclick="window.resetCalcSettings()">デフォルトに戻す</button>
+                <button class="btn btn-primary btn-sm" data-action="applyCalcSettings">適用</button>
+                <button class="btn btn-outline btn-sm" data-action="resetCalcSettings">デフォルトに戻す</button>
             </div>
         </div>
     `;
 }
 
-window.toggleCalcSettings = function() {
+function toggleCalcSettings() {
     const body = document.getElementById('calc-settings-body');
     if (!body) return;
     const isOpen = body.style.display !== 'none';
     body.style.display = isOpen ? 'none' : '';
     const btn = document.getElementById('calc-settings-toggle-btn');
     if (btn) btn.classList.toggle('active', !isOpen);
-};
+}
 
-window.applyCalcSettings = function() {
+function applyCalcSettings() {
     const bufferTime = parseInt(document.getElementById('calc-buffer-time').value, 10);
     const minGapTime = parseInt(document.getElementById('calc-mingap-time').value, 10);
     saveCalcSettings({ bufferTime, minGapTime });
@@ -88,16 +88,16 @@ window.applyCalcSettings = function() {
     renderAvailabilityCalendar();
     updateSlotSummary();
     showToast('計算設定を適用しました', 'success');
-};
+}
 
-window.resetCalcSettings = function() {
+function resetCalcSettings() {
     saveCalcSettings({ ...DEFAULT_CALC_SETTINGS });
     renderCalcSettingsPanel();
     recalculateSlots();
     renderAvailabilityCalendar();
     updateSlotSummary();
     showToast('デフォルト設定に戻しました', 'info');
-};
+}
 
 function formatSubmittedAt(isoStr) {
     if (!isoStr) return '';
@@ -105,7 +105,55 @@ function formatSubmittedAt(isoStr) {
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 提出`;
 }
 
+function setupStaticHandlers() {
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        location.href = '/auth/logout';
+    });
+    document.getElementById('btn-back-periods').addEventListener('click', () => showPeriodList());
+    document.getElementById('calc-settings-toggle-btn').addEventListener('click', () => toggleCalcSettings());
+    document.getElementById('submit-btn').addEventListener('click', () => submitAvailability());
+}
+
+function setupDelegatedHandlers() {
+    // Click delegation for periods list and dynamic popups/settings
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        const action = target.dataset.action;
+        switch (action) {
+            case 'selectPeriod': selectPeriod(Number(target.dataset.id)); break;
+            case 'closeDayPopup': closeDayPopup(); break;
+            case 'toggleDayFromPopup': toggleDayFromPopup(target.dataset.date); break;
+            case 'applyCustomTime': applyCustomTime(target.dataset.date); break;
+            case 'resetCustomTime': resetCustomTime(target.dataset.date); break;
+            case 'applyCalcSettings': applyCalcSettings(); break;
+            case 'resetCalcSettings': resetCalcSettings(); break;
+        }
+    });
+
+    // Change delegation for calendar selector checkboxes
+    document.addEventListener('change', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        if (target.dataset.action === 'onCalendarSelectionChange') {
+            onCalendarSelectionChange();
+        }
+    });
+
+    // Input delegation for range sliders
+    document.addEventListener('input', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        if (target.dataset.action === 'updateDisplay') {
+            const displayEl = document.getElementById(target.dataset.display);
+            if (displayEl) displayEl.textContent = target.value;
+        }
+    });
+}
+
 async function init() {
+    setupStaticHandlers();
+    setupDelegatedHandlers();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -133,7 +181,7 @@ async function loadPeriods() {
                 statusHtml = `<span class="badge badge-open">未提出</span>`;
             }
             return `
-                <div class="card" style="cursor:pointer;" onclick="window.selectPeriod(${p.id})">
+                <div class="card" style="cursor:pointer;" data-action="selectPeriod" data-id="${p.id}">
                     <div class="flex-between">
                         <div>
                             <strong>${escapeHtml(p.name)}</strong>
@@ -150,7 +198,7 @@ async function loadPeriods() {
     }
 }
 
-window.selectPeriod = async function(periodId) {
+async function selectPeriod(periodId) {
     try {
         const periods = await api.get('/api/worker/periods');
         currentPeriod = periods.find(p => p.id === periodId);
@@ -184,7 +232,7 @@ window.selectPeriod = async function(periodId) {
     } catch (e) {
         showToast('データの読み込みに失敗しました', 'error');
     }
-};
+}
 
 // --- Calendar list ---
 
@@ -255,14 +303,14 @@ function renderCalendarItem(cal) {
     return `
         <label class="cal-selector-item">
             <input type="checkbox" value="${escapedId}" ${checked}
-                onchange="window.onCalendarSelectionChange()">
+                data-action="onCalendarSelectionChange">
             ${colorDot}
             <span class="cal-selector-name">${label}${primaryTag}</span>
         </label>
     `;
 }
 
-window.onCalendarSelectionChange = async function() {
+async function onCalendarSelectionChange() {
     const checkboxes = document.querySelectorAll('#calendar-selector input[type="checkbox"]');
     selectedCalendarIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
@@ -271,7 +319,7 @@ window.onCalendarSelectionChange = async function() {
     recalculateSlots();
     renderAvailabilityCalendar();
     updateSlotSummary();
-};
+}
 
 // --- Data loading ---
 
@@ -563,7 +611,7 @@ function showDayPopup(dateStr, data, cellElement) {
     popup.innerHTML = `
         <div class="day-popup-header">
             <div class="day-popup-date">${displayDate}</div>
-            <button class="day-popup-close" onclick="window.closeDayPopup()">&times;</button>
+            <button class="day-popup-close" data-action="closeDayPopup">&times;</button>
         </div>
 
         <div class="day-popup-section">
@@ -580,7 +628,7 @@ function showDayPopup(dateStr, data, cellElement) {
             <div class="day-popup-toggle-row">
                 <button class="day-popup-toggle ${isAvailable ? 'active' : ''}"
                         id="popup-toggle-btn"
-                        onclick="window.toggleDayFromPopup('${dateStr}')">
+                        data-action="toggleDayFromPopup" data-date="${dateStr}">
                     <span class="toggle-track">
                         <span class="toggle-thumb"></span>
                     </span>
@@ -597,8 +645,8 @@ function showDayPopup(dateStr, data, cellElement) {
                 <input type="time" id="popup-end-time" class="form-control popup-time-input" value="${endTime}">
             </div>
             <div class="day-popup-time-actions">
-                <button class="btn btn-primary btn-sm" onclick="window.applyCustomTime('${dateStr}')">適用</button>
-                <button class="btn btn-outline btn-sm" onclick="window.resetCustomTime('${dateStr}')">リセット</button>
+                <button class="btn btn-primary btn-sm" data-action="applyCustomTime" data-date="${dateStr}">適用</button>
+                <button class="btn btn-outline btn-sm" data-action="resetCustomTime" data-date="${dateStr}">リセット</button>
             </div>
             ${data.is_custom_time ? '<div class="day-popup-custom-badge">カスタム時間設定中</div>' : ''}
             ${data.auto_calculated_start
@@ -692,7 +740,7 @@ function renderEventChips(allDayEvents, timedEvents) {
     return html;
 }
 
-window.closeDayPopup = function() {
+function closeDayPopup() {
     const overlay = document.querySelector('.day-popup-overlay');
     if (overlay) {
         overlay.classList.remove('visible');
@@ -700,13 +748,9 @@ window.closeDayPopup = function() {
         if (popup) popup.classList.remove('visible');
         setTimeout(() => overlay.remove(), 200);
     }
-};
-
-function closeDayPopup() {
-    window.closeDayPopup();
 }
 
-window.toggleDayFromPopup = function(dateStr) {
+function toggleDayFromPopup(dateStr) {
     const data = slotData[dateStr];
     if (!data || data.closed) return;
 
@@ -726,9 +770,9 @@ window.toggleDayFromPopup = function(dateStr) {
 
     renderAvailabilityCalendar();
     updateSlotSummary();
-};
+}
 
-window.applyCustomTime = function(dateStr) {
+function applyCustomTime(dateStr) {
     const data = slotData[dateStr];
     if (!data) return;
 
@@ -767,9 +811,9 @@ window.applyCustomTime = function(dateStr) {
     closeDayPopup();
     const cell = document.querySelector(`[data-date="${dateStr}"]`);
     if (cell) showDayPopup(dateStr, data, cell);
-};
+}
 
-window.resetCustomTime = function(dateStr) {
+function resetCustomTime(dateStr) {
     const data = slotData[dateStr];
     if (!data) return;
 
@@ -786,7 +830,7 @@ window.resetCustomTime = function(dateStr) {
     closeDayPopup();
     const cell = document.querySelector(`[data-date="${dateStr}"]`);
     if (cell) showDayPopup(dateStr, data, cell);
-};
+}
 
 // --- Summary ---
 
@@ -796,7 +840,7 @@ function updateSlotSummary() {
     document.getElementById('slot-summary').textContent = `${available}/${total} 日勤務可能`;
 }
 
-window.showPeriodList = function() {
+function showPeriodList() {
     document.getElementById('period-select-section').style.display = 'block';
     document.getElementById('availability-section').style.display = 'none';
     currentPeriod = null;
@@ -804,9 +848,9 @@ window.showPeriodList = function() {
     calendarList = [];
     selectedCalendarIds = [];
     cachedOpeningHours = null;
-};
+}
 
-window.submitAvailability = async function() {
+async function submitAvailability() {
     if (!currentPeriod) return;
 
     const available = Object.values(slotData).filter(d => d.is_available).length;
@@ -849,7 +893,7 @@ window.submitAvailability = async function() {
             }
         }
     );
-};
+}
 
 function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
     const overlay = document.createElement('div');
