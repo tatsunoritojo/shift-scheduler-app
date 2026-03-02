@@ -18,6 +18,10 @@ from app.services.opening_hours_sync_service import (
     export_opening_hours_to_calendar,
     import_opening_hours_from_calendar,
 )
+from app.services.invitation_service import (
+    create_email_invitation, create_or_get_invite_code, regenerate_invite_code,
+    cancel_invitation, toggle_member_active, list_members, list_invitations,
+)
 from app.utils.validators import validate_time_str, validate_text_length
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
@@ -638,3 +642,104 @@ def get_worker_history(worker_id):
         ShiftScheduleEntry.shift_date.desc()
     ).limit(50).all()
     return jsonify([e.to_dict() for e in entries])
+
+
+# --- Members & Invitations ---
+
+@api_admin_bp.route('/members', methods=['GET'])
+@require_role('admin')
+def get_members():
+    """Get all members in the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify(list_members(org.id))
+
+
+@api_admin_bp.route('/members/<int:user_id>/active', methods=['PUT'])
+@require_role('admin')
+def update_member_active(user_id):
+    """Toggle member active/inactive status."""
+    user = get_current_user()
+    _get_or_create_org(user)
+    data = request.get_json()
+    if data is None or 'is_active' not in data:
+        return jsonify({"error": "is_active is required"}), 400
+
+    member, error = toggle_member_active(user_id, data['is_active'], user)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({
+        'id': member.id,
+        'email': member.email,
+        'display_name': member.display_name,
+        'role': member.role,
+        'is_active': member.is_active,
+    })
+
+
+@api_admin_bp.route('/invitations', methods=['GET'])
+@require_role('admin')
+def get_invitations():
+    """Get invitations for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    status = request.args.get('status')
+    return jsonify(list_invitations(org.id, status))
+
+
+@api_admin_bp.route('/invitations', methods=['POST'])
+@require_role('admin')
+@limiter.limit("20 per minute")
+def create_invitation():
+    """Create an email invitation."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({"error": "email is required"}), 400
+
+    email = data['email'].strip()
+    if not email or '@' not in email:
+        return jsonify({"error": "有効なメールアドレスを入力してください"}), 400
+
+    invitation, error = create_email_invitation(org.id, email, user)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(invitation.to_dict()), 201
+
+
+@api_admin_bp.route('/invitations/<int:invitation_id>', methods=['DELETE'])
+@require_role('admin')
+def delete_invitation(invitation_id):
+    """Cancel a pending invitation."""
+    user = get_current_user()
+    _get_or_create_org(user)
+    invitation, error = cancel_invitation(invitation_id, user)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(invitation.to_dict())
+
+
+@api_admin_bp.route('/invite-code', methods=['GET'])
+@require_role('admin')
+def get_invite_code():
+    """Get or create the organization's invite code."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    code, error = create_or_get_invite_code(org.id, user)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({"invite_code": code})
+
+
+@api_admin_bp.route('/invite-code/regenerate', methods=['POST'])
+@require_role('admin')
+@limiter.limit("10 per minute")
+def regenerate_invite_code_endpoint():
+    """Regenerate the organization's invite code."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    code, error = regenerate_invite_code(org.id, user)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({"invite_code": code})

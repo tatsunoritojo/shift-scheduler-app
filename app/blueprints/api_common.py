@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, session, current_app, redirect
+from flask import Blueprint, jsonify, session, current_app, redirect, request
 
 from app.middleware.auth_middleware import get_current_user
 
@@ -49,6 +49,22 @@ def sitemap():
 @api_common_bp.route('/login')
 def login_page():
     return current_app.send_static_file('pages/login.html')
+
+
+@api_common_bp.route('/invite')
+def invite_page():
+    return current_app.send_static_file('pages/invite.html')
+
+
+@api_common_bp.route('/api/invite/info')
+def invite_info():
+    from app.services.invitation_service import get_invitation_info
+    token = request.args.get('token')
+    code = request.args.get('code')
+    info, error = get_invitation_info(token=token, code=code)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(info)
 
 
 @api_common_bp.route('/worker')

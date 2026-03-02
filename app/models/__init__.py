@@ -6,3 +6,4 @@ from app.models.shift import (
     ShiftSchedule, ShiftScheduleEntry,
 )
 from app.models.approval import ApprovalHistory
+from app.models.invitation import Invitation

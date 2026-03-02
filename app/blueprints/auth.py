@@ -23,7 +23,19 @@ def login():
         prompt='consent',
     )
     session['state'] = state
-    return redirect(authorization_url)
+
+    response = redirect(authorization_url)
+
+    # Store invite params in cookies (survives session.clear())
+    invite_token = request.args.get('invite')
+    invite_code = request.args.get('invite_code')
+    cookie_opts = dict(httponly=True, secure=True, samesite='Lax', max_age=600)
+    if invite_token:
+        response.set_cookie('invite_token', invite_token, **cookie_opts)
+    if invite_code:
+        response.set_cookie('invite_code', invite_code, **cookie_opts)
+
+    return response
 
 
 @auth_bp.route('/google/callback')
@@ -51,7 +63,29 @@ def callback():
         auth_logger.warning("LOGIN_FAILED: Could not extract user info from %s", request.remote_addr)
         return jsonify({"error": "Failed to extract user info"}), 500
 
-    user = upsert_user(google_id, email, display_name)
+    # Read invite params from cookies (set in login())
+    invite_token = request.cookies.get('invite_token')
+    invite_code = request.cookies.get('invite_code')
+
+    user = upsert_user(
+        google_id, email, display_name,
+        invite_token=invite_token, invite_code=invite_code,
+    )
+
+    # Build redirect response first so we can delete cookies
+    if not user:
+        # upsert_user returns None for: inactive user, or invalid invitation
+        from app.models.user import User as UserModel
+        existing = UserModel.query.filter_by(email=email).first()
+        if existing and not existing.is_active:
+            error_type = 'inactive'
+        else:
+            error_type = 'invalid_invitation'
+        auth_logger.warning("LOGIN_BLOCKED: reason=%s email=%s", error_type, email)
+        response = redirect(f'/login?error={error_type}')
+        response.delete_cookie('invite_token')
+        response.delete_cookie('invite_code')
+        return response
 
     if credentials.refresh_token:
         save_refresh_token(user, credentials.refresh_token, credentials.scopes)
@@ -69,11 +103,16 @@ def callback():
 
     # Redirect based on role
     if user.role == 'admin':
-        return redirect('/admin')
+        response = redirect('/admin')
     elif user.role == 'owner':
-        return redirect('/owner')
+        response = redirect('/owner')
     else:
-        return redirect('/worker')
+        response = redirect('/worker')
+
+    # Clean up cookies
+    response.delete_cookie('invite_token')
+    response.delete_cookie('invite_code')
+    return response
 
 
 @auth_bp.route('/logout')

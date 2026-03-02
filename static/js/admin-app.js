@@ -382,7 +382,196 @@ window.deleteSettingsPopup = async function(excId) {
     }
 };
 
+// --- Members & Invitations ---
+
+async function loadMembers() {
+    const container = document.getElementById('members-list');
+    if (!container) return;
+    container.innerHTML = '<p style="color:var(--color-neutral-400);">読み込み中...</p>';
+    try {
+        const members = await api.get('/api/admin/members');
+        renderMembersList(members);
+    } catch (e) {
+        container.innerHTML = '<p style="color:#dc2626;">メンバー一覧の取得に失敗しました</p>';
+    }
+}
+
+function renderMembersList(members) {
+    const container = document.getElementById('members-list');
+    if (!members || members.length === 0) {
+        container.innerHTML = '<p style="color:var(--color-neutral-400);">メンバーがいません</p>';
+        return;
+    }
+
+    const roleLabels = { admin: '管理者', owner: 'オーナー', worker: 'ワーカー' };
+    const rows = members.map(m => {
+        const roleBadge = `<span class="badge ${m.role === 'admin' ? 'badge-manual' : m.role === 'owner' ? 'badge-calendar' : ''}">${escapeHtml(roleLabels[m.role] || m.role)}</span>`;
+        const statusBadge = m.is_active
+            ? '<span style="color:#22c55e;font-weight:500;">有効</span>'
+            : '<span style="color:#dc2626;font-weight:500;">無効</span>';
+        const canToggle = m.role === 'worker';
+        const toggleBtn = canToggle
+            ? (m.is_active
+                ? `<button class="btn btn-outline btn-sm" onclick="toggleMemberActive(${m.id}, false)">無効化</button>`
+                : `<button class="btn btn-primary btn-sm" onclick="toggleMemberActive(${m.id}, true)">有効化</button>`)
+            : '';
+        return `<tr>
+            <td>${escapeHtml(m.display_name || '-')}</td>
+            <td>${escapeHtml(m.email)}</td>
+            <td>${roleBadge}</td>
+            <td>${statusBadge}</td>
+            <td>${toggleBtn}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>名前</th><th>メール</th><th>ロール</th><th>ステータス</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+    if (window.lucide) lucide.createIcons();
+}
+
+window.toggleMemberActive = async function(userId, isActive) {
+    try {
+        await api.put(`/api/admin/members/${userId}/active`, { is_active: isActive });
+        showToast(isActive ? 'メンバーを有効化しました' : 'メンバーを無効化しました', 'success');
+        loadMembers();
+    } catch (e) {
+        showToast(`更新に失敗しました: ${e.message}`, 'error');
+    }
+};
+
+async function loadInviteCode() {
+    try {
+        const data = await api.get('/api/admin/invite-code');
+        const code = data.invite_code;
+        const url = `${window.location.origin}/invite?code=${code}`;
+        const input = document.getElementById('invite-link-input');
+        if (input) input.value = url;
+        renderQRCode(url);
+    } catch (e) {
+        console.error('Failed to load invite code:', e);
+    }
+}
+
+window.regenerateInviteCode = async function() {
+    if (!confirm('招待コードを再生成すると、現在のリンク・QRコードは無効になります。よろしいですか？')) return;
+    try {
+        const data = await api.post('/api/admin/invite-code/regenerate');
+        const url = `${window.location.origin}/invite?code=${data.invite_code}`;
+        const input = document.getElementById('invite-link-input');
+        if (input) input.value = url;
+        renderQRCode(url);
+        showToast('招待コードを再生成しました', 'success');
+    } catch (e) {
+        showToast(`再生成に失敗しました: ${e.message}`, 'error');
+    }
+};
+
+window.copyInviteLink = function() {
+    const input = document.getElementById('invite-link-input');
+    if (!input || !input.value) return;
+    navigator.clipboard.writeText(input.value).then(() => {
+        showToast('招待リンクをコピーしました', 'success');
+    }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        showToast('招待リンクをコピーしました', 'success');
+    });
+};
+
+function renderQRCode(url) {
+    const container = document.getElementById('invite-qr-container');
+    if (!container) return;
+    if (typeof qrcode === 'undefined') {
+        container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.85em;">QRコードライブラリを読み込めませんでした</p>';
+        return;
+    }
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const size = 6;
+    const imgTag = qr.createDataURL(size, 0);
+    container.innerHTML = `<img src="${imgTag}" alt="招待QRコード" style="width:180px;height:180px;border:1px solid #e2e8f0;border-radius:8px;margin-top:8px;">`;
+}
+
+window.sendInvitation = async function() {
+    const input = document.getElementById('invitation-email');
+    const email = input ? input.value.trim() : '';
+    if (!email) {
+        showToast('メールアドレスを入力してください', 'error');
+        return;
+    }
+    try {
+        await api.post('/api/admin/invitations', { email });
+        showToast('招待を送信しました', 'success');
+        if (input) input.value = '';
+        loadInvitations();
+    } catch (e) {
+        showToast(`招待の送信に失敗しました: ${e.message}`, 'error');
+    }
+};
+
+async function loadInvitations() {
+    const container = document.getElementById('invitations-list');
+    if (!container) return;
+    try {
+        const invitations = await api.get('/api/admin/invitations?status=pending');
+        renderInvitationsList(invitations);
+    } catch (e) {
+        container.innerHTML = '';
+    }
+}
+
+function renderInvitationsList(invitations) {
+    const container = document.getElementById('invitations-list');
+    if (!invitations || invitations.length === 0) {
+        container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">保留中の招待はありません</p>';
+        return;
+    }
+
+    const rows = invitations.map(inv => {
+        const created = inv.created_at ? new Date(inv.created_at) : null;
+        const dateStr = created ? `${created.getMonth() + 1}/${created.getDate()}` : '-';
+        const expires = inv.expires_at ? new Date(inv.expires_at) : null;
+        const expiresStr = expires ? `${expires.getMonth() + 1}/${expires.getDate()}` : '-';
+        return `<tr>
+            <td>${escapeHtml(inv.email || '-')}</td>
+            <td>${dateStr}</td>
+            <td>${expiresStr}</td>
+            <td><button class="btn btn-outline btn-sm" onclick="cancelInvitation(${inv.id})" style="color:#dc2626;border-color:#dc2626;">取消</button></td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+        <table class="data-table" style="margin-top:12px;">
+            <thead><tr><th>メール</th><th>送信日</th><th>有効期限</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+window.cancelInvitation = async function(invitationId) {
+    if (!confirm('この招待を取り消しますか？')) return;
+    try {
+        await api.delete(`/api/admin/invitations/${invitationId}`);
+        showToast('招待を取り消しました', 'success');
+        loadInvitations();
+    } catch (e) {
+        showToast(`取消に失敗しました: ${e.message}`, 'error');
+    }
+};
+
+function setupMemberHandlers() {
+    document.getElementById('btn-send-invitation').addEventListener('click', () => window.sendInvitation());
+    document.getElementById('btn-copy-invite-link').addEventListener('click', () => window.copyInviteLink());
+    document.getElementById('btn-regenerate-invite-code').addEventListener('click', () => window.regenerateInviteCode());
+}
+
 async function init() {
+    setupMemberHandlers();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -413,6 +602,11 @@ window.switchTab = function(tabName) {
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
     if (tabName === 'builder') loadBuilderPeriodSelect();
+    if (tabName === 'members') {
+        loadMembers();
+        loadInvitations();
+        loadInviteCode();
+    }
 };
 
 // --- Opening Hours ---

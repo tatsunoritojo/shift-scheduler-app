@@ -21,6 +21,7 @@
         <main class="main-content">
             <div class="tab-bar">
                 <button class="tab-btn active" data-tab="settings" onclick="switchTab('settings')">設定</button>
+                <button class="tab-btn" data-tab="members" onclick="switchTab('members')">メンバー管理</button>
                 <button class="tab-btn" data-tab="periods" onclick="switchTab('periods')">シフト期間</button>
                 <button class="tab-btn" data-tab="builder" onclick="switchTab('builder')">シフト構築</button>
             </div>
@@ -111,6 +112,38 @@
                         </div>
                     </div>
                 </details>
+            </div>
+
+            <!-- Members Tab -->
+            <div id="tab-members" class="tab-content">
+                <!-- Invite Link Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="link" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 招待リンク</h3>
+                    <p class="help-text mb-16">このリンクやQRコードを共有して、メンバーを招待できます。</p>
+                    <div class="flex gap-8 mb-16" style="align-items:center;flex-wrap:wrap;">
+                        <input type="text" id="invite-link-input" class="form-control" readonly style="flex:1;min-width:200px;background:#f8fafc;">
+                        <button class="btn btn-primary" id="btn-copy-invite-link"><i data-lucide="copy" style="width:15px;height:15px;"></i> コピー</button>
+                        <button class="btn btn-outline" id="btn-regenerate-invite-code"><i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> 再生成</button>
+                    </div>
+                    <div id="invite-qr-container" style="text-align:center;"></div>
+                </div>
+
+                <!-- Email Invite Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="mail" style="width:18px;height:18px;vertical-align:text-bottom;"></i> メールで招待</h3>
+                    <p class="help-text mb-16">メールアドレスを入力して招待を送信します。7日間有効です。</p>
+                    <div class="flex gap-8 mb-16" style="align-items:center;flex-wrap:wrap;">
+                        <input type="email" id="invitation-email" class="form-control" placeholder="example@gmail.com" style="flex:1;min-width:200px;">
+                        <button class="btn btn-primary" id="btn-send-invitation"><i data-lucide="send" style="width:15px;height:15px;"></i> 送信</button>
+                    </div>
+                    <div id="invitations-list"></div>
+                </div>
+
+                <!-- Members List Card -->
+                <div class="card">
+                    <h3><i data-lucide="users" style="width:18px;height:18px;vertical-align:text-bottom;"></i> メンバー一覧</h3>
+                    <div id="members-list"></div>
+                </div>
             </div>
 
             <!-- Periods Tab -->
@@ -214,6 +247,7 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.575.0/dist/umd/lucide.min.js" integrity="sha384-GzE8qT1LzDfRNjtvLN/dXDLPlJOB3BBom3Twb9/RwHkXCgNl6OU1pBxM9397HWGU" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js" crossorigin="anonymous"></script>
     <script type="module" src="/static/js/admin-app.js"></script>
     <script src="/static/js/init.js"></script>
 </body>

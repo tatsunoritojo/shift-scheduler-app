@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招待 - シフリー</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <style>
+        .invite-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .invite-card {
+            background: white;
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            padding: 48px 40px;
+            max-width: 440px;
+            width: 100%;
+            text-align: center;
+        }
+        .invite-card h1 {
+            color: var(--color-neutral-800);
+            font-size: 1.6em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .invite-card .subtitle {
+            color: var(--color-neutral-500);
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+        .org-name {
+            display: inline-block;
+            background: var(--color-primary-50, #eff6ff);
+            color: var(--color-primary-600, #2563eb);
+            padding: 8px 20px;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            font-size: 1.05em;
+            margin-bottom: 24px;
+        }
+        .invite-message {
+            color: var(--color-neutral-600);
+            margin-bottom: 28px;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 1.5px solid var(--color-neutral-200);
+            border-radius: var(--radius-lg);
+            padding: 14px 32px;
+            font-size: 1em;
+            font-weight: 500;
+            color: var(--color-neutral-800);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .google-btn:hover {
+            border-color: var(--color-neutral-300);
+            box-shadow: var(--shadow-md);
+        }
+        .google-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+        .error-state {
+            color: #dc2626;
+        }
+        .error-state h2 {
+            font-size: 1.2em;
+            margin-bottom: 12px;
+        }
+        .loading {
+            color: var(--color-neutral-400);
+            padding: 40px 0;
+        }
+        .brand {
+            margin-top: 32px;
+            color: var(--color-neutral-400);
+            font-size: 0.82em;
+        }
+    </style>
+</head>
+<body>
+    <div class="invite-container">
+        <div class="invite-card">
+            <div id="loading" class="loading">読み込み中...</div>
+            <div id="invite-content" style="display:none;">
+                <h1>シフリー</h1>
+                <p class="subtitle">シフト管理への招待</p>
+                <div id="org-name" class="org-name"></div>
+                <p class="invite-message">上記の組織に招待されています。<br>Googleアカウントでログインして参加しましょう。</p>
+                <a id="login-link" href="#" class="google-btn">
+                    <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Googleでログイン
+                </a>
+                <p class="brand">シフリー - Googleカレンダー連携シフト管理</p>
+            </div>
+            <div id="error-content" style="display:none;" class="error-state">
+                <h2 id="error-title">無効な招待です</h2>
+                <p id="error-detail">招待リンクが正しくないか、有効期限が切れています。</p>
+                <p class="brand">シフリー</p>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        var token = params.get('token');
+        var code = params.get('code');
+
+        if (!token && !code) {
+            showError('無効なリンクです', '招待リンクが正しくありません。');
+            return;
+        }
+
+        var query = token ? 'token=' + encodeURIComponent(token) : 'code=' + encodeURIComponent(code);
+        fetch('/api/invite/info?' + query)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    showError('無効な招待です', data.error);
+                    return;
+                }
+                document.getElementById('org-name').textContent = data.organization_name;
+                document.getElementById('login-link').href = data.login_url;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('invite-content').style.display = 'block';
+            })
+            .catch(function() {
+                showError('エラー', '招待情報の取得に失敗しました。');
+            });
+
+        function showError(title, detail) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-title').textContent = title;
+            document.getElementById('error-detail').textContent = detail;
+            document.getElementById('error-content').style.display = 'block';
+        }
+    })();
+    </script>
+</body>
+</html>

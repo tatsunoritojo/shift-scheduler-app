@@ -86,42 +86,122 @@ def determine_role(email):
     return 'worker'
 
 
-def upsert_user(google_id, email, display_name):
-    """Create or update a user record. Returns the User."""
+def upsert_user(google_id, email, display_name, invite_token=None, invite_code=None):
+    """Create or update a user record.
+
+    Returns the User on success, or None if access is denied (inactive).
+
+    New user flow:
+      - With invitation (token/code/email match) → join that org as worker
+      - Without invitation → create a new organization as admin
+    """
     from app.models.organization import Organization
+    from app.services.invitation_service import (
+        validate_and_accept_invitation, resolve_invite_code,
+        check_email_invitation, accept_email_invitation,
+    )
 
     user = User.query.filter_by(google_id=google_id).first()
-    role = determine_role(email)
 
     if user:
-        if user.role != role:
-            auth_svc_logger.warning(
-                "ROLE_CHANGE: user_id=%s email=%s old_role=%s new_role=%s",
-                user.id, email, user.role, role,
-            )
+        # Existing user — role is persisted, not overwritten from env vars
+        if not user.is_active:
+            auth_svc_logger.warning("LOGIN_BLOCKED: inactive user_id=%s email=%s", user.id, email)
+            return None
         user.email = email
         user.display_name = display_name
-        user.role = role
-    else:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return user
+
+    # --- New user ---
+
+    # 1. Token-based invitation → join as worker
+    if invite_token:
         user = User(
-            google_id=google_id,
-            email=email,
-            display_name=display_name,
-            role=role,
+            google_id=google_id, email=email,
+            display_name=display_name, role='worker',
         )
         db.session.add(user)
+        db.session.flush()
+        org_id, err = validate_and_accept_invitation(invite_token, user)
+        if err:
+            db.session.rollback()
+            auth_svc_logger.warning("INVITE_REJECTED: token err=%s email=%s", err, email)
+            return None
+        user.organization_id = org_id
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return user
 
-    # Assign to default organization if not set
-    if not user.organization_id:
-        org = Organization.query.first()
-        if org:
-            user.organization_id = org.id
+    # 2. Invite code → join as worker
+    if invite_code:
+        org, err = resolve_invite_code(invite_code)
+        if err:
+            auth_svc_logger.warning("INVITE_REJECTED: code err=%s email=%s", err, email)
+            return None
+        user = User(
+            google_id=google_id, email=email,
+            display_name=display_name, role='worker',
+        )
+        user.organization_id = org.id
+        db.session.add(user)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return user
+
+    # 3. Check for pending email invitation (direct login case) → join as worker
+    pending = check_email_invitation(email)
+    if pending:
+        user = User(
+            google_id=google_id, email=email,
+            display_name=display_name, role='worker',
+        )
+        db.session.add(user)
+        db.session.flush()
+        org_id = accept_email_invitation(pending, user)
+        user.organization_id = org_id
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+        return user
+
+    # 4. No invitation → create new organization as admin
+    org = Organization(
+        name=f'{display_name or email} の組織',
+        admin_email=email,
+    )
+    db.session.add(org)
+    db.session.flush()
+
+    user = User(
+        google_id=google_id, email=email,
+        display_name=display_name, role='admin',
+    )
+    user.organization_id = org.id
+    db.session.add(user)
 
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
         raise
+
+    auth_svc_logger.info(
+        "NEW_ORG_CREATED: user=%s email=%s org_id=%s",
+        user.id, email, org.id,
+    )
     return user
 
 

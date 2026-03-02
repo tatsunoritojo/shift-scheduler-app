@@ -11,6 +11,8 @@ class Organization(db.Model):
     owner_email = db.Column(db.String(255))
     settings_json = db.Column(db.Text, default='{}')
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    invite_code = db.Column(db.String(64), unique=True, nullable=True)
+    invite_code_created_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
