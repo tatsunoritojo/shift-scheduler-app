@@ -69,8 +69,11 @@ def no_organization_page():
 @limiter.limit("5 per hour")
 def create_organization():
     """Create a new organization. The authenticated user becomes its admin."""
+    import logging
     from app.models.organization import Organization
     from app.models.membership import OrganizationMember
+
+    logger = logging.getLogger(__name__)
 
     user = get_current_user()
     if not user:
@@ -86,22 +89,22 @@ def create_organization():
     if len(name) > 255:
         return error_response("Organization name too long", 400, code="VALIDATION_ERROR")
 
-    org = Organization(name=name, admin_email=user.email)
-    db.session.add(org)
-    db.session.flush()
-
-    member = OrganizationMember(
-        user_id=user.id,
-        organization_id=org.id,
-        role='admin',
-    )
-    db.session.add(member)
-    member.sync_to_user()
-
     try:
+        org = Organization(name=name, admin_email=user.email)
+        db.session.add(org)
+        db.session.flush()
+
+        member = OrganizationMember(
+            user_id=user.id,
+            organization_id=org.id,
+            role='admin',
+        )
+        db.session.add(member)
+        member.sync_to_user()
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        logger.exception("Failed to create organization for user %s: %s", user.email, e)
         return error_response("Failed to create organization", 500, code="INTERNAL_ERROR")
 
     return jsonify({

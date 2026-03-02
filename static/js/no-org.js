@@ -33,12 +33,12 @@ document.getElementById('create-org-btn')?.addEventListener('click', async () =>
         if (res.ok) {
             window.location.href = '/';
         } else {
-            errorEl.textContent = data.error || '組織の作成に失敗しました';
+            errorEl.textContent = data.error || `組織の作成に失敗しました (${res.status})`;
             errorEl.style.display = 'block';
             btn.disabled = false;
         }
-    } catch {
-        errorEl.textContent = '通信エラーが発生しました';
+    } catch (e) {
+        errorEl.textContent = '通信エラーが発生しました: ' + e.message;
         errorEl.style.display = 'block';
         btn.disabled = false;
     }
