@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, session, current_app, redirect, request, make_response
 
-from app.extensions import limiter
+from app.extensions import db, limiter
 from app.middleware.auth_middleware import get_current_user, _check_active_membership
+from app.utils.errors import error_response
 
 api_common_bp = Blueprint('api_common', __name__)
 
@@ -62,6 +63,52 @@ def no_organization_page():
     if user.organization_id and _check_active_membership(user):
         return redirect('/')
     return current_app.send_static_file('pages/no-organization.html')
+
+
+@api_common_bp.route('/api/organizations', methods=['POST'])
+@limiter.limit("5 per hour")
+def create_organization():
+    """Create a new organization. The authenticated user becomes its admin."""
+    from app.models.organization import Organization
+    from app.models.membership import OrganizationMember
+
+    user = get_current_user()
+    if not user:
+        return error_response("Authentication required", 401, code="AUTH_REQUIRED")
+
+    if _check_active_membership(user):
+        return error_response("Already a member of an organization", 400, code="ALREADY_MEMBER")
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        name = f'{user.display_name or user.email} の組織'
+    if len(name) > 255:
+        return error_response("Organization name too long", 400, code="VALIDATION_ERROR")
+
+    org = Organization(name=name, admin_email=user.email)
+    db.session.add(org)
+    db.session.flush()
+
+    member = OrganizationMember(
+        user_id=user.id,
+        organization_id=org.id,
+        role='admin',
+    )
+    db.session.add(member)
+    member.sync_to_user()
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Failed to create organization", 500, code="INTERNAL_ERROR")
+
+    return jsonify({
+        'id': org.id,
+        'name': org.name,
+        'role': 'admin',
+    }), 201
 
 
 @api_common_bp.route('/invite')
