@@ -16,7 +16,7 @@ depends_on = None
 
 def upgrade():
     op.add_column('organizations', sa.Column('invite_code', sa.String(32), nullable=True))
-    op.add_column('organizations', sa.Column('invite_code_enabled', sa.Boolean(), nullable=False, server_default=sa.text('0')))
+    op.add_column('organizations', sa.Column('invite_code_enabled', sa.Boolean(), nullable=False, server_default=sa.false()))
     op.create_unique_constraint('uq_organizations_invite_code', 'organizations', ['invite_code'])
 
 
