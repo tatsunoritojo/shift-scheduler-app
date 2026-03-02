@@ -100,7 +100,15 @@ def create_organization():
             role='admin',
         )
         db.session.add(member)
-        member.sync_to_user()
+
+        # Sync denormalized fields directly (avoid lazy-load on new member)
+        user.role = 'admin'
+        user.organization_id = org.id
+
+        # Capture values before commit (commit expires ORM objects)
+        org_id = org.id
+        org_name = org.name
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -108,8 +116,8 @@ def create_organization():
         return error_response("Failed to create organization", 500, code="INTERNAL_ERROR")
 
     return jsonify({
-        'id': org.id,
-        'name': org.name,
+        'id': org_id,
+        'name': org_name,
         'role': 'admin',
     }), 201
 

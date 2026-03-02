@@ -210,3 +210,71 @@ class TestAuthMeOrgField:
         resp = client.get("/auth/me")
         data = resp.get_json()
         assert data["organization_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# POST /api/organizations: org-less user can create a new organization
+# ---------------------------------------------------------------------------
+
+class TestCreateOrganization:
+
+    def test_create_org_success(self, client, auth, db_session):
+        """Org-less user can create a new organization and become admin."""
+        user = _make_orgless_user(db_session)
+        db_session.commit()
+        auth.login_as(user)
+
+        resp = client.post("/api/organizations", json={"name": "My Shop"})
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert data["name"] == "My Shop"
+        assert data["role"] == "admin"
+        assert "id" in data
+
+        # Verify user is now admin of the new org
+        db_session.expire_all()
+        assert user.role == "admin"
+        assert user.organization_id == data["id"]
+
+        # Verify OrganizationMember record exists
+        member = OrganizationMember.query.filter_by(
+            user_id=user.id, organization_id=data["id"]
+        ).first()
+        assert member is not None
+        assert member.role == "admin"
+        assert member.is_active is True
+
+    def test_create_org_default_name(self, client, auth, db_session):
+        """If no name is provided, a default name is generated."""
+        user = _make_orgless_user(db_session)
+        db_session.commit()
+        auth.login_as(user)
+
+        resp = client.post("/api/organizations", json={})
+        assert resp.status_code == 201
+        data = resp.get_json()
+        assert user.display_name in data["name"]
+
+    def test_create_org_rejects_if_already_member(self, client, auth, admin_user, db_session):
+        """User who already belongs to an org cannot create another."""
+        db_session.commit()
+        auth.login_as(admin_user)
+
+        resp = client.post("/api/organizations", json={"name": "Dup"})
+        assert resp.status_code == 400
+        assert resp.get_json()["code"] == "ALREADY_MEMBER"
+
+    def test_create_org_requires_auth(self, client):
+        """Unauthenticated request is rejected."""
+        resp = client.post("/api/organizations", json={"name": "No Auth"})
+        assert resp.status_code == 401
+
+    def test_create_org_name_too_long(self, client, auth, db_session):
+        """Organization name exceeding 255 chars is rejected."""
+        user = _make_orgless_user(db_session)
+        db_session.commit()
+        auth.login_as(user)
+
+        resp = client.post("/api/organizations", json={"name": "x" * 256})
+        assert resp.status_code == 400
+        assert resp.get_json()["code"] == "VALIDATION_ERROR"
