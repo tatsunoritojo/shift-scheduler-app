@@ -7,6 +7,14 @@ from app.services.notification_service import notify_approval_requested, notify_
 from app.services.audit_service import log_audit
 
 
+def _try_commit():
+    """Best-effort commit for post-rollback audit entries."""
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 def submit_for_approval(schedule_id, admin_user):
     """Submit a schedule for owner approval."""
     schedule = db.session.get(ShiftSchedule, schedule_id)
@@ -30,8 +38,18 @@ def submit_for_approval(schedule_id, admin_user):
     )
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        log_audit(
+            action='SCHEDULE_SUBMITTED',
+            resource_type='ShiftSchedule',
+            resource_id=schedule_id,
+            actor_id=admin_user.id,
+            organization_id=org_id,
+            status='FAILED',
+            error_message=str(e),
+        )
+        _try_commit()
         return None, "Database error"
 
     # Notify owner
@@ -71,8 +89,18 @@ def approve_schedule(schedule_id, owner_user, comment=None):
     )
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        log_audit(
+            action='SCHEDULE_APPROVED',
+            resource_type='ShiftSchedule',
+            resource_id=schedule_id,
+            actor_id=owner_user.id,
+            organization_id=org_id,
+            status='FAILED',
+            error_message=str(e),
+        )
+        _try_commit()
         return None, "Database error"
 
     # Notify admin
@@ -110,8 +138,18 @@ def reject_schedule(schedule_id, owner_user, comment=None):
     )
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        log_audit(
+            action='SCHEDULE_REJECTED',
+            resource_type='ShiftSchedule',
+            resource_id=schedule_id,
+            actor_id=owner_user.id,
+            organization_id=org_id,
+            status='FAILED',
+            error_message=str(e),
+        )
+        _try_commit()
         return None, "Database error"
 
     # Notify admin
@@ -148,8 +186,18 @@ def confirm_schedule(schedule_id, admin_user):
     )
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
+        log_audit(
+            action='SCHEDULE_CONFIRMED',
+            resource_type='ShiftSchedule',
+            resource_id=schedule_id,
+            actor_id=admin_user.id,
+            organization_id=org_id,
+            status='FAILED',
+            error_message=str(e),
+        )
+        _try_commit()
         return None, "Database error"
 
     return schedule, None

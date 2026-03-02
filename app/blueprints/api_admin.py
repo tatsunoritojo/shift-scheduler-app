@@ -568,7 +568,11 @@ def confirm_period_schedule(period_id):
         return error_response(error, 400)
 
     # Sync to Google Calendar
-    sync_results = _sync_schedule_to_calendar(result, user)
+    try:
+        sync_results = _sync_schedule_to_calendar(result, user)
+    except CredentialsExpiredError as e:
+        # Schedule is already confirmed (committed above); calendar sync failed.
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
 
     data = result.to_dict()
     data['sync_results'] = sync_results
@@ -582,8 +586,8 @@ def _sync_schedule_to_calendar(schedule, admin_user):
 
     try:
         credentials = get_credentials_for_user(admin_user)
-    except CredentialsExpiredError as e:
-        return [{"error": str(e), "code": "CREDENTIALS_EXPIRED"}]
+    except CredentialsExpiredError:
+        raise  # Let caller return standard error_response
     except Exception as e:
         current_app.logger.error(f"Failed to get admin credentials: {e}")
         return [{"error": "認証情報の取得に失敗しました"}]
