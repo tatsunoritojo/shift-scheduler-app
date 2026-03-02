@@ -1,5 +1,4 @@
 {
-  "buildCommand": "uv pip install --system -r requirements.txt && python scripts/migrate.py",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ],
