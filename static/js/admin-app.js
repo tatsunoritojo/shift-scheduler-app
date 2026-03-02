@@ -427,6 +427,10 @@ function setupStaticHandlers() {
     if (enableToggle) enableToggle.addEventListener('change', (e) => toggleInviteCode(e.target.checked));
     const btnCreateInvitation = document.getElementById('btn-create-invitation');
     if (btnCreateInvitation) btnCreateInvitation.addEventListener('click', () => createInvitation());
+
+    // Reminder settings
+    const btnSaveReminder = document.getElementById('btn-save-reminder-settings');
+    if (btnSaveReminder) btnSaveReminder.addEventListener('click', () => saveReminderSettings());
 }
 
 function setupDelegatedHandlers() {
@@ -447,6 +451,9 @@ function setupDelegatedHandlers() {
             case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
             case 'revokeInvitation': revokeInvitation(Number(target.dataset.id)); break;
             case 'removeMember': removeMember(Number(target.dataset.id), target.dataset.name); break;
+            case 'openVacancyDialog': openVacancyDialog(Number(target.dataset.entryId)); break;
+            case 'cancelVacancy': cancelVacancy(Number(target.dataset.id)); break;
+            case 'sendPeriodReminder': sendPeriodReminder(Number(target.dataset.periodId)); break;
         }
     });
 
@@ -591,6 +598,8 @@ async function revokeInvitation(id) {
     showConfirmDialog(
         '招待を取り消しますか？',
         '取り消すと、このリンクは使えなくなります。',
+        'btn-danger',
+        '取り消す',
         async () => {
             try {
                 await api.delete(`/api/admin/invitations/${id}`);
@@ -652,6 +661,8 @@ async function removeMember(id, name) {
     showConfirmDialog(
         `${name || 'このメンバー'} を除外しますか？`,
         '除外すると、このユーザーは組織にアクセスできなくなります。',
+        'btn-danger',
+        '除外する',
         async () => {
             try {
                 await api.delete(`/api/admin/members/${id}`);
@@ -677,6 +688,7 @@ async function init() {
             loadOpeningHours(),
             loadExceptions(),
             loadPeriods(),
+            loadReminderSettings(),
         ]);
         // Show preview calendar based on calendar exceptions range
         if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
@@ -697,7 +709,11 @@ function switchTab(tabName) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
-    if (tabName === 'builder') loadBuilderPeriodSelect();
+    if (tabName === 'builder') {
+        loadBuilderPeriodSelect();
+        loadChangeLog();
+        loadVacancies();
+    }
     if (tabName === 'members') loadMembersTab();
 }
 
@@ -936,6 +952,7 @@ async function loadPeriods() {
                         <td>
                             ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
                             ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
+                            ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -1074,6 +1091,7 @@ function buildDayAggregatedData() {
                 start_time: slot ? slot.start_time : null,
                 end_time: slot ? slot.end_time : null,
                 is_assigned: !!entry,
+                entry_id: entry ? entry.id : null,
                 assigned_start: entry ? entry.start_time : null,
                 assigned_end: entry ? entry.end_time : null,
             });
@@ -1342,6 +1360,7 @@ function createWorkerCard(worker, dateStr, idx) {
                 <span class="time-separator">〜</span>
                 <input type="time" class="form-control popup-time-input" value="${aEnd}"
                     id="assigned-end-${worker.user_id}" data-action="applyWorkerTime" data-user-id="${worker.user_id}" data-date="${dateStr}">
+                ${worker.entry_id ? `<button class="btn btn-outline btn-sm" data-action="openVacancyDialog" data-entry-id="${worker.entry_id}" title="欠員補充" style="margin-left:4px;padding:2px 6px;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i></button>` : ''}
             </div>
         `;
     }
@@ -1581,6 +1600,190 @@ async function confirmSchedule() {
             }
         }
     );
+}
+
+// --- Reminder Settings ---
+
+async function loadReminderSettings() {
+    try {
+        const data = await api.get('/api/admin/reminder-settings');
+        const daysDeadline = document.getElementById('reminder-days-deadline');
+        const timeDeadline = document.getElementById('reminder-time-deadline');
+        const daysShift = document.getElementById('reminder-days-shift');
+        const timeShift = document.getElementById('reminder-time-shift');
+        if (daysDeadline) daysDeadline.value = data.reminder_days_before_deadline ?? 1;
+        if (timeDeadline) timeDeadline.value = data.reminder_time_deadline || '09:00';
+        if (daysShift) daysShift.value = data.reminder_days_before_shift ?? 1;
+        if (timeShift) timeShift.value = data.reminder_time_shift || '21:00';
+    } catch (e) {
+        console.warn('Failed to load reminder settings:', e);
+    }
+}
+
+async function saveReminderSettings() {
+    try {
+        await api.put('/api/admin/reminder-settings', {
+            reminder_days_before_deadline: Number(document.getElementById('reminder-days-deadline').value),
+            reminder_time_deadline: document.getElementById('reminder-time-deadline').value,
+            reminder_days_before_shift: Number(document.getElementById('reminder-days-shift').value),
+            reminder_time_shift: document.getElementById('reminder-time-shift').value,
+        });
+        showToast('リマインド設定を保存しました', 'success');
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function sendPeriodReminder(periodId) {
+    showConfirmDialog(
+        '未提出者にリマインドを送信しますか？',
+        'まだシフト希望を提出していないアルバイトにメールで通知します。',
+        'btn-primary',
+        '送信する',
+        async () => {
+            try {
+                const result = await api.post(`/api/admin/reminders/send/${periodId}`);
+                showToast(`リマインド送信: ${result.sent}件送信, ${result.skipped}件スキップ`, 'success');
+            } catch (e) {
+                showToast(`送信に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+// --- Vacancy Management ---
+
+async function loadVacancies() {
+    const container = document.getElementById('vacancy-list');
+    if (!container) return;
+    try {
+        const vacancies = await api.get('/api/admin/vacancy');
+        if (!vacancies || vacancies.length === 0) {
+            container.innerHTML = '<p class="help-text">欠員補充リクエストはありません</p>';
+            return;
+        }
+        const statusLabel = { open: '募集中', notified: '通知済', accepted: '補充完了', expired: '期限切れ', cancelled: '取消' };
+        const statusColor = { open: '#3b82f6', notified: '#f59e0b', accepted: '#22c55e', expired: '#6b7280', cancelled: '#ef4444' };
+        container.innerHTML = vacancies.map(v => `
+            <div class="flex-between mb-8" style="padding:8px 0;border-bottom:1px solid var(--color-neutral-100);">
+                <div>
+                    <span style="font-weight:600;">${escapeHtml(v.original_user_name || '不明')}</span>
+                    <span style="color:var(--color-neutral-400);font-size:0.85em;margin-left:8px;">${v.shift_date || ''} ${v.start_time || ''}-${v.end_time || ''}</span>
+                    <span style="color:${statusColor[v.status] || '#666'};font-size:0.82em;margin-left:8px;font-weight:600;">${statusLabel[v.status] || v.status}</span>
+                    ${v.accepted_by_name ? `<span style="color:#22c55e;font-size:0.82em;margin-left:4px;">→ ${escapeHtml(v.accepted_by_name)}</span>` : ''}
+                </div>
+                ${v.status === 'open' || v.status === 'notified' ? `<button class="btn btn-outline btn-sm" data-action="cancelVacancy" data-id="${v.id}" title="キャンセル"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}
+            </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        container.innerHTML = '<p class="help-text">読み込みに失敗しました</p>';
+    }
+}
+
+async function openVacancyDialog(entryId) {
+    try {
+        const candidates = await api.get(`/api/admin/vacancy/candidates/${entryId}`);
+        if (!candidates || candidates.length === 0) {
+            showToast('候補者が見つかりません（この日に勤務可能な未割当スタッフがいません）', 'warning');
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-dialog-overlay';
+        overlay.innerHTML = `
+            <div class="confirm-dialog" style="max-width:500px;">
+                <h3>欠員補充 — 候補者選択</h3>
+                <p style="color:var(--color-neutral-400);font-size:0.9em;margin-bottom:16px;">候補者を選択して通知を送信します。労働時間が少ない順に並んでいます。</p>
+                <div class="form-group">
+                    <label>理由（任意）</label>
+                    <input type="text" id="vacancy-reason" class="form-control" placeholder="例: 体調不良による欠勤">
+                </div>
+                <div style="max-height:300px;overflow-y:auto;margin-bottom:16px;">
+                    ${candidates.map(c => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--color-neutral-100);cursor:pointer;">
+                            <input type="checkbox" class="vacancy-candidate-cb" value="${c.user_id}" checked>
+                            <span style="flex:1;">
+                                <strong>${escapeHtml(c.user_name)}</strong>
+                                <span style="color:var(--color-neutral-400);font-size:0.85em;margin-left:8px;">週${c.weekly_hours}h</span>
+                            </span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="confirm-dialog-actions">
+                    <button class="btn btn-outline" id="vacancy-dialog-cancel">キャンセル</button>
+                    <button class="btn btn-primary" id="vacancy-dialog-send">通知を送信</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#vacancy-dialog-cancel').onclick = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        overlay.querySelector('#vacancy-dialog-send').onclick = async () => {
+            const selectedIds = [...overlay.querySelectorAll('.vacancy-candidate-cb:checked')].map(cb => Number(cb.value));
+            if (selectedIds.length === 0) {
+                showToast('候補者を選択してください', 'warning');
+                return;
+            }
+            const reason = overlay.querySelector('#vacancy-reason').value;
+            try {
+                const vacancy = await api.post('/api/admin/vacancy', {
+                    schedule_entry_id: entryId,
+                    reason: reason,
+                });
+                await api.post(`/api/admin/vacancy/${vacancy.id}/notify`, {
+                    candidate_user_ids: selectedIds,
+                });
+                showToast('欠員補充通知を送信しました', 'success');
+                overlay.remove();
+                loadVacancies();
+            } catch (e) {
+                showToast(`送信に失敗しました: ${e.message}`, 'error');
+            }
+        };
+    } catch (e) {
+        showToast(`候補者の取得に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function cancelVacancy(id) {
+    showConfirmDialog(
+        '欠員補充リクエストをキャンセルしますか？',
+        'キャンセルすると、候補者への通知は無効になります。',
+        'btn-danger',
+        'キャンセルする',
+        async () => {
+            try {
+                await api.delete(`/api/admin/vacancy/${id}`);
+                showToast('リクエストをキャンセルしました', 'success');
+                loadVacancies();
+            } catch (e) {
+                showToast(`キャンセルに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+// --- Change Log ---
+
+async function loadChangeLog() {
+    const container = document.getElementById('change-log-list');
+    if (!container) return;
+    try {
+        const logs = await api.get('/api/admin/change-log');
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p class="help-text">変更履歴はありません</p>';
+            return;
+        }
+        container.innerHTML = logs.map(l => `
+            <div style="padding:6px 0;border-bottom:1px solid var(--color-neutral-100);font-size:0.85em;">
+                <div><strong>${l.shift_date || ''}</strong> ${escapeHtml(l.original_user_name || '?')} → ${escapeHtml(l.new_user_name || '?')}</div>
+                <div style="color:var(--color-neutral-400);">${l.reason ? escapeHtml(l.reason) : ''} ${l.performed_at ? `(${new Date(l.performed_at).toLocaleDateString('ja-JP')})` : ''}</div>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="help-text">読み込みに失敗しました</p>';
+    }
 }
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

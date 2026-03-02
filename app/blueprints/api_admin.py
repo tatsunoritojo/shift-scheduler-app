@@ -933,3 +933,200 @@ def update_invite_code():
         'invite_code': org.invite_code,
         'invite_code_enabled': org.invite_code_enabled,
     })
+
+
+# --- Vacancy Management ---
+
+@api_admin_bp.route('/vacancy/candidates/<int:entry_id>', methods=['GET'])
+@require_role('admin')
+def get_vacancy_candidates(entry_id):
+    """Get list of candidate workers for a vacancy."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    entry = db.session.get(ShiftScheduleEntry, entry_id)
+    if not entry:
+        return error_response("Not found", 404, code="NOT_FOUND")
+    schedule = db.session.get(ShiftSchedule, entry.schedule_id)
+    if not schedule:
+        return error_response("Not found", 404, code="NOT_FOUND")
+    period = db.session.get(ShiftPeriod, schedule.shift_period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    from app.services.vacancy_service import find_candidates
+    candidates = find_candidates(entry_id, org.id)
+    return jsonify(candidates)
+
+
+@api_admin_bp.route('/vacancy', methods=['POST'])
+@require_role('admin')
+@limiter.limit("20 per minute")
+def create_vacancy():
+    """Create a new vacancy request."""
+    user = get_current_user()
+    data = request.get_json(silent=True)
+    if not data or not data.get('schedule_entry_id'):
+        return error_response("schedule_entry_id is required", 400, code="BAD_REQUEST")
+
+    from app.services.vacancy_service import create_vacancy_request
+    vacancy, error = create_vacancy_request(
+        data['schedule_entry_id'],
+        data.get('reason', ''),
+        user,
+    )
+    if error:
+        return error_response(error, 400)
+    return jsonify(vacancy.to_dict()), 201
+
+
+@api_admin_bp.route('/vacancy/<int:vacancy_id>/notify', methods=['POST'])
+@require_role('admin')
+@limiter.limit("10 per minute")
+def notify_vacancy_candidates(vacancy_id):
+    """Send notification emails to selected candidates."""
+    user = get_current_user()
+    data = request.get_json(silent=True)
+    if not data or not data.get('candidate_user_ids'):
+        return error_response("candidate_user_ids is required", 400, code="BAD_REQUEST")
+
+    base_url = request.host_url.rstrip('/')
+    from app.services.vacancy_service import send_vacancy_notifications
+    result, error = send_vacancy_notifications(
+        vacancy_id, data['candidate_user_ids'], base_url,
+    )
+    if error:
+        return error_response(error, 400)
+    return jsonify(result)
+
+
+@api_admin_bp.route('/vacancy/<int:vacancy_id>', methods=['DELETE'])
+@require_role('admin')
+def cancel_vacancy(vacancy_id):
+    """Cancel a vacancy request."""
+    user = get_current_user()
+    from app.services.vacancy_service import cancel_vacancy_request
+    vacancy, error = cancel_vacancy_request(vacancy_id, user)
+    if error:
+        return error_response(error, 400)
+    return jsonify(vacancy.to_dict())
+
+
+@api_admin_bp.route('/vacancy', methods=['GET'])
+@require_role('admin')
+def get_vacancies():
+    """Get list of vacancy requests for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    from app.models.vacancy import VacancyRequest
+    vacancies = VacancyRequest.query.join(
+        ShiftScheduleEntry, VacancyRequest.schedule_entry_id == ShiftScheduleEntry.id
+    ).join(
+        ShiftSchedule, ShiftScheduleEntry.schedule_id == ShiftSchedule.id
+    ).join(
+        ShiftPeriod, ShiftSchedule.shift_period_id == ShiftPeriod.id
+    ).filter(
+        ShiftPeriod.organization_id == org.id,
+    ).order_by(VacancyRequest.created_at.desc()).limit(50).all()
+    return jsonify([v.to_dict() for v in vacancies])
+
+
+@api_admin_bp.route('/change-log', methods=['GET'])
+@require_role('admin')
+def get_change_log():
+    """Get shift change log for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    from app.models.vacancy import ShiftChangeLog
+    logs = ShiftChangeLog.query.join(
+        ShiftScheduleEntry, ShiftChangeLog.schedule_entry_id == ShiftScheduleEntry.id
+    ).join(
+        ShiftSchedule, ShiftScheduleEntry.schedule_id == ShiftSchedule.id
+    ).join(
+        ShiftPeriod, ShiftSchedule.shift_period_id == ShiftPeriod.id
+    ).filter(
+        ShiftPeriod.organization_id == org.id,
+    ).order_by(ShiftChangeLog.performed_at.desc()).limit(50).all()
+    return jsonify([l.to_dict() for l in logs])
+
+
+# --- Reminder Settings ---
+
+@api_admin_bp.route('/reminder-settings', methods=['GET'])
+@require_role('admin')
+def get_reminder_settings():
+    """Get reminder settings for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify({
+        'reminder_days_before_deadline': org.get_setting('reminder_days_before_deadline', 1),
+        'reminder_time_deadline': org.get_setting('reminder_time_deadline', '09:00'),
+        'reminder_days_before_shift': org.get_setting('reminder_days_before_shift', 1),
+        'reminder_time_shift': org.get_setting('reminder_time_shift', '21:00'),
+    })
+
+
+@api_admin_bp.route('/reminder-settings', methods=['PUT'])
+@require_role('admin')
+def update_reminder_settings():
+    """Update reminder settings for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not data:
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    allowed_keys = {
+        'reminder_days_before_deadline', 'reminder_time_deadline',
+        'reminder_days_before_shift', 'reminder_time_shift',
+    }
+    for key in allowed_keys:
+        if key in data:
+            org.set_setting(key, data[key])
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+
+    return jsonify({
+        'reminder_days_before_deadline': org.get_setting('reminder_days_before_deadline', 1),
+        'reminder_time_deadline': org.get_setting('reminder_time_deadline', '09:00'),
+        'reminder_days_before_shift': org.get_setting('reminder_days_before_shift', 1),
+        'reminder_time_shift': org.get_setting('reminder_time_shift', '21:00'),
+    })
+
+
+@api_admin_bp.route('/reminders/send/<int:period_id>', methods=['POST'])
+@require_role('admin')
+@limiter.limit("5 per minute")
+def send_period_reminder(period_id):
+    """Manually send submission reminders for a specific period."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    from app.services.reminder_service import send_submission_reminder_for_period
+    result, error = send_submission_reminder_for_period(period_id, user)
+    if error:
+        return error_response(error, 400)
+    return jsonify(result)
+
+
+@api_admin_bp.route('/reminders/stats/<int:period_id>', methods=['GET'])
+@require_role('admin')
+def get_period_reminder_stats(period_id):
+    """Get reminder statistics for a specific period."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    from app.services.reminder_service import get_reminder_stats
+    stats = get_reminder_stats(period_id)
+    if stats is None:
+        return error_response("Not found", 404, code="NOT_FOUND")
+    return jsonify(stats)

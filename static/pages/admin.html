@@ -79,6 +79,33 @@
                     </div>
                 </div>
 
+                <!-- Reminder Settings Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:text-bottom;"></i> リマインド通知設定</h3>
+                    <p class="help-text mb-16">提出期限やシフト前のリマインド通知を自動送信する設定です。</p>
+                    <div class="grid-2 mb-16">
+                        <div class="form-group">
+                            <label>提出期限の何日前に通知</label>
+                            <input type="number" id="reminder-days-deadline" class="form-control" value="1" min="0" max="14" style="width:100px;">
+                            <div class="field-hint">0 = 無効</div>
+                        </div>
+                        <div class="form-group">
+                            <label>提出期限リマインド送信時刻</label>
+                            <input type="time" id="reminder-time-deadline" class="form-control" value="09:00" style="width:auto;">
+                        </div>
+                        <div class="form-group">
+                            <label>シフトの何日前に通知</label>
+                            <input type="number" id="reminder-days-shift" class="form-control" value="1" min="0" max="14" style="width:100px;">
+                            <div class="field-hint">0 = 無効</div>
+                        </div>
+                        <div class="form-group">
+                            <label>シフト前リマインド送信時刻</label>
+                            <input type="time" id="reminder-time-shift" class="form-control" value="21:00" style="width:auto;">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-save-reminder-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
+                </div>
+
                 <!-- Manual Settings (collapsed) -->
                 <details class="settings-collapse" id="manual-settings-details">
                     <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の開校時間・例外の管理）</summary>
@@ -270,6 +297,17 @@
                                 </div>
                                 <p class="help-text mb-8">アルバイトは期間中に何度でも再提出できます。日時は最終提出時刻です。</p>
                                 <div id="submissions-summary"></div>
+                            </div>
+                            <div class="card mt-16">
+                                <h3><i data-lucide="user-minus" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 欠員補充</h3>
+                                <p class="help-text mb-8">シフト枠の欠員を他のスタッフに依頼します。</p>
+                                <div id="vacancy-list"></div>
+                            </div>
+                            <div class="card mt-16">
+                                <h3><i data-lucide="history" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 変更ログ</h3>
+                                <div id="change-log-list">
+                                    <p class="help-text">変更履歴はありません</p>
+                                </div>
                             </div>
                         </div>
                     </div>

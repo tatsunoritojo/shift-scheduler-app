@@ -38,5 +38,19 @@ def process_tasks():
     from app.services.task_runner import process_pending_tasks
     stats = process_pending_tasks(batch_size=20)
 
+    # Process reminders (integrated into same cron for Vercel Hobby 1/day limit)
+    reminder_stats = {}
+    try:
+        from app.services.reminder_service import (
+            check_and_send_submission_reminders,
+            check_and_send_preshift_reminders,
+        )
+        reminder_stats['submission'] = check_and_send_submission_reminders()
+        reminder_stats['preshift'] = check_and_send_preshift_reminders()
+    except Exception as e:
+        logger.error("Reminder processing failed: %s", e)
+        reminder_stats['error'] = str(e)
+
+    stats['reminders'] = reminder_stats
     logger.info("Cron run: %s", stats)
     return jsonify(stats), 200

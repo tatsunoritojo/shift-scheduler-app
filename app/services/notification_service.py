@@ -113,6 +113,95 @@ def notify_invitation_created(to_email, org_name, inviter_name, role, invite_url
                             organization_id=organization_id, created_by=created_by)
 
 
+def notify_submission_deadline(to_email, worker_name, period_name, deadline_str,
+                               submit_url, *, organization_id=None, created_by=None):
+    """Notify a worker that the submission deadline is approaching (async)."""
+    safe_name = html_escape(worker_name)
+    safe_period = html_escape(period_name)
+    safe_deadline = html_escape(deadline_str)
+    safe_url = html_escape(submit_url)
+    subject = f"[シフリー] 提出期限リマインド: {period_name}"
+    body = f"""
+    <h3>シフト希望の提出期限が近づいています</h3>
+    <p>{safe_name} さん、シフト期間「{safe_period}」の希望提出期限が近づいています。</p>
+    <p>提出期限: <strong>{safe_deadline}</strong></p>
+    <p><a href="{safe_url}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">シフト希望を提出する</a></p>
+    """
+    return _enqueue_or_send(to_email, subject, body,
+                            organization_id=organization_id, created_by=created_by)
+
+
+def notify_preshift(to_email, worker_name, shift_date_str, start_time, end_time,
+                    *, organization_id=None, created_by=None):
+    """Notify a worker about an upcoming shift (async)."""
+    safe_name = html_escape(worker_name)
+    safe_date = html_escape(shift_date_str)
+    safe_start = html_escape(start_time)
+    safe_end = html_escape(end_time)
+    subject = f"[シフリー] シフトリマインド: {shift_date_str}"
+    body = f"""
+    <h3>明日のシフトのお知らせ</h3>
+    <p>{safe_name} さん、明日のシフト予定をお知らせします。</p>
+    <p>日付: <strong>{safe_date}</strong></p>
+    <p>時間: <strong>{safe_start} 〜 {safe_end}</strong></p>
+    <p>遅刻・欠勤の場合は早めにご連絡ください。</p>
+    """
+    return _enqueue_or_send(to_email, subject, body,
+                            organization_id=organization_id, created_by=created_by)
+
+
+def notify_vacancy_request(to_email, user_name, shift_date, start_time, end_time,
+                           reason, accept_url, decline_url,
+                           *, organization_id=None, created_by=None):
+    """Notify a candidate about a vacancy fill request (async)."""
+    safe_name = html_escape(user_name)
+    safe_date = html_escape(str(shift_date))
+    safe_start = html_escape(start_time)
+    safe_end = html_escape(end_time)
+    safe_reason = html_escape(reason) if reason else ''
+    safe_accept = html_escape(accept_url)
+    safe_decline = html_escape(decline_url)
+    subject = f"[シフリー] 欠員補充のお願い: {shift_date}"
+    body = f"""
+    <h3>シフトの欠員補充のお願い</h3>
+    <p>{safe_name} さん、以下のシフトに欠員が発生しました。代わりに出勤いただけないでしょうか？</p>
+    <p>日付: <strong>{safe_date}</strong></p>
+    <p>時間: <strong>{safe_start} 〜 {safe_end}</strong></p>
+    """
+    if safe_reason:
+        body += f"<p>理由: {safe_reason}</p>"
+    body += f"""
+    <p>
+        <a href="{safe_accept}" style="display:inline-block;padding:12px 24px;background:#22c55e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;margin-right:12px;">引き受ける</a>
+        <a href="{safe_decline}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">辞退する</a>
+    </p>
+    <p style="color:#999;font-size:0.85em;">このリンクは本人専用です。他の方と共有しないでください。</p>
+    """
+    return _enqueue_or_send(to_email, subject, body,
+                            organization_id=organization_id, created_by=created_by)
+
+
+def notify_vacancy_accepted(admin_email, shift_date, start_time, end_time,
+                            original_name, new_name,
+                            *, organization_id=None, created_by=None):
+    """Notify admin that a vacancy has been filled (async)."""
+    safe_date = html_escape(str(shift_date))
+    safe_start = html_escape(start_time)
+    safe_end = html_escape(end_time)
+    safe_orig = html_escape(original_name)
+    safe_new = html_escape(new_name)
+    subject = f"[シフリー] 欠員補充完了: {shift_date}"
+    body = f"""
+    <h3>欠員補充が完了しました</h3>
+    <p>以下のシフトの欠員補充が完了しました。</p>
+    <p>日付: <strong>{safe_date}</strong></p>
+    <p>時間: <strong>{safe_start} 〜 {safe_end}</strong></p>
+    <p>変更前: {safe_orig} → 変更後: <strong>{safe_new}</strong></p>
+    """
+    return _enqueue_or_send(admin_email, subject, body,
+                            organization_id=organization_id, created_by=created_by)
+
+
 # ---------------------------------------------------------------------------
 # Internal — enqueue with sync fallback
 # ---------------------------------------------------------------------------
