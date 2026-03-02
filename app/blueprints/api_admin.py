@@ -1,3 +1,5 @@
+import secrets
+
 from flask import Blueprint, request, jsonify, session, current_app
 from datetime import datetime, timedelta
 
@@ -805,6 +807,26 @@ def create_invitation():
     except Exception:
         db.session.rollback()
         return error_response("Database error", 500, code="INTERNAL_ERROR")
+
+    # Send invitation email if email is specified
+    if email:
+        try:
+            from app.services.notification_service import notify_invitation_created
+            base_url = request.host_url.rstrip('/')
+            invite_url = f"{base_url}/auth/invite/{token.token}"
+            notify_invitation_created(
+                to_email=token.email,
+                org_name=org.name,
+                inviter_name=user.display_name or user.email,
+                role=token.role,
+                invite_url=invite_url,
+                expires_at=token.expires_at,
+                organization_id=org.id,
+                created_by=user.id,
+            )
+        except Exception as e:
+            current_app.logger.warning("Failed to send invitation email: %s", e)
+
     return jsonify(token.to_dict()), 201
 
 
@@ -837,3 +859,77 @@ def revoke_invitation(token_id):
         db.session.rollback()
         return error_response("Database error", 500, code="INTERNAL_ERROR")
     return '', 204
+
+
+# --- Invite Code (organization-wide link) ---
+
+@api_admin_bp.route('/invite-code', methods=['GET'])
+@require_role('admin')
+def get_invite_code():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify({
+        'invite_code': org.invite_code,
+        'invite_code_enabled': org.invite_code_enabled,
+    })
+
+
+@api_admin_bp.route('/invite-code', methods=['POST'])
+@require_role('admin')
+def generate_invite_code():
+    """Generate or regenerate the organization invite code."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    org.invite_code = secrets.token_urlsafe(16)
+    org.invite_code_enabled = True
+    log_audit(
+        action='INVITE_CODE_GENERATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+    )
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify({
+        'invite_code': org.invite_code,
+        'invite_code_enabled': org.invite_code_enabled,
+    })
+
+
+@api_admin_bp.route('/invite-code', methods=['PUT'])
+@require_role('admin')
+def update_invite_code():
+    """Enable or disable the invite code."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not data or 'enabled' not in data:
+        return error_response("enabled is required", 400, code="BAD_REQUEST")
+
+    if not isinstance(data['enabled'], bool):
+        return error_response("enabled must be a boolean", 400, code="VALIDATION_ERROR")
+
+    old_enabled = org.invite_code_enabled
+    org.invite_code_enabled = data['enabled']
+    log_audit(
+        action='INVITE_CODE_TOGGLED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values={'enabled': old_enabled},
+        new_values={'enabled': data['enabled']},
+    )
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify({
+        'invite_code': org.invite_code,
+        'invite_code_enabled': org.invite_code_enabled,
+    })

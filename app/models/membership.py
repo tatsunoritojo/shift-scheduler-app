@@ -1,6 +1,6 @@
 """Organization membership and invitation models for RBAC."""
 
-import uuid
+import secrets
 from datetime import datetime, timedelta
 
 from app.extensions import db
@@ -58,7 +58,7 @@ class InvitationToken(db.Model):
     __tablename__ = 'invitation_tokens'
 
     id = db.Column(db.Integer, primary_key=True)
-    token = db.Column(db.String(64), unique=True, nullable=False, default=lambda: uuid.uuid4().hex)
+    token = db.Column(db.String(64), unique=True, nullable=False, default=lambda: secrets.token_urlsafe(32))
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.id'), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='worker')
     email = db.Column(db.String(255), nullable=True)  # If set, only this email can use the token

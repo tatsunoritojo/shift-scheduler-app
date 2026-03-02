@@ -92,6 +92,27 @@ def notify_approval_result(admin_email, period_name, action, comment=None,
                             organization_id=organization_id, created_by=created_by)
 
 
+def notify_invitation_created(to_email, org_name, inviter_name, role, invite_url,
+                               expires_at, *, organization_id=None, created_by=None):
+    """Notify a user that they have been invited to an organization (async)."""
+    safe_org = html_escape(org_name)
+    safe_inviter = html_escape(inviter_name)
+    role_ja = {'admin': '管理者', 'owner': '事業主', 'worker': 'アルバイト'}.get(role, role)
+    safe_url = html_escape(invite_url)
+    expires_str = expires_at.strftime('%Y/%m/%d %H:%M') if expires_at else ''
+
+    subject = f"[シフリー] {safe_org} への招待"
+    body = f"""
+    <h3>{safe_org} への招待</h3>
+    <p>{safe_inviter} さんがあなたを「{safe_org}」に{role_ja}として招待しました。</p>
+    <p>以下のリンクをクリックして参加してください:</p>
+    <p><a href="{safe_url}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">招待を受ける</a></p>
+    <p style="color:#999;font-size:0.85em;">このリンクの有効期限: {expires_str}</p>
+    """
+    return _enqueue_or_send(to_email, subject, body,
+                            organization_id=organization_id, created_by=created_by)
+
+
 # ---------------------------------------------------------------------------
 # Internal — enqueue with sync fallback
 # ---------------------------------------------------------------------------

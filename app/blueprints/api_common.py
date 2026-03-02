@@ -1,5 +1,6 @@
-from flask import Blueprint, jsonify, session, current_app, redirect
+from flask import Blueprint, jsonify, session, current_app, redirect, request
 
+from app.extensions import limiter
 from app.middleware.auth_middleware import get_current_user
 
 api_common_bp = Blueprint('api_common', __name__)
@@ -61,6 +62,47 @@ def no_organization_page():
     if user.organization_id:
         return redirect('/')
     return current_app.send_static_file('pages/no-organization.html')
+
+
+@api_common_bp.route('/invite')
+def invite_page():
+    """Serve the invitation landing page."""
+    return current_app.send_static_file('pages/invite.html')
+
+
+@api_common_bp.route('/api/invite/info')
+@limiter.limit("20 per minute")
+def invite_info():
+    """Public API: return organization name for a given invite code or token."""
+    from app.models.organization import Organization
+    from app.models.membership import InvitationToken
+
+    code = request.args.get('code')
+    token = request.args.get('token')
+
+    if code:
+        org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
+        if not org or not org.is_active:
+            return jsonify({'error': 'Invalid or disabled invite code'}), 404
+        login_url = f"/auth/invite/code/{code}"
+        return jsonify({
+            'organization_name': org.name,
+            'role': 'worker',
+            'login_url': login_url,
+        })
+
+    if token:
+        invite = InvitationToken.query.filter_by(token=token).first()
+        if not invite or not invite.is_valid:
+            return jsonify({'error': 'Invalid or expired invitation'}), 404
+        login_url = f"/auth/invite/{token}"
+        return jsonify({
+            'organization_name': invite.organization.name,
+            'role': invite.role,
+            'login_url': login_url,
+        })
+
+    return jsonify({'error': 'code or token parameter is required'}), 400
 
 
 @api_common_bp.route('/worker')

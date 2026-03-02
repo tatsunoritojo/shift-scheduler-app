@@ -415,6 +415,18 @@ function setupStaticHandlers() {
     document.getElementById('btn-submit-approval').addEventListener('click', () => submitForApproval());
     document.getElementById('confirm-btn').addEventListener('click', () => confirmSchedule());
     document.getElementById('btn-refresh-builder').addEventListener('click', () => loadBuilderData());
+
+    // Members tab
+    const btnGenerate = document.getElementById('btn-generate-invite-code');
+    if (btnGenerate) btnGenerate.addEventListener('click', () => generateInviteCode());
+    const btnRegenerate = document.getElementById('btn-regenerate-invite-code');
+    if (btnRegenerate) btnRegenerate.addEventListener('click', () => generateInviteCode());
+    const btnCopy = document.getElementById('btn-copy-invite-url');
+    if (btnCopy) btnCopy.addEventListener('click', () => copyInviteUrl());
+    const enableToggle = document.getElementById('invite-code-enabled-toggle');
+    if (enableToggle) enableToggle.addEventListener('change', (e) => toggleInviteCode(e.target.checked));
+    const btnCreateInvitation = document.getElementById('btn-create-invitation');
+    if (btnCreateInvitation) btnCreateInvitation.addEventListener('click', () => createInvitation());
 }
 
 function setupDelegatedHandlers() {
@@ -433,6 +445,8 @@ function setupDelegatedHandlers() {
             case 'updatePeriodStatus': updatePeriodStatus(Number(target.dataset.id), target.dataset.status); break;
             case 'closeAdminDayPopup': closeAdminDayPopup(); break;
             case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
+            case 'revokeInvitation': revokeInvitation(Number(target.dataset.id)); break;
+            case 'removeMember': removeMember(Number(target.dataset.id), target.dataset.name); break;
         }
     });
 
@@ -443,7 +457,212 @@ function setupDelegatedHandlers() {
         if (target.dataset.action === 'applyWorkerTime') {
             applyWorkerTime(Number(target.dataset.userId), target.dataset.date);
         }
+        if (target.dataset.action === 'changeMemberRole') {
+            changeMemberRole(Number(target.dataset.memberId), target.value);
+        }
     });
+}
+
+// --- Members Tab ---
+
+let membersTabLoaded = false;
+
+async function loadMembersTab() {
+    if (membersTabLoaded) return;
+    membersTabLoaded = true;
+    await Promise.all([loadInviteCode(), loadInvitations(), loadMembers()]);
+    if (window.lucide) lucide.createIcons();
+}
+
+async function loadInviteCode() {
+    try {
+        const data = await api.get('/api/admin/invite-code');
+        if (data.invite_code) {
+            const baseUrl = window.location.origin;
+            const url = `${baseUrl}/invite?code=${data.invite_code}`;
+            document.getElementById('invite-url-display').value = url;
+            document.getElementById('invite-code-enabled-toggle').checked = data.invite_code_enabled;
+            document.getElementById('invite-code-content').style.display = '';
+            document.getElementById('invite-code-empty').style.display = 'none';
+            renderQRCode(url);
+        } else {
+            document.getElementById('invite-code-content').style.display = 'none';
+            document.getElementById('invite-code-empty').style.display = '';
+        }
+    } catch (e) {
+        console.error('Failed to load invite code:', e);
+    }
+}
+
+function renderQRCode(url) {
+    const container = document.getElementById('invite-qr-code');
+    if (!container || typeof qrcode === 'undefined') return;
+    container.innerHTML = '';
+    try {
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        container.innerHTML = qr.createSvgTag(4, 0);
+    } catch (e) {
+        container.innerHTML = '<span style="color:var(--color-neutral-400);font-size:0.85em;">QRコード生成エラー</span>';
+    }
+}
+
+async function generateInviteCode() {
+    try {
+        await api.post('/api/admin/invite-code');
+        showToast('招待コードを生成しました', 'success');
+        membersTabLoaded = false;
+        await loadMembersTab();
+    } catch (e) {
+        showToast(`生成に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+function copyInviteUrl() {
+    const input = document.getElementById('invite-url-display');
+    if (!input || !input.value) return;
+    navigator.clipboard.writeText(input.value).then(
+        () => showToast('リンクをコピーしました', 'success'),
+        () => showToast('コピーに失敗しました', 'error')
+    );
+}
+
+async function toggleInviteCode(enabled) {
+    try {
+        await api.put('/api/admin/invite-code', { enabled });
+        showToast(enabled ? '招待リンクを有効にしました' : '招待リンクを無効にしました', 'success');
+    } catch (e) {
+        showToast(`更新に失敗しました: ${e.message}`, 'error');
+        // Revert toggle
+        document.getElementById('invite-code-enabled-toggle').checked = !enabled;
+    }
+}
+
+async function loadInvitations() {
+    try {
+        const data = await api.get('/api/admin/invitations');
+        const container = document.getElementById('invitations-table');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">招待はありません</p>';
+            return;
+        }
+        const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+        const rows = data.map(t => {
+            const valid = t.is_valid;
+            const status = t.used_at ? '使用済み' : (valid ? '有効' : '期限切れ');
+            const statusColor = t.used_at ? 'var(--color-neutral-400)' : (valid ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)');
+            const expires = t.expires_at ? new Date(t.expires_at).toLocaleString('ja-JP') : '-';
+            return `<tr>
+                <td>${escapeHtml(t.email || '(制限なし)')}</td>
+                <td>${ROLE_LABELS[t.role] || t.role}</td>
+                <td style="color:${statusColor}">${status}</td>
+                <td style="font-size:0.85em;">${expires}</td>
+                <td>${valid && !t.used_at ? `<button class="btn btn-outline btn-sm" data-action="revokeInvitation" data-id="${t.id}" title="取消"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
+            <thead><tr><th>メール</th><th>ロール</th><th>状態</th><th>有効期限</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch (e) {
+        console.error('Failed to load invitations:', e);
+    }
+}
+
+async function createInvitation() {
+    const email = document.getElementById('invitation-email').value.trim();
+    const role = document.getElementById('invitation-role').value;
+    const expiresHours = parseInt(document.getElementById('invitation-expires').value, 10) || 72;
+    const body = { role, expires_hours: expiresHours };
+    if (email) body.email = email;
+    try {
+        const result = await api.post('/api/admin/invitations', body);
+        showToast('招待を作成しました', 'success');
+        document.getElementById('invitation-email').value = '';
+        await loadInvitations();
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        showToast(`招待の作成に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function revokeInvitation(id) {
+    showConfirmDialog(
+        '招待を取り消しますか？',
+        '取り消すと、このリンクは使えなくなります。',
+        async () => {
+            try {
+                await api.delete(`/api/admin/invitations/${id}`);
+                showToast('招待を取り消しました', 'success');
+                await loadInvitations();
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                showToast(`取消に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+async function loadMembers() {
+    try {
+        const data = await api.get('/api/admin/members');
+        const container = document.getElementById('members-table');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">メンバーはいません</p>';
+            return;
+        }
+        const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+        const rows = data.map(m => {
+            const isSelf = currentUser && m.user_id === currentUser.id;
+            const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('ja-JP') : '-';
+            return `<tr>
+                <td>${escapeHtml(m.user_name || '-')}</td>
+                <td style="font-size:0.85em;">${escapeHtml(m.user_email || '-')}</td>
+                <td>
+                    <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberRole" data-member-id="${m.id}" ${isSelf ? 'disabled' : ''}>
+                        ${['admin', 'owner', 'worker'].map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
+                    </select>
+                </td>
+                <td style="font-size:0.85em;">${joined}</td>
+                <td>${!isSelf ? `<button class="btn btn-outline btn-sm" data-action="removeMember" data-id="${m.id}" data-name="${escapeHtml(m.user_name || m.user_email || '')}" title="除外"><i data-lucide="user-x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
+            <thead><tr><th>名前</th><th>メール</th><th>ロール</th><th>参加日</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch (e) {
+        console.error('Failed to load members:', e);
+    }
+}
+
+async function changeMemberRole(memberId, newRole) {
+    try {
+        await api.put(`/api/admin/members/${memberId}/role`, { role: newRole });
+        showToast('ロールを変更しました', 'success');
+    } catch (e) {
+        showToast(`ロール変更に失敗しました: ${e.message}`, 'error');
+        await loadMembers();
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+async function removeMember(id, name) {
+    showConfirmDialog(
+        `${name || 'このメンバー'} を除外しますか？`,
+        '除外すると、このユーザーは組織にアクセスできなくなります。',
+        async () => {
+            try {
+                await api.delete(`/api/admin/members/${id}`);
+                showToast('メンバーを除外しました', 'success');
+                await loadMembers();
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                showToast(`除外に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 }
 
 async function init() {
@@ -479,6 +698,7 @@ function switchTab(tabName) {
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
     if (tabName === 'builder') loadBuilderPeriodSelect();
+    if (tabName === 'members') loadMembersTab();
 }
 
 // --- Opening Hours ---

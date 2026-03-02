@@ -105,12 +105,16 @@ def determine_role(email):
     return 'worker'
 
 
-def upsert_user(google_id, email, display_name, invitation_token=None):
+def upsert_user(google_id, email, display_name, invitation_token=None, invite_code_org=None):
     """Create or update a user record.
 
     If *invitation_token* is provided (an InvitationToken instance),
     the user is assigned to the token's org with the token's role.
+    If *invite_code_org* is provided (an Organization instance),
+    the user is assigned to that org as a worker.
     Otherwise, existing membership is preserved or env-config bootstrap applies.
+
+    Priority: invitation_token > invite_code_org > env bootstrap > no org.
     """
     from app.models.organization import Organization
     from app.models.membership import OrganizationMember, InvitationToken
@@ -139,8 +143,11 @@ def upsert_user(google_id, email, display_name, invitation_token=None):
 
     # --- Org / membership assignment ---
     if invitation_token and invitation_token.is_valid:
-        # Invitation-based assignment
+        # Invitation-based assignment (highest priority)
         _accept_invitation(user, invitation_token)
+    elif invite_code_org and not user.organization_id:
+        # Invite code — assign as worker
+        _accept_invite_code(user, invite_code_org)
     elif not user.organization_id:
         # Bootstrap: only auto-assign for env-configured admin/owner emails
         admin_emails = [e.strip() for e in current_app.config.get('ADMIN_EMAIL', '').split(',') if e.strip()]
@@ -196,6 +203,32 @@ def _accept_invitation(user, token):
     # Mark token as used
     token.used_at = datetime.utcnow()
     token.used_by = user.id
+
+
+def _accept_invite_code(user, org):
+    """Accept an invite_code: assign user to org as worker (no-op if already a member)."""
+    from app.models.membership import OrganizationMember
+
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=org.id
+    ).first()
+
+    if membership:
+        # Already a member — no-op
+        if not membership.is_active:
+            membership.is_active = True
+            membership.role = 'worker'
+        return
+
+    membership = OrganizationMember(
+        user_id=user.id,
+        organization_id=org.id,
+        role='worker',
+    )
+    db.session.add(membership)
+
+    user.organization_id = org.id
+    user.role = 'worker'
 
 
 def _ensure_membership(user, org_id, role):

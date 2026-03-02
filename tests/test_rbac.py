@@ -111,7 +111,7 @@ class TestInvitations:
         data = resp.get_json()
         assert data["role"] == "worker"
         assert data["is_valid"] is True
-        assert len(data["token"]) == 32  # uuid4 hex
+        assert len(data["token"]) >= 32  # secrets.token_urlsafe(32)
 
     def test_create_email_restricted_invitation(self, client, auth, admin_user, db_session):
         db_session.commit()
