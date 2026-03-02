@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, session, current_app, redirect, request, make_response
 
 from app.extensions import limiter
-from app.middleware.auth_middleware import get_current_user
+from app.middleware.auth_middleware import get_current_user, _check_active_membership
 
 api_common_bp = Blueprint('api_common', __name__)
 
@@ -181,7 +181,7 @@ def worker_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
-    if not user.organization_id:
+    if not user.organization_id or not _check_active_membership(user):
         return redirect('/no-organization')
     if user.role != 'worker':
         return redirect('/')
@@ -193,7 +193,7 @@ def admin_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
-    if not user.organization_id:
+    if not user.organization_id or not _check_active_membership(user):
         return redirect('/no-organization')
     if user.role != 'admin':
         return redirect('/')
@@ -205,7 +205,7 @@ def owner_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
-    if not user.organization_id:
+    if not user.organization_id or not _check_active_membership(user):
         return redirect('/no-organization')
     if user.role != 'owner':
         return redirect('/')

@@ -105,7 +105,7 @@ def _register_security_headers(app):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data:; "
-            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com"
+            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://unpkg.com"
         )
         return response
 

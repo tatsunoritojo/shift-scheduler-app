@@ -683,13 +683,14 @@ async function init() {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
         initSyncDateRange();
-        const [statusData] = await Promise.all([
+        const results = await Promise.allSettled([
             loadSyncStatus(),
             loadOpeningHours(),
             loadExceptions(),
             loadPeriods(),
             loadReminderSettings(),
         ]);
+        const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
         // Show preview calendar based on calendar exceptions range
         if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
             renderImportPreview(
