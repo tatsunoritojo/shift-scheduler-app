@@ -12,7 +12,7 @@ from app.services.shift_service import (
     get_opening_hours_for_period,
 )
 from app.services.approval_service import submit_for_approval, confirm_schedule
-from app.services.auth_service import get_credentials_for_user
+from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
 from app.services.calendar_service import create_event
 from app.services.opening_hours_sync_service import (
     export_opening_hours_to_calendar,
@@ -21,6 +21,7 @@ from app.services.opening_hours_sync_service import (
 from app.utils.validators import validate_time_str, validate_text_length
 from app.utils.errors import error_response
 from app.models.membership import OrganizationMember, InvitationToken
+from app.services.audit_service import log_audit
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -240,9 +241,11 @@ def sync_export_opening_hours():
 
     try:
         credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
     except Exception as e:
         current_app.logger.error(f"Credential error: {e}")
-        return error_response("認証エラーが発生しました。再ログインしてください。", 401, code="AUTH_REQUIRED")
+        return error_response("認証エラーが発生しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
 
     if not credentials:
         return error_response("Google認証情報がありません。再ログインしてください。", 401, code="AUTH_REQUIRED")
@@ -271,9 +274,11 @@ def sync_import_opening_hours():
 
     try:
         credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
     except Exception as e:
         current_app.logger.error(f"Credential error: {e}")
-        return error_response("認証エラーが発生しました。再ログインしてください。", 401, code="AUTH_REQUIRED")
+        return error_response("認証エラーが発生しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
 
     if not credentials:
         return error_response("Google認証情報がありません。再ログインしてください。", 401, code="AUTH_REQUIRED")
@@ -577,6 +582,8 @@ def _sync_schedule_to_calendar(schedule, admin_user):
 
     try:
         credentials = get_credentials_for_user(admin_user)
+    except CredentialsExpiredError as e:
+        return [{"error": str(e), "code": "CREDENTIALS_EXPIRED"}]
     except Exception as e:
         current_app.logger.error(f"Failed to get admin credentials: {e}")
         return [{"error": "認証情報の取得に失敗しました"}]
@@ -680,8 +687,18 @@ def update_member_role(member_id):
         if admin_count <= 1:
             return error_response("Cannot remove the last admin", 400)
 
+    old_role = member.role
     member.role = new_role
     member.sync_to_user()
+    log_audit(
+        action='ROLE_CHANGED',
+        resource_type='OrganizationMember',
+        resource_id=member.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values={'role': old_role},
+        new_values={'role': new_role},
+    )
 
     try:
         db.session.commit()
@@ -713,6 +730,14 @@ def remove_member(member_id):
             return error_response("Cannot remove the last admin", 400)
 
     member.is_active = False
+    log_audit(
+        action='MEMBER_REMOVED',
+        resource_type='OrganizationMember',
+        resource_id=member.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values={'role': member.role, 'user_email': member.user.email if member.user else None},
+    )
 
     try:
         db.session.commit()
@@ -761,6 +786,15 @@ def create_invitation():
         expires_at=datetime.utcnow() + timedelta(hours=expires_hours),
     )
     db.session.add(token)
+    db.session.flush()
+    log_audit(
+        action='INVITATION_CREATED',
+        resource_type='InvitationToken',
+        resource_id=token.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        new_values={'role': role, 'email': email, 'expires_hours': expires_hours},
+    )
 
     try:
         db.session.commit()
@@ -784,6 +818,14 @@ def revoke_invitation(token_id):
 
     # Expire the token immediately
     token.expires_at = datetime.utcnow()
+    log_audit(
+        action='INVITATION_REVOKED',
+        resource_type='InvitationToken',
+        resource_id=token.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values={'role': token.role, 'email': token.email},
+    )
 
     try:
         db.session.commit()

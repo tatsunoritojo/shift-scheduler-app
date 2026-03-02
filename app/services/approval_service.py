@@ -4,6 +4,7 @@ from app.models.shift import ShiftSchedule
 from app.models.approval import ApprovalHistory
 from app.models.user import User
 from app.services.notification_service import notify_approval_requested, notify_approval_result
+from app.services.audit_service import log_audit
 
 
 def submit_for_approval(schedule_id, admin_user):
@@ -18,6 +19,15 @@ def submit_for_approval(schedule_id, admin_user):
         action='submitted',
         performed_by=admin_user.id,
     ))
+    org_id = schedule.period.organization_id if schedule.period else None
+    log_audit(
+        action='SCHEDULE_SUBMITTED',
+        resource_type='ShiftSchedule',
+        resource_id=schedule_id,
+        actor_id=admin_user.id,
+        organization_id=org_id,
+        new_values={'status': 'pending_approval'},
+    )
     try:
         db.session.commit()
     except Exception:
@@ -50,6 +60,15 @@ def approve_schedule(schedule_id, owner_user, comment=None):
         performed_by=owner_user.id,
         comment=comment,
     ))
+    org_id = schedule.period.organization_id if schedule.period else None
+    log_audit(
+        action='SCHEDULE_APPROVED',
+        resource_type='ShiftSchedule',
+        resource_id=schedule_id,
+        actor_id=owner_user.id,
+        organization_id=org_id,
+        new_values={'status': 'approved', 'comment': comment},
+    )
     try:
         db.session.commit()
     except Exception:
@@ -80,6 +99,15 @@ def reject_schedule(schedule_id, owner_user, comment=None):
         performed_by=owner_user.id,
         comment=comment,
     ))
+    org_id = schedule.period.organization_id if schedule.period else None
+    log_audit(
+        action='SCHEDULE_REJECTED',
+        resource_type='ShiftSchedule',
+        resource_id=schedule_id,
+        actor_id=owner_user.id,
+        organization_id=org_id,
+        new_values={'status': 'rejected', 'comment': comment},
+    )
     try:
         db.session.commit()
     except Exception:
@@ -109,6 +137,15 @@ def confirm_schedule(schedule_id, admin_user):
         action='confirmed',
         performed_by=admin_user.id,
     ))
+    org_id = schedule.period.organization_id if schedule.period else None
+    log_audit(
+        action='SCHEDULE_CONFIRMED',
+        resource_type='ShiftSchedule',
+        resource_id=schedule_id,
+        actor_id=admin_user.id,
+        organization_id=org_id,
+        new_values={'status': 'confirmed'},
+    )
     try:
         db.session.commit()
     except Exception:

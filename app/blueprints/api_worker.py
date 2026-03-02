@@ -8,7 +8,7 @@ from app.models.user import User
 from app.services.shift_service import (
     get_opening_hours_for_period, create_or_update_submission,
 )
-from app.services.auth_service import get_credentials_for_user
+from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
 from app.services.calendar_service import fetch_events, list_calendars
 
 api_worker_bp = Blueprint('api_worker', __name__, url_prefix='/api/worker')
@@ -59,9 +59,11 @@ def get_worker_calendars():
 
     try:
         credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
     except RuntimeError as e:
         current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="AUTH_REQUIRED")
+        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
 
     if not credentials:
         return error_response("No credentials found", 404, code="NOT_FOUND")
@@ -81,9 +83,11 @@ def get_worker_calendar_events():
 
     try:
         credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
     except RuntimeError as e:
         current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="AUTH_REQUIRED")
+        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
 
     if not credentials:
         return error_response("No credentials found", 404, code="NOT_FOUND")

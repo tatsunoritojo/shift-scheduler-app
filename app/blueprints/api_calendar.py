@@ -3,7 +3,7 @@ from datetime import datetime
 
 from app.middleware.auth_middleware import require_auth, get_current_user
 from app.utils.errors import error_response
-from app.services.auth_service import get_credentials_for_user
+from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
 from app.services.calendar_service import fetch_events
 from googleapiclient.errors import HttpError
 
@@ -17,6 +17,8 @@ def get_calendar_events():
 
     try:
         credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
     except RuntimeError as e:
         current_app.logger.error(f"Credential error for user {user.id}: {e}")
         return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")

@@ -6,6 +6,7 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 
 from app.extensions import db
@@ -292,7 +293,27 @@ def get_credentials_for_user(user):
                 'token': credentials.token,
                 'refresh_token': credentials.refresh_token,
             }
+        except RefreshError as e:
+            # Token is permanently invalid (expired, revoked, or consent withdrawn).
+            # Mark the stored token as stale so we don't retry next time.
+            auth_svc_logger.warning(
+                "CREDENTIALS_EXPIRED: user_id=%s error=%s — clearing stale token",
+                user.id, e,
+            )
+            token.refresh_token = None
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            raise CredentialsExpiredError(
+                "Google認証の有効期限が切れました。再ログインしてください。"
+            ) from e
         except Exception as e:
             raise RuntimeError(f"Failed to refresh access token: {e}")
 
     return credentials
+
+
+class CredentialsExpiredError(Exception):
+    """Raised when Google OAuth credentials are permanently invalid."""
+    pass

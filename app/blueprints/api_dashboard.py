@@ -11,6 +11,7 @@ from app.models.async_task import AsyncTask
 from app.models.approval import ApprovalHistory
 from app.models.shift import ShiftSchedule
 from app.models.opening_hours import SyncOperationLog
+from app.models.audit_log import AuditLog
 
 api_dashboard_bp = Blueprint('api_dashboard', __name__)
 
@@ -140,3 +141,27 @@ def task_stats():
         'by_type': stats,
         'avg_retries': round(float(avg_retries or 0), 2),
     })
+
+
+@api_dashboard_bp.route('/api/admin/dashboard/audit-logs', methods=['GET'])
+@require_role('admin')
+def audit_logs():
+    """List audit log entries for the organization."""
+    user = get_current_user()
+    org_id = user.organization_id
+    limit = min(int(request.args.get('limit', 50)), 200)
+    action_filter = request.args.get('action')
+    resource_filter = request.args.get('resource_type')
+
+    query = (
+        AuditLog.query
+        .filter_by(organization_id=org_id)
+        .order_by(AuditLog.created_at.desc())
+    )
+    if action_filter:
+        query = query.filter_by(action=action_filter)
+    if resource_filter:
+        query = query.filter_by(resource_type=resource_filter)
+
+    logs = query.limit(limit).all()
+    return jsonify([log.to_dict() for log in logs])
