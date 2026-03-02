@@ -17,7 +17,7 @@ def index():
     if user_id:
         user = get_current_user()
         if user:
-            if not user.organization_id:
+            if not user.organization_id or not _check_active_membership(user):
                 return redirect('/no-organization')
             if user.role == 'admin':
                 return redirect('/admin')
@@ -59,7 +59,7 @@ def no_organization_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
-    if user.organization_id:
+    if user.organization_id and _check_active_membership(user):
         return redirect('/')
     return current_app.send_static_file('pages/no-organization.html')
 
