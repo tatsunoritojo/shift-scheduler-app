@@ -20,6 +20,7 @@ document.getElementById('create-org-btn')?.addEventListener('click', async () =>
     const name = nameInput.value.trim();
 
     btn.disabled = true;
+    btn.classList.add('btn-loading');
     errorEl.style.display = 'none';
 
     try {
@@ -31,16 +32,34 @@ document.getElementById('create-org-btn')?.addEventListener('click', async () =>
         const data = await res.json();
 
         if (res.ok) {
-            window.location.href = '/';
+            // Show success state
+            const formSection = document.getElementById('create-form-section');
+            const successSection = document.getElementById('create-success');
+            const divider = document.querySelector('.divider');
+            const steps = document.querySelector('.steps');
+
+            if (formSection) formSection.style.display = 'none';
+            if (divider) divider.style.display = 'none';
+            if (steps) steps.style.display = 'none';
+
+            document.getElementById('success-org-name').textContent = data.name || name || '新しい組織';
+            if (successSection) {
+                successSection.style.display = '';
+                successSection.classList.add('fade-in');
+            }
+
+            setTimeout(() => { window.location.href = '/'; }, 1500);
         } else {
-            errorEl.textContent = data.error || `組織の作成に失敗しました (${res.status})`;
+            errorEl.textContent = data.error || '組織の作成に失敗しました (' + res.status + ')';
             errorEl.style.display = 'block';
             btn.disabled = false;
+            btn.classList.remove('btn-loading');
         }
     } catch (e) {
-        errorEl.textContent = '通信エラーが発生しました: ' + e.message;
+        errorEl.textContent = '通信エラー: サーバーに接続できませんでした。インターネット接続を確認してください。';
         errorEl.style.display = 'block';
         btn.disabled = false;
+        btn.classList.remove('btn-loading');
     }
 });
 

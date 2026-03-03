@@ -9,8 +9,9 @@
  * @param {string} btnClass - CSS class for the confirm button (e.g. 'btn-primary', 'btn-danger')
  * @param {string} btnLabel - Label for the confirm button
  * @param {Function} onConfirm - Callback when confirmed
+ * @param {Function} [onCancel] - Optional callback when cancelled
  */
-export function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
+export function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm, onCancel) {
     const overlay = document.createElement('div');
     overlay.className = 'confirm-dialog-overlay';
     overlay.innerHTML = `
@@ -24,10 +25,14 @@ export function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm)
         </div>
     `;
     document.body.appendChild(overlay);
-    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
+    const dismiss = () => {
+        overlay.remove();
+        if (onCancel) onCancel();
+    };
+    overlay.querySelector('#confirm-cancel').onclick = dismiss;
     overlay.querySelector('#confirm-ok').onclick = () => {
         overlay.remove();
         onConfirm();
     };
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
 }

@@ -99,7 +99,9 @@ class TestInviteLandingPage:
         db_session.commit()
 
         resp = client.get(f"/api/invite/info?code={org.invite_code}")
-        assert resp.status_code == 404
+        assert resp.status_code == 403
+        data = resp.get_json()
+        assert data["code"] == "INVITE_CODE_DISABLED"
 
     def test_invite_info_with_valid_token(self, client, admin_user, org, db_session):
         token = InvitationToken(
@@ -128,7 +130,9 @@ class TestInviteLandingPage:
         db_session.commit()
 
         resp = client.get(f"/api/invite/info?token={token.token}")
-        assert resp.status_code == 404
+        assert resp.status_code == 410
+        data = resp.get_json()
+        assert data["code"] == "INVITATION_EXPIRED"
 
     def test_invite_info_no_params(self, client, db_session):
         db_session.commit()
