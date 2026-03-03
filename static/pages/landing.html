@@ -238,10 +238,138 @@
                 </div>
             </div>
 
-            <!-- Step 4 -->
+            <!-- Step 4 (NEW: Builder) -->
             <div class="lp-step-block lp-step-reverse">
                 <div class="lp-step-text">
                     <span class="lp-step-number">4</span>
+                    <h3>管理者がシフトを構築</h3>
+                    <p>提出されたシフト希望をもとに、カレンダーを見ながらスタッフを配置。自動で空きを可視化します。</p>
+                </div>
+                <div class="lp-browser-frame">
+                    <div class="lp-browser-bar">
+                        <span class="lp-browser-dot"></span>
+                        <span class="lp-browser-dot"></span>
+                        <span class="lp-browser-dot"></span>
+                        <div class="lp-browser-url">shifree.app/admin</div>
+                    </div>
+                    <div class="lp-screenshot lp-screenshot-pc" id="ss-builder">
+                        <div class="mock-screen mock-screen-dimmed">
+                            <div class="mock-tabs">
+                                <span class="mock-tab">設定</span>
+                                <span class="mock-tab">メンバー</span>
+                                <span class="mock-tab">期間</span>
+                                <span class="mock-tab active">シフト表</span>
+                            </div>
+                            <div class="mock-admin-toolbar">
+                                <span class="mock-admin-period-name">2026年3月シフト</span>
+                                <span class="mock-admin-period-badge reviewing">構築中</span>
+                                <span class="mock-admin-toolbar-spacer"></span>
+                                <span class="mock-admin-legend"><span class="mock-legend-dot full"></span>充足</span>
+                                <span class="mock-admin-legend"><span class="mock-legend-dot part"></span>一部</span>
+                                <span class="mock-admin-legend"><span class="mock-legend-dot empty"></span>未割当</span>
+                                <span class="mock-admin-legend"><span class="mock-legend-dot closed"></span>休業</span>
+                            </div>
+                            <div class="mock-admin-layout">
+                                <div class="mock-admin-main">
+                                    <div class="mock-card-t" style="font-size:5px;margin-bottom:2px">2026年3月</div>
+                                    <div class="mock-cal-head-pc">
+                                        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+                                    </div>
+                                    <div class="mock-cal-grid-pc">
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">1</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">2</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell part"><span class="mock-pc-day">3</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell closed"><span class="mock-pc-day">4</span><span class="mock-pc-closed">休業</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">5</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">6</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">7</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">8</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">9</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">10</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell closed"><span class="mock-pc-day">11</span><span class="mock-pc-closed">休業</span></div>
+                                        <div class="mock-pc-cell part"><span class="mock-pc-day">12</span><span class="mock-pc-badge part">2/5</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell empty"><span class="mock-pc-day">13</span><span class="mock-pc-badge empty">0/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">14</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">15</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">16</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell part"><span class="mock-pc-day">17</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell closed"><span class="mock-pc-day">18</span><span class="mock-pc-closed">休業</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">19</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell closed"><span class="mock-pc-day">20</span><span class="mock-pc-closed">祝休</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">21</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">22</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell part"><span class="mock-pc-day">23</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">24</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell closed"><span class="mock-pc-day">25</span><span class="mock-pc-closed">休業</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">26</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">27</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">28</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">29</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">10-21</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">30</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell full"><span class="mock-pc-day">31</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
+                                        <div class="mock-pc-cell empty-cell"></div>
+                                        <div class="mock-pc-cell empty-cell"></div>
+                                        <div class="mock-pc-cell empty-cell"></div>
+                                        <div class="mock-pc-cell empty-cell"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Builder day popup overlay -->
+                        <div class="mock-builder-overlay">
+                            <div class="mock-builder-popup">
+                                <div class="mock-builder-popup-hdr">
+                                    <span class="mock-builder-popup-date">3月5日（木）</span>
+                                    <span class="mock-builder-popup-close">&times;</span>
+                                </div>
+                                <div class="mock-builder-section">
+                                    <div class="mock-builder-label">営業時間</div>
+                                    <div class="mock-builder-value">09:00 〜 22:00</div>
+                                </div>
+                                <div class="mock-builder-section">
+                                    <div class="mock-builder-label">カバレッジ</div>
+                                    <div class="mock-coverage">
+                                        <div class="mock-coverage-track">
+                                            <div class="mock-coverage-block cb-1" style="left:0%;width:46.2%"></div>
+                                            <div class="mock-coverage-block cb-2" style="left:15.4%;width:46.2%"></div>
+                                            <div class="mock-coverage-block cb-3" style="left:38.5%;width:61.5%"></div>
+                                        </div>
+                                        <div class="mock-coverage-times">
+                                            <span>9</span><span>12</span><span>15</span><span>18</span><span>22</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mock-builder-section">
+                                    <div class="mock-builder-label">スタッフ割当</div>
+                                    <div class="mock-worker-card">
+                                        <span class="mock-worker-name">田中</span>
+                                        <span class="mock-worker-toggle on"></span>
+                                        <span class="mock-worker-time">09:00-15:00</span>
+                                    </div>
+                                    <div class="mock-worker-card">
+                                        <span class="mock-worker-name">佐藤</span>
+                                        <span class="mock-worker-toggle on"></span>
+                                        <span class="mock-worker-time">11:00-17:00</span>
+                                    </div>
+                                    <div class="mock-worker-card off">
+                                        <span class="mock-worker-name">鈴木</span>
+                                        <span class="mock-worker-toggle"></span>
+                                        <span class="mock-worker-time">&#8212;</span>
+                                    </div>
+                                </div>
+                                <div class="mock-builder-footer">
+                                    <span class="mock-builder-status">3/3 割当済み</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="lp-step-block">
+                <div class="lp-step-text">
+                    <span class="lp-step-number">5</span>
                     <h3>管理者が確認して承認</h3>
                     <p>提出されたシフト希望を一覧で確認。承認・却下をワンタップで。<br>スマホからでも隙間時間にサッと処理できます。</p>
                 </div>
@@ -367,10 +495,10 @@
                 </div>
             </div>
 
-            <!-- Step 5 -->
-            <div class="lp-step-block">
+            <!-- Step 6 -->
+            <div class="lp-step-block lp-step-reverse">
                 <div class="lp-step-text">
-                    <span class="lp-step-number">5</span>
+                    <span class="lp-step-number">6</span>
                     <h3>確定シフトがカレンダーに届く</h3>
                     <p>承認されたシフトはGoogleカレンダーに自動反映。全員がいつでも確認できます。</p>
                 </div>
@@ -478,6 +606,30 @@
                     </div>
                     <h3>開発者に直接つながる</h3>
                     <p>大企業のサポートセンターではなく、作った本人に相談できます。要望も即反映。</p>
+                </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- bell -->
+                        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    </div>
+                    <h3>リマインド通知</h3>
+                    <p>提出期限やシフト前に自動通知。出し忘れ・遅刻を防ぎます。</p>
+                </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- refresh-cw -->
+                        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </div>
+                    <h3>欠員補充</h3>
+                    <p>急な欠員もワンクリック。代わりのスタッフに自動で通知を送信します。</p>
+                </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <!-- link -->
+                        <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </div>
+                    <h3>かんたんメンバー登録</h3>
+                    <p>招待リンクやQRコードを共有するだけ。新しいスタッフもすぐ参加できます。</p>
                 </div>
             </div>
         </div>
