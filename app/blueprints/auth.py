@@ -56,31 +56,30 @@ def _clear_invite_cookies(response):
 
 @auth_bp.route('/invite/<token>')
 def accept_invite(token):
-    """Store invitation token in cookie and redirect to OAuth login."""
+    """Validate invitation token, set cookie, and redirect to OAuth login."""
     from app.models.membership import InvitationToken
 
     invite = InvitationToken.query.filter_by(token=token).first()
     if not invite or not invite.is_valid:
         return error_response("Invalid or expired invitation", 400, code="BAD_REQUEST")
 
-    resp = make_response(redirect(url_for('auth.login')))
+    # Pass token as query param so login() stores it in session with state
+    resp = make_response(redirect(url_for('auth.login', invite_token=token)))
     _set_invite_cookie(resp, COOKIE_INVITE_TOKEN, token)
     return resp
 
 
 @auth_bp.route('/invite/code/<code>')
 def accept_invite_code(code):
-    """Store invite_code in cookie + session and redirect to OAuth login."""
+    """Validate invite_code, set cookie, and redirect to OAuth login."""
     from app.models.organization import Organization
 
     org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
     if not org or not org.is_active:
         return error_response("Invalid or disabled invite code", 400, code="BAD_REQUEST")
 
-    # Store in session as fallback (cookies can be lost on mobile OAuth redirects)
-    session['invite_code'] = code
-
-    resp = make_response(redirect(url_for('auth.login')))
+    # Pass code as query param so login() stores it in session with state
+    resp = make_response(redirect(url_for('auth.login', invite_code=code)))
     _set_invite_cookie(resp, COOKIE_INVITE_CODE, code)
     return resp
 
@@ -95,6 +94,15 @@ def login():
         prompt='consent',
     )
     session['state'] = state
+
+    # Store invite data in session alongside state (same request = guaranteed consistency)
+    invite_code = request.args.get('invite_code')
+    invite_token = request.args.get('invite_token')
+    if invite_code:
+        session['invite_code'] = invite_code
+    if invite_token:
+        session['invitation_token'] = invite_token
+
     return redirect(authorization_url)
 
 
@@ -126,8 +134,14 @@ def callback():
     # Check for invitation token (cookie → session fallback)
     invitation = _resolve_invitation(email)
 
-    # Check for invite_code
+    # Check for invite_code (cookie → session fallback)
     invite_code_org = _resolve_invite_code()
+    auth_logger.info(
+        "INVITE_RESOLVE: invitation=%s invite_code_org=%s session_keys=%s cookie_invite_code=%s",
+        invitation, invite_code_org,
+        list(session.keys()),
+        bool(request.cookies.get(COOKIE_INVITE_CODE)),
+    )
 
     user = upsert_user(google_id, email, display_name,
                        invitation_token=invitation,

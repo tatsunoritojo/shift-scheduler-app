@@ -152,7 +152,9 @@ class TestCookieTokenPassing:
 
         resp = client.get(f"/auth/invite/{token.token}")
         assert resp.status_code == 302
-        assert "/auth/google/login" in resp.headers["Location"]
+        location = resp.headers["Location"]
+        assert "/auth/google/login" in location
+        assert f"invite_token={token.token}" in location
         # Check that cookie is set in response
         cookie_header = resp.headers.get_all("Set-Cookie")
         cookie_names = [c.split("=")[0] for c in cookie_header]
@@ -175,19 +177,29 @@ class TestCookieTokenPassing:
         resp = client.get("/auth/invite/code/nonexistent")
         assert resp.status_code == 400
 
-    def test_accept_invite_code_stores_session(self, client, org, db_session):
-        """Invite code should be stored in session as fallback for mobile browsers."""
+    def test_accept_invite_code_passes_query_param(self, client, org, db_session):
+        """Invite code redirect should pass code as query param to login."""
         org.invite_code = secrets.token_urlsafe(16)
         org.invite_code_enabled = True
         db_session.commit()
 
-        with client.session_transaction() as sess:
-            assert 'invite_code' not in sess
+        resp = client.get(f"/auth/invite/code/{org.invite_code}")
+        assert resp.status_code == 302
+        location = resp.headers["Location"]
+        assert f"invite_code={org.invite_code}" in location
 
-        client.get(f"/auth/invite/code/{org.invite_code}")
+    def test_login_stores_invite_code_in_session(self, client, org, db_session):
+        """login() should store invite_code from query param into session."""
+        org.invite_code = secrets.token_urlsafe(16)
+        org.invite_code_enabled = True
+        db_session.commit()
+
+        # Call login with invite_code query param (simulates redirect from accept_invite_code)
+        client.get(f"/auth/google/login?invite_code={org.invite_code}")
 
         with client.session_transaction() as sess:
             assert sess.get('invite_code') == org.invite_code
+            assert 'state' in sess  # OAuth state stored in same request
 
     def test_resolve_invite_code_session_fallback(self, client, org, db_session):
         """When cookie is lost (mobile), invite code should resolve from session."""
@@ -195,13 +207,8 @@ class TestCookieTokenPassing:
         org.invite_code_enabled = True
         db_session.commit()
 
-        # Simulate: session has invite_code but cookie is missing
-        with client.session_transaction() as sess:
-            sess['invite_code'] = org.invite_code
-
         from app.blueprints.auth import _resolve_invite_code
         with client.application.test_request_context():
-            # Import fresh — no cookies set on this request
             from flask import session as flask_session
             flask_session['invite_code'] = org.invite_code
             result = _resolve_invite_code()
