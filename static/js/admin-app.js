@@ -481,9 +481,12 @@ async function loadMembersTab() {
     if (window.lucide) lucide.createIcons();
 }
 
+let currentOrgName = '';
+
 async function loadInviteCode() {
     try {
         const data = await api.get('/api/admin/invite-code');
+        if (data.organization_name) currentOrgName = data.organization_name;
         if (data.invite_code) {
             const baseUrl = window.location.origin;
             const url = `${baseUrl}/invite?code=${data.invite_code}`;
@@ -510,9 +513,38 @@ function renderQRCode(url) {
         qr.addData(url);
         qr.make();
         container.innerHTML = qr.createSvgTag(4, 0);
+        container.onclick = () => showQRCodeFullscreen(url);
     } catch (e) {
         container.innerHTML = '<span style="color:var(--color-neutral-400);font-size:0.85em;">QRコード生成エラー</span>';
     }
+}
+
+function showQRCodeFullscreen(url) {
+    if (typeof qrcode === 'undefined') return;
+    const orgName = currentOrgName || 'シフリー';
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0', zIndex: '9999',
+        background: '#fff', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+    });
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const svgHtml = qr.createSvgTag(10, 0);
+    overlay.innerHTML = `
+        <div style="text-align:center;padding:24px;">
+            <p style="font-size:1.1em;color:#3b82f6;font-weight:700;letter-spacing:0.05em;margin-bottom:8px;">シフリー</p>
+            <p style="font-size:1.6em;font-weight:700;color:#1e293b;margin-bottom:32px;">${orgName}</p>
+            <div style="display:inline-block;padding:16px;border-radius:16px;border:2px solid #e2e8f0;">${svgHtml}</div>
+            <p style="color:#94a3b8;font-size:0.85em;margin-top:32px;">スキャンして組織に参加</p>
+            <p style="color:#cbd5e1;font-size:0.75em;margin-top:12px;">タップして閉じる</p>
+        </div>`;
+    overlay.onclick = () => overlay.remove();
+    document.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', handler); }
+    });
+    document.body.appendChild(overlay);
 }
 
 async function generateInviteCode() {

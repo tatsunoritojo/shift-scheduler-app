@@ -871,6 +871,7 @@ def get_invite_code():
     return jsonify({
         'invite_code': org.invite_code,
         'invite_code_enabled': org.invite_code_enabled,
+        'organization_name': org.name,
     })
 
 
