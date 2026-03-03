@@ -522,88 +522,106 @@
 .mock-btn-red { background: #ef4444; }
 
 /* --- Mock 1: 営業時間 --- */
+.mock-oh-help {
+    font-size: 5px;
+    color: var(--color-neutral-500);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
 .mock-oh-row {
     display: flex;
     align-items: center;
-    padding: 2.5px 0;
-    border-bottom: 1px solid #e8ecf0;
-    font-size: 6px;
-    gap: 4px;
+    padding: 2px 0;
+    font-size: 5.5px;
+    gap: 3px;
 }
-
-.mock-oh-row:last-child { border-bottom: none; }
 
 .mock-oh-d {
     width: 14px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-neutral-700);
     flex-shrink: 0;
-    font-size: 6px;
+    font-size: 5.5px;
 }
 
 .mock-oh-d.sun { color: #ef4444; }
 .mock-oh-d.sat { color: #3b82f6; }
 
-.mock-oh-tog {
-    width: 18px;
-    height: 10px;
-    border-radius: 5px;
-    background: var(--color-primary-500);
-    position: relative;
+/* Mini form-control style (mimics real app inputs) */
+.mock-oh-input {
+    background: #fff;
+    border: 0.5px solid var(--color-neutral-200);
+    border-radius: 2px;
+    padding: 1.5px 3px;
+    font-size: 5px;
+    color: var(--color-neutral-800);
+    min-width: 24px;
+    text-align: center;
+}
+
+.mock-oh-sep {
+    font-size: 5px;
+    color: var(--color-neutral-400);
+}
+
+/* Mini checkbox */
+.mock-oh-chk {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    font-size: 4.5px;
+    color: var(--color-neutral-500);
     flex-shrink: 0;
 }
 
-.mock-oh-tog::after {
-    content: '';
-    position: absolute;
-    top: 1.5px;
-    right: 1.5px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+.mock-oh-chk-box {
+    width: 6px;
+    height: 6px;
+    border: 0.5px solid var(--color-neutral-300);
+    border-radius: 1px;
     background: #fff;
+    flex-shrink: 0;
 }
 
-.mock-oh-tog.off {
-    background: var(--color-neutral-300);
+.mock-oh-chk-box.checked {
+    background: var(--color-primary-500);
+    border-color: var(--color-primary-500);
 }
 
-.mock-oh-tog.off::after {
-    right: auto;
-    left: 1.5px;
+.mock-oh-row.is-closed .mock-oh-input {
+    background: var(--color-neutral-50);
+    color: var(--color-neutral-300);
 }
 
-.mock-oh-t {
-    flex: 1;
-    font-size: 5.5px;
-    color: var(--color-neutral-600);
-}
-
-.mock-oh-t.closed {
+.mock-oh-row.is-closed .mock-oh-d {
     color: var(--color-neutral-400);
-    font-style: italic;
 }
 
 .mock-exc-row {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 5.5px;
+    font-size: 5px;
     padding: 2px 0;
 }
 
 .mock-exc-date {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-neutral-700);
 }
 
-.mock-exc-closed {
-    color: #ef4444;
-    font-size: 5px;
+.mock-exc-badge {
+    font-size: 4.5px;
     font-weight: 600;
+    padding: 0.5px 4px;
+    border-radius: 100px;
+}
+
+.mock-exc-badge.closed {
+    color: #ef4444;
     background: #fef2f2;
-    padding: 0.5px 3px;
-    border-radius: 3px;
 }
 
 /* --- Mock 2: ロック画面通知 --- */
