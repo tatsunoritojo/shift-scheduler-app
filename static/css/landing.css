@@ -742,7 +742,133 @@
     margin-bottom: 1px;
 }
 
-/* --- Mock 2: ロック画面通知 --- */
+/* --- Mock 2: 2台並びレイアウト --- */
+.mock-dual {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 340px;
+}
+
+.mock-dual-phone {
+    flex: 1;
+    border-radius: 16px;
+    background: var(--color-neutral-900);
+    padding: 6px 5px;
+    box-shadow: var(--shadow-lg);
+    min-width: 0;
+}
+
+.mock-dual-phone .mock-dual-notch {
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--color-neutral-700);
+    margin: 0 auto 4px;
+}
+
+.mock-dual-screen {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mock-dual-arrow {
+    font-size: 12px;
+    color: var(--color-neutral-400);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.mock-dual-label {
+    text-align: center;
+    font-size: 5px;
+    font-weight: 600;
+    color: var(--color-neutral-500);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+}
+
+/* Admin confirm dialog inside dual screen */
+.mock-admin-notify {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-neutral-50);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    border-radius: 12px;
+}
+
+.mock-admin-notify .mock-hdr {
+    padding: 5px 7px;
+    font-size: 6px;
+    border-radius: 12px 12px 0 0;
+}
+
+.mock-admin-notify .mock-hdr-app {
+    font-size: 6.5px;
+}
+
+.mock-admin-notify .mock-bdg {
+    font-size: 4px;
+    padding: 1px 4px;
+}
+
+.mock-admin-notify-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+}
+
+/* Confirm dialog overlay */
+.mock-confirm {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 8px;
+    width: 100%;
+}
+
+.mock-confirm-title {
+    font-size: 6px;
+    font-weight: 700;
+    color: var(--color-neutral-800);
+    margin-bottom: 3px;
+}
+
+.mock-confirm-text {
+    font-size: 4.5px;
+    color: var(--color-neutral-500);
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.mock-confirm-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.mock-confirm-actions .mock-btn {
+    width: auto;
+    padding: 3px 8px;
+    font-size: 4.5px;
+    border-radius: 3px;
+}
+
+.mock-btn-outline {
+    background: transparent;
+    color: var(--color-neutral-500);
+    border: 0.5px solid var(--color-neutral-300);
+}
+
+/* Lock screen (employee side) */
 .mock-lockscreen {
     position: absolute;
     inset: 0;
@@ -753,7 +879,7 @@
     color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overflow: hidden;
-    border-radius: 18px;
+    border-radius: 12px;
 }
 
 .mock-sbar {
@@ -761,47 +887,47 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding: 6px 12px 0;
-    font-size: 5.5px;
+    padding: 4px 8px 0;
+    font-size: 4px;
     color: rgba(255,255,255,0.7);
 }
 
 .mock-lock-time {
-    font-size: 36px;
+    font-size: 22px;
     font-weight: 200;
-    letter-spacing: -2px;
-    margin-top: 30px;
+    letter-spacing: -1px;
+    margin-top: 16px;
     line-height: 1;
 }
 
 .mock-lock-date {
-    font-size: 7px;
+    font-size: 5px;
     color: rgba(255,255,255,0.7);
-    margin-top: 4px;
-    margin-bottom: 28px;
+    margin-top: 2px;
+    margin-bottom: 14px;
 }
 
 .mock-notif {
-    width: calc(100% - 20px);
-    margin: 0 10px;
-    padding: 7px 8px;
+    width: calc(100% - 12px);
+    margin: 0 6px;
+    padding: 5px 6px;
     background: rgba(255,255,255,0.18);
     backdrop-filter: blur(12px);
-    border-radius: 10px;
+    border-radius: 7px;
     display: flex;
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
 }
 
 .mock-notif-icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
     background: var(--color-primary-500);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 6px;
     font-weight: 800;
     color: #fff;
     flex-shrink: 0;
@@ -813,22 +939,22 @@
 }
 
 .mock-notif-title {
-    font-size: 6.5px;
+    font-size: 5px;
     font-weight: 700;
-    margin-bottom: 1px;
+    margin-bottom: 0.5px;
 }
 
 .mock-notif-text {
-    font-size: 5.5px;
+    font-size: 4px;
     color: rgba(255,255,255,0.8);
     line-height: 1.4;
 }
 
 .mock-notif-time {
-    font-size: 5px;
+    font-size: 3.5px;
     color: rgba(255,255,255,0.5);
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 0.5px;
 }
 
 /* --- Mock 3 & 4: カレンダー共通 --- */

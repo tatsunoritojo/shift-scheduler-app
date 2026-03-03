@@ -122,22 +122,51 @@
                     <h3>従業員にシフト提出を依頼</h3>
                     <p>ワンタップで全員に通知。「今月のシフト出してね」の連絡はもう要りません。</p>
                 </div>
-                <div class="lp-phone-frame">
-                    <div class="lp-phone-notch"></div>
-                    <div class="lp-screenshot" id="ss-notify">
-                        <div class="mock-lockscreen">
-                            <div class="mock-sbar"><span>9:41</span><span>☰</span></div>
-                            <div class="mock-lock-time">9:41</div>
-                            <div class="mock-lock-date">3月2日 月曜日</div>
-                            <div class="mock-notif">
-                                <div class="mock-notif-icon">シ</div>
-                                <div class="mock-notif-body">
-                                    <div class="mock-notif-title">シフリー</div>
-                                    <div class="mock-notif-text">3月のシフト希望を提出してください（締切: 3/10）</div>
+                <div class="mock-dual" id="ss-notify">
+                    <!-- 管理者側 -->
+                    <div>
+                        <div class="mock-dual-phone">
+                            <div class="mock-dual-notch"></div>
+                            <div class="mock-dual-screen">
+                                <div class="mock-admin-notify">
+                                    <div class="mock-hdr"><span class="mock-hdr-app">シフリー</span><span class="mock-bdg">管理者</span></div>
+                                    <div class="mock-admin-notify-body">
+                                        <div class="mock-confirm">
+                                            <div class="mock-confirm-title">リマインドを送信しますか？</div>
+                                            <div class="mock-confirm-text">未提出のスタッフにメールで通知します。</div>
+                                            <div class="mock-confirm-actions">
+                                                <span class="mock-btn mock-btn-outline">キャンセル</span>
+                                                <span class="mock-btn mock-btn-primary">送信</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mock-notif-time">今</div>
                             </div>
                         </div>
+                        <div class="mock-dual-label">管理者</div>
+                    </div>
+                    <span class="mock-dual-arrow">→</span>
+                    <!-- 従業員側 -->
+                    <div>
+                        <div class="mock-dual-phone">
+                            <div class="mock-dual-notch"></div>
+                            <div class="mock-dual-screen">
+                                <div class="mock-lockscreen">
+                                    <div class="mock-sbar"><span>9:41</span><span>☰</span></div>
+                                    <div class="mock-lock-time">9:41</div>
+                                    <div class="mock-lock-date">3月2日 月曜日</div>
+                                    <div class="mock-notif">
+                                        <div class="mock-notif-icon">シ</div>
+                                        <div class="mock-notif-body">
+                                            <div class="mock-notif-title">シフリー</div>
+                                            <div class="mock-notif-text">3月のシフト希望を提出してください（締切: 3/10）</div>
+                                        </div>
+                                        <div class="mock-notif-time">今</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mock-dual-label">スタッフ</div>
                     </div>
                 </div>
             </div>
