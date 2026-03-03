@@ -966,6 +966,137 @@
     margin-top: 1px;
 }
 
+/* --- Mock 3: ポップアップオーバーレイ --- */
+.mock-popup-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(1px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+}
+
+.mock-popup {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    width: calc(100% - 24px);
+    max-width: 180px;
+    overflow: hidden;
+}
+
+.mock-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    border-bottom: 0.5px solid var(--color-neutral-200);
+}
+
+.mock-popup-date {
+    font-size: 7px;
+    font-weight: 700;
+    color: var(--color-neutral-800);
+}
+
+.mock-popup-close {
+    font-size: 9px;
+    color: var(--color-neutral-400);
+    cursor: default;
+    line-height: 1;
+}
+
+.mock-popup-section {
+    padding: 5px 8px;
+}
+
+.mock-popup-label {
+    font-size: 4.5px;
+    font-weight: 600;
+    color: var(--color-neutral-500);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.mock-popup-value {
+    font-size: 6px;
+    color: var(--color-neutral-700);
+}
+
+/* Toggle switch inside popup */
+.mock-popup-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mock-popup-toggle-track {
+    width: 22px;
+    height: 12px;
+    border-radius: 6px;
+    background: var(--color-primary-500);
+    position: relative;
+}
+
+.mock-popup-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 1.5px;
+    right: 1.5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2);
+}
+
+.mock-popup-toggle-label {
+    font-size: 5.5px;
+    font-weight: 600;
+    color: var(--color-primary-600);
+}
+
+/* Time inputs inside popup */
+.mock-popup-time {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 4px;
+}
+
+.mock-popup-time-input {
+    background: #fff;
+    border: 0.5px solid var(--color-neutral-200);
+    border-radius: 3px;
+    padding: 2.5px 4px;
+    font-size: 5.5px;
+    color: var(--color-neutral-800);
+    text-align: center;
+    flex: 1;
+}
+
+.mock-popup-time-sep {
+    font-size: 5px;
+    color: var(--color-neutral-400);
+}
+
+.mock-popup-actions {
+    display: flex;
+    gap: 4px;
+    padding: 4px 8px 6px;
+}
+
+.mock-popup-actions .mock-btn {
+    flex: 1;
+    padding: 3px 0;
+    font-size: 5px;
+    border-radius: 3px;
+}
+
 /* --- Mock 3 & 4: カレンダー共通 --- */
 .mock-cal-head {
     display: grid;
