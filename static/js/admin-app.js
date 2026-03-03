@@ -4,6 +4,7 @@ import { renderCalendar } from './modules/calendar-grid.js';
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
 import { escapeHtml } from './modules/escape-html.js';
 import { showConfirmDialog } from './modules/ui-dialogs.js';
+import { setLoading, withLoading } from './modules/btn-loading.js';
 import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt } from './modules/event-utils.js';
 
 let currentUser = null;
@@ -548,33 +549,65 @@ function showQRCodeFullscreen(url) {
 }
 
 async function generateInviteCode() {
-    try {
-        await api.post('/api/admin/invite-code');
-        showToast('招待コードを生成しました', 'success');
-        membersTabLoaded = false;
-        await loadMembersTab();
-    } catch (e) {
-        showToast(`生成に失敗しました: ${e.message}`, 'error');
+    const hasExisting = document.getElementById('invite-code-content')?.style.display !== 'none';
+    const doGenerate = async () => {
+        const btn = document.getElementById('btn-regenerate-invite-code') || document.getElementById('btn-generate-invite-code');
+        await withLoading(btn, async () => {
+            await api.post('/api/admin/invite-code');
+            showToast('招待コードを生成しました', 'success');
+            membersTabLoaded = false;
+            await loadMembersTab();
+        });
+    };
+    if (hasExisting) {
+        showConfirmDialog(
+            '招待コードを再生成しますか？',
+            '現在のコードは無効になり、既存の招待リンクやQRコードが使えなくなります。',
+            'btn-warning',
+            '再生成する',
+            async () => {
+                try { await doGenerate(); }
+                catch (e) { showToast(`生成に失敗しました: ${e.message}`, 'error'); }
+            }
+        );
+    } else {
+        try { await doGenerate(); }
+        catch (e) { showToast(`生成に失敗しました: ${e.message}`, 'error'); }
     }
 }
 
 function copyInviteUrl() {
     const input = document.getElementById('invite-url-display');
+    const btn = document.getElementById('btn-copy-invite-url');
     if (!input || !input.value) return;
     navigator.clipboard.writeText(input.value).then(
-        () => showToast('リンクをコピーしました', 'success'),
+        () => {
+            if (btn) {
+                const original = btn.innerHTML;
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> コピーしました';
+                btn.classList.add('btn-copied');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.remove('btn-copied');
+                    if (window.lucide) lucide.createIcons();
+                }, 2000);
+            }
+        },
         () => showToast('コピーに失敗しました', 'error')
     );
 }
 
 async function toggleInviteCode(enabled) {
+    const toggle = document.getElementById('invite-code-enabled-toggle');
+    toggle.disabled = true;
     try {
         await api.put('/api/admin/invite-code', { enabled });
         showToast(enabled ? '招待リンクを有効にしました' : '招待リンクを無効にしました', 'success');
     } catch (e) {
         showToast(`更新に失敗しました: ${e.message}`, 'error');
-        // Revert toggle
-        document.getElementById('invite-code-enabled-toggle').checked = !enabled;
+        toggle.checked = !enabled;
+    } finally {
+        toggle.disabled = false;
     }
 }
 
@@ -589,13 +622,22 @@ async function loadInvitations() {
         const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
         const rows = data.map(t => {
             const valid = t.is_valid;
-            const status = t.used_at ? '使用済み' : (valid ? '有効' : '期限切れ');
-            const statusColor = t.used_at ? 'var(--color-neutral-400)' : (valid ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)');
+            let badgeClass, badgeLabel;
+            if (t.used_at) {
+                badgeClass = 'badge-invite-accepted';
+                badgeLabel = '使用済み';
+            } else if (valid) {
+                badgeClass = 'badge-invite-pending';
+                badgeLabel = '有効';
+            } else {
+                badgeClass = 'badge-invite-expired';
+                badgeLabel = '期限切れ';
+            }
             const expires = t.expires_at ? new Date(t.expires_at).toLocaleString('ja-JP') : '-';
             return `<tr>
                 <td>${escapeHtml(t.email || '(制限なし)')}</td>
                 <td>${ROLE_LABELS[t.role] || t.role}</td>
-                <td style="color:${statusColor}">${status}</td>
+                <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                 <td style="font-size:0.85em;">${expires}</td>
                 <td>${valid && !t.used_at ? `<button class="btn btn-outline btn-sm" data-action="revokeInvitation" data-id="${t.id}" title="取消"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}</td>
             </tr>`;
@@ -610,17 +652,20 @@ async function loadInvitations() {
 }
 
 async function createInvitation() {
+    const btn = document.getElementById('btn-create-invitation');
     const email = document.getElementById('invitation-email').value.trim();
     const role = document.getElementById('invitation-role').value;
     const expiresHours = parseInt(document.getElementById('invitation-expires').value, 10) || 72;
     const body = { role, expires_hours: expiresHours };
     if (email) body.email = email;
     try {
-        const result = await api.post('/api/admin/invitations', body);
-        showToast('招待を作成しました', 'success');
-        document.getElementById('invitation-email').value = '';
-        await loadInvitations();
-        if (window.lucide) lucide.createIcons();
+        await withLoading(btn, async () => {
+            await api.post('/api/admin/invitations', body);
+            showToast('招待を作成しました', 'success');
+            document.getElementById('invitation-email').value = '';
+            await loadInvitations();
+            if (window.lucide) lucide.createIcons();
+        });
     } catch (e) {
         showToast(`招待の作成に失敗しました: ${e.message}`, 'error');
     }
@@ -661,7 +706,7 @@ async function loadMembers() {
                 <td>${escapeHtml(m.user_name || '-')}</td>
                 <td style="font-size:0.85em;">${escapeHtml(m.user_email || '-')}</td>
                 <td>
-                    <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberRole" data-member-id="${m.id}" ${isSelf ? 'disabled' : ''}>
+                    <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberRole" data-member-id="${m.id}" data-previous-role="${m.role}" ${isSelf ? 'disabled' : ''}>
                         ${['admin', 'owner', 'worker'].map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
                     </select>
                 </td>
@@ -679,14 +724,30 @@ async function loadMembers() {
 }
 
 async function changeMemberRole(memberId, newRole) {
-    try {
-        await api.put(`/api/admin/members/${memberId}/role`, { role: newRole });
-        showToast('ロールを変更しました', 'success');
-    } catch (e) {
-        showToast(`ロール変更に失敗しました: ${e.message}`, 'error');
-        await loadMembers();
-        if (window.lucide) lucide.createIcons();
-    }
+    const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+    const select = document.querySelector(`[data-action="changeMemberRole"][data-member-id="${memberId}"]`);
+    const previousValue = select ? select.dataset.previousRole : null;
+
+    showConfirmDialog(
+        'ロールを変更しますか？',
+        `このメンバーのロールを「${ROLE_LABELS[newRole] || newRole}」に変更します。`,
+        'btn-primary',
+        '変更する',
+        async () => {
+            try {
+                await api.put(`/api/admin/members/${memberId}/role`, { role: newRole });
+                showToast('ロールを変更しました', 'success');
+            } catch (e) {
+                showToast(`ロール変更に失敗しました: ${e.message}`, 'error');
+                await loadMembers();
+                if (window.lucide) lucide.createIcons();
+            }
+        },
+        () => {
+            // Revert select to previous value on cancel
+            if (select && previousValue) select.value = previousValue;
+        }
+    );
 }
 
 async function removeMember(id, name) {

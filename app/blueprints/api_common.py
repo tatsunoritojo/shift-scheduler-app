@@ -131,6 +131,18 @@ def invite_page():
     return current_app.send_static_file('pages/invite.html')
 
 
+@api_common_bp.route('/callback-landing')
+def callback_landing_page():
+    """Intermediate page shown after OAuth callback for invite joins."""
+    return current_app.send_static_file('pages/callback-landing.html')
+
+
+@api_common_bp.route('/ui-preview')
+def ui_preview_page():
+    """Dev-only: preview page for UI components."""
+    return current_app.send_static_file('pages/ui-preview.html')
+
+
 @api_common_bp.route('/api/invite/info')
 @limiter.limit("20 per minute")
 def invite_info():
@@ -142,9 +154,11 @@ def invite_info():
     token = request.args.get('token')
 
     if code:
-        org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
+        org = Organization.query.filter_by(invite_code=code).first()
         if not org or not org.is_active:
-            return jsonify({'error': 'Invalid or disabled invite code'}), 404
+            return jsonify({'error': 'Invalid invite code', 'code': 'INVITE_CODE_NOT_FOUND'}), 404
+        if not org.invite_code_enabled:
+            return jsonify({'error': 'Invite code is disabled', 'code': 'INVITE_CODE_DISABLED'}), 403
         login_url = f"/auth/invite/code/{code}"
         return jsonify({
             'organization_name': org.name,
@@ -154,8 +168,12 @@ def invite_info():
 
     if token:
         invite = InvitationToken.query.filter_by(token=token).first()
-        if not invite or not invite.is_valid:
-            return jsonify({'error': 'Invalid or expired invitation'}), 404
+        if not invite:
+            return jsonify({'error': 'Invalid invitation', 'code': 'INVITATION_NOT_FOUND'}), 404
+        if invite.used_at:
+            return jsonify({'error': 'Invitation already used', 'code': 'INVITATION_USED'}), 410
+        if not invite.is_valid:
+            return jsonify({'error': 'Invitation expired', 'code': 'INVITATION_EXPIRED'}), 410
         login_url = f"/auth/invite/{token}"
         return jsonify({
             'organization_name': invite.organization.name,
@@ -163,7 +181,7 @@ def invite_info():
             'login_url': login_url,
         })
 
-    return jsonify({'error': 'code or token parameter is required'}), 400
+    return jsonify({'error': 'code or token parameter is required', 'code': 'MISSING_PARAM'}), 400
 
 
 @api_common_bp.route('/vacancy/respond')

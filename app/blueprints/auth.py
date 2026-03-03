@@ -156,6 +156,8 @@ def callback():
     auth_logger.info("LOGIN_SUCCESS: user_id=%s email=%s role=%s", user.id, user.email, user.role)
 
     # Build redirect response and clear invite cookies
+    joined_via_invite = invitation is not None or invite_code_org is not None
+
     if not user.organization_id:
         auth_logger.info("LOGIN_NO_ORG: user_id=%s redirected to /no-organization", user.id)
         dest = '/no-organization'
@@ -166,7 +168,12 @@ def callback():
     else:
         dest = '/worker'
 
-    resp = make_response(redirect(dest))
+    if joined_via_invite and user.organization_id:
+        from urllib.parse import urlencode
+        landing_params = urlencode({'dest': dest, 'joined': '1'})
+        resp = make_response(redirect(f'/callback-landing?{landing_params}'))
+    else:
+        resp = make_response(redirect(dest))
     _clear_invite_cookies(resp)
     return resp
 
