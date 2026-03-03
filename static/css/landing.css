@@ -521,107 +521,115 @@
 .mock-btn-green { background: #22c55e; }
 .mock-btn-red { background: #ef4444; }
 
-/* --- Mock 1: 営業時間 --- */
-.mock-oh-help {
-    font-size: 5px;
-    color: var(--color-neutral-500);
-    margin-bottom: 4px;
+/* --- Mock 1: GCal 予定編集画面 --- */
+.mock-gcal-edit {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    font-family: 'Google Sans', Roboto, -apple-system, sans-serif;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+.mock-gcal-edit-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    flex-shrink: 0;
+}
+
+.mock-gcal-edit-close {
+    width: 14px;
+    height: 14px;
+    color: #5f6368;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mock-gcal-edit-save {
+    background: #1a73e8;
+    color: #fff;
+    font-size: 5.5px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 3px;
+}
+
+.mock-gcal-edit-body {
+    flex: 1;
+    padding: 0 14px 10px;
+    overflow-y: auto;
+}
+
+.mock-gcal-edit-title {
+    font-size: 12px;
+    font-weight: 400;
+    color: #202124;
+    border: none;
+    border-bottom: 1.5px solid #1a73e8;
+    padding: 4px 0 6px;
+    margin-bottom: 14px;
+    width: 100%;
+}
+
+.mock-gcal-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 6px;
+    color: #3c4043;
+}
+
+.mock-gcal-edit-icon {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    font-size: 8px;
+    flex-shrink: 0;
+}
+
+.mock-gcal-edit-label {
+    font-size: 6px;
+    color: #3c4043;
     line-height: 1.4;
 }
 
-.mock-oh-row {
-    display: flex;
-    align-items: center;
-    padding: 2px 0;
-    font-size: 5.5px;
-    gap: 3px;
+.mock-gcal-edit-label strong {
+    font-weight: 500;
+    color: #202124;
 }
 
-.mock-oh-d {
-    width: 14px;
-    font-weight: 600;
-    color: var(--color-neutral-700);
-    flex-shrink: 0;
-    font-size: 5.5px;
+.mock-gcal-edit-divider {
+    height: 1px;
+    background: #e8eaed;
+    margin: 4px 0;
 }
 
-.mock-oh-d.sun { color: #ef4444; }
-.mock-oh-d.sat { color: #3b82f6; }
-
-/* Mini form-control style (mimics real app inputs) */
-.mock-oh-input {
-    background: #fff;
-    border: 0.5px solid var(--color-neutral-200);
-    border-radius: 2px;
-    padding: 1.5px 3px;
+.mock-gcal-edit-chip {
+    display: inline-block;
     font-size: 5px;
-    color: var(--color-neutral-800);
-    min-width: 24px;
-    text-align: center;
+    color: #1a73e8;
+    background: #e8f0fe;
+    padding: 1.5px 5px;
+    border-radius: 3px;
+    font-weight: 500;
 }
 
-.mock-oh-sep {
-    font-size: 5px;
-    color: var(--color-neutral-400);
-}
-
-/* Mini checkbox */
-.mock-oh-chk {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    margin-left: auto;
-    font-size: 4.5px;
-    color: var(--color-neutral-500);
+.mock-gcal-edit-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #039be5;
     flex-shrink: 0;
-}
-
-.mock-oh-chk-box {
-    width: 6px;
-    height: 6px;
-    border: 0.5px solid var(--color-neutral-300);
-    border-radius: 1px;
-    background: #fff;
-    flex-shrink: 0;
-}
-
-.mock-oh-chk-box.checked {
-    background: var(--color-primary-500);
-    border-color: var(--color-primary-500);
-}
-
-.mock-oh-row.is-closed .mock-oh-input {
-    background: var(--color-neutral-50);
-    color: var(--color-neutral-300);
-}
-
-.mock-oh-row.is-closed .mock-oh-d {
-    color: var(--color-neutral-400);
-}
-
-.mock-exc-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 5px;
-    padding: 2px 0;
-}
-
-.mock-exc-date {
-    font-weight: 600;
-    color: var(--color-neutral-700);
-}
-
-.mock-exc-badge {
-    font-size: 4.5px;
-    font-weight: 600;
-    padding: 0.5px 4px;
-    border-radius: 100px;
-}
-
-.mock-exc-badge.closed {
-    color: #ef4444;
-    background: #fef2f2;
 }
 
 /* --- Mock 2: ロック画面通知 --- */
