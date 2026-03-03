@@ -3,6 +3,8 @@ import { showToast } from './modules/notification.js';
 import { renderCalendar } from './modules/calendar-grid.js';
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
 import { escapeHtml } from './modules/escape-html.js';
+import { showConfirmDialog } from './modules/ui-dialogs.js';
+import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt } from './modules/event-utils.js';
 
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
@@ -413,6 +415,22 @@ function setupStaticHandlers() {
     document.getElementById('btn-submit-approval').addEventListener('click', () => submitForApproval());
     document.getElementById('confirm-btn').addEventListener('click', () => confirmSchedule());
     document.getElementById('btn-refresh-builder').addEventListener('click', () => loadBuilderData());
+
+    // Members tab
+    const btnGenerate = document.getElementById('btn-generate-invite-code');
+    if (btnGenerate) btnGenerate.addEventListener('click', () => generateInviteCode());
+    const btnRegenerate = document.getElementById('btn-regenerate-invite-code');
+    if (btnRegenerate) btnRegenerate.addEventListener('click', () => generateInviteCode());
+    const btnCopy = document.getElementById('btn-copy-invite-url');
+    if (btnCopy) btnCopy.addEventListener('click', () => copyInviteUrl());
+    const enableToggle = document.getElementById('invite-code-enabled-toggle');
+    if (enableToggle) enableToggle.addEventListener('change', (e) => toggleInviteCode(e.target.checked));
+    const btnCreateInvitation = document.getElementById('btn-create-invitation');
+    if (btnCreateInvitation) btnCreateInvitation.addEventListener('click', () => createInvitation());
+
+    // Reminder settings
+    const btnSaveReminder = document.getElementById('btn-save-reminder-settings');
+    if (btnSaveReminder) btnSaveReminder.addEventListener('click', () => saveReminderSettings());
 }
 
 function setupDelegatedHandlers() {
@@ -431,6 +449,11 @@ function setupDelegatedHandlers() {
             case 'updatePeriodStatus': updatePeriodStatus(Number(target.dataset.id), target.dataset.status); break;
             case 'closeAdminDayPopup': closeAdminDayPopup(); break;
             case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
+            case 'revokeInvitation': revokeInvitation(Number(target.dataset.id)); break;
+            case 'removeMember': removeMember(Number(target.dataset.id), target.dataset.name); break;
+            case 'openVacancyDialog': openVacancyDialog(Number(target.dataset.entryId)); break;
+            case 'cancelVacancy': cancelVacancy(Number(target.dataset.id)); break;
+            case 'sendPeriodReminder': sendPeriodReminder(Number(target.dataset.periodId)); break;
         }
     });
 
@@ -441,7 +464,248 @@ function setupDelegatedHandlers() {
         if (target.dataset.action === 'applyWorkerTime') {
             applyWorkerTime(Number(target.dataset.userId), target.dataset.date);
         }
+        if (target.dataset.action === 'changeMemberRole') {
+            changeMemberRole(Number(target.dataset.memberId), target.value);
+        }
     });
+}
+
+// --- Members Tab ---
+
+let membersTabLoaded = false;
+
+async function loadMembersTab() {
+    if (membersTabLoaded) return;
+    membersTabLoaded = true;
+    await Promise.all([loadInviteCode(), loadInvitations(), loadMembers()]);
+    if (window.lucide) lucide.createIcons();
+}
+
+let currentOrgName = '';
+
+async function loadInviteCode() {
+    try {
+        const data = await api.get('/api/admin/invite-code');
+        if (data.organization_name) currentOrgName = data.organization_name;
+        if (data.invite_code) {
+            const baseUrl = window.location.origin;
+            const url = `${baseUrl}/invite?code=${data.invite_code}`;
+            document.getElementById('invite-url-display').value = url;
+            document.getElementById('invite-code-enabled-toggle').checked = data.invite_code_enabled;
+            document.getElementById('invite-code-content').style.display = '';
+            document.getElementById('invite-code-empty').style.display = 'none';
+            renderQRCode(url);
+        } else {
+            document.getElementById('invite-code-content').style.display = 'none';
+            document.getElementById('invite-code-empty').style.display = '';
+        }
+    } catch (e) {
+        console.error('Failed to load invite code:', e);
+    }
+}
+
+function renderQRCode(url) {
+    const container = document.getElementById('invite-qr-code');
+    if (!container || typeof qrcode === 'undefined') return;
+    container.innerHTML = '';
+    try {
+        const qr = qrcode(0, 'M');
+        qr.addData(url);
+        qr.make();
+        container.innerHTML = qr.createSvgTag(4, 0);
+        container.onclick = () => showQRCodeFullscreen(url);
+    } catch (e) {
+        container.innerHTML = '<span style="color:var(--color-neutral-400);font-size:0.85em;">QRコード生成エラー</span>';
+    }
+}
+
+function showQRCodeFullscreen(url) {
+    if (typeof qrcode === 'undefined') return;
+    const orgName = currentOrgName || 'シフリー';
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0', zIndex: '9999',
+        background: '#fff', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+    });
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const svgHtml = qr.createSvgTag(10, 0);
+    overlay.innerHTML = `
+        <div style="text-align:center;padding:24px;">
+            <p style="font-size:1.1em;color:#3b82f6;font-weight:700;letter-spacing:0.05em;margin-bottom:8px;">シフリー</p>
+            <p style="font-size:1.6em;font-weight:700;color:#1e293b;margin-bottom:32px;">${orgName}</p>
+            <div style="display:inline-block;padding:16px;border-radius:16px;border:2px solid #e2e8f0;">${svgHtml}</div>
+            <p style="color:#94a3b8;font-size:0.85em;margin-top:32px;">スキャンして組織に参加</p>
+            <p style="color:#cbd5e1;font-size:0.75em;margin-top:12px;">タップして閉じる</p>
+        </div>`;
+    overlay.onclick = () => overlay.remove();
+    document.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', handler); }
+    });
+    document.body.appendChild(overlay);
+}
+
+async function generateInviteCode() {
+    try {
+        await api.post('/api/admin/invite-code');
+        showToast('招待コードを生成しました', 'success');
+        membersTabLoaded = false;
+        await loadMembersTab();
+    } catch (e) {
+        showToast(`生成に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+function copyInviteUrl() {
+    const input = document.getElementById('invite-url-display');
+    if (!input || !input.value) return;
+    navigator.clipboard.writeText(input.value).then(
+        () => showToast('リンクをコピーしました', 'success'),
+        () => showToast('コピーに失敗しました', 'error')
+    );
+}
+
+async function toggleInviteCode(enabled) {
+    try {
+        await api.put('/api/admin/invite-code', { enabled });
+        showToast(enabled ? '招待リンクを有効にしました' : '招待リンクを無効にしました', 'success');
+    } catch (e) {
+        showToast(`更新に失敗しました: ${e.message}`, 'error');
+        // Revert toggle
+        document.getElementById('invite-code-enabled-toggle').checked = !enabled;
+    }
+}
+
+async function loadInvitations() {
+    try {
+        const data = await api.get('/api/admin/invitations');
+        const container = document.getElementById('invitations-table');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">招待はありません</p>';
+            return;
+        }
+        const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+        const rows = data.map(t => {
+            const valid = t.is_valid;
+            const status = t.used_at ? '使用済み' : (valid ? '有効' : '期限切れ');
+            const statusColor = t.used_at ? 'var(--color-neutral-400)' : (valid ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)');
+            const expires = t.expires_at ? new Date(t.expires_at).toLocaleString('ja-JP') : '-';
+            return `<tr>
+                <td>${escapeHtml(t.email || '(制限なし)')}</td>
+                <td>${ROLE_LABELS[t.role] || t.role}</td>
+                <td style="color:${statusColor}">${status}</td>
+                <td style="font-size:0.85em;">${expires}</td>
+                <td>${valid && !t.used_at ? `<button class="btn btn-outline btn-sm" data-action="revokeInvitation" data-id="${t.id}" title="取消"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
+            <thead><tr><th>メール</th><th>ロール</th><th>状態</th><th>有効期限</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch (e) {
+        console.error('Failed to load invitations:', e);
+    }
+}
+
+async function createInvitation() {
+    const email = document.getElementById('invitation-email').value.trim();
+    const role = document.getElementById('invitation-role').value;
+    const expiresHours = parseInt(document.getElementById('invitation-expires').value, 10) || 72;
+    const body = { role, expires_hours: expiresHours };
+    if (email) body.email = email;
+    try {
+        const result = await api.post('/api/admin/invitations', body);
+        showToast('招待を作成しました', 'success');
+        document.getElementById('invitation-email').value = '';
+        await loadInvitations();
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        showToast(`招待の作成に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function revokeInvitation(id) {
+    showConfirmDialog(
+        '招待を取り消しますか？',
+        '取り消すと、このリンクは使えなくなります。',
+        'btn-danger',
+        '取り消す',
+        async () => {
+            try {
+                await api.delete(`/api/admin/invitations/${id}`);
+                showToast('招待を取り消しました', 'success');
+                await loadInvitations();
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                showToast(`取消に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+async function loadMembers() {
+    try {
+        const data = await api.get('/api/admin/members');
+        const container = document.getElementById('members-table');
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">メンバーはいません</p>';
+            return;
+        }
+        const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+        const rows = data.map(m => {
+            const isSelf = currentUser && m.user_id === currentUser.id;
+            const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('ja-JP') : '-';
+            return `<tr>
+                <td>${escapeHtml(m.user_name || '-')}</td>
+                <td style="font-size:0.85em;">${escapeHtml(m.user_email || '-')}</td>
+                <td>
+                    <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberRole" data-member-id="${m.id}" ${isSelf ? 'disabled' : ''}>
+                        ${['admin', 'owner', 'worker'].map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
+                    </select>
+                </td>
+                <td style="font-size:0.85em;">${joined}</td>
+                <td>${!isSelf ? `<button class="btn btn-outline btn-sm" data-action="removeMember" data-id="${m.id}" data-name="${escapeHtml(m.user_name || m.user_email || '')}" title="除外"><i data-lucide="user-x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
+            <thead><tr><th>名前</th><th>メール</th><th>ロール</th><th>参加日</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch (e) {
+        console.error('Failed to load members:', e);
+    }
+}
+
+async function changeMemberRole(memberId, newRole) {
+    try {
+        await api.put(`/api/admin/members/${memberId}/role`, { role: newRole });
+        showToast('ロールを変更しました', 'success');
+    } catch (e) {
+        showToast(`ロール変更に失敗しました: ${e.message}`, 'error');
+        await loadMembers();
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+async function removeMember(id, name) {
+    showConfirmDialog(
+        `${name || 'このメンバー'} を除外しますか？`,
+        '除外すると、このユーザーは組織にアクセスできなくなります。',
+        'btn-danger',
+        '除外する',
+        async () => {
+            try {
+                await api.delete(`/api/admin/members/${id}`);
+                showToast('メンバーを除外しました', 'success');
+                await loadMembers();
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                showToast(`除外に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 }
 
 async function init() {
@@ -451,12 +715,14 @@ async function init() {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
         initSyncDateRange();
-        const [statusData] = await Promise.all([
+        const results = await Promise.allSettled([
             loadSyncStatus(),
             loadOpeningHours(),
             loadExceptions(),
             loadPeriods(),
+            loadReminderSettings(),
         ]);
+        const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
         // Show preview calendar based on calendar exceptions range
         if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
             renderImportPreview(
@@ -476,7 +742,12 @@ function switchTab(tabName) {
     document.getElementById(`tab-${tabName}`).classList.add('active');
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
-    if (tabName === 'builder') loadBuilderPeriodSelect();
+    if (tabName === 'builder') {
+        loadBuilderPeriodSelect();
+        loadChangeLog();
+        loadVacancies();
+    }
+    if (tabName === 'members') loadMembersTab();
 }
 
 // --- Opening Hours ---
@@ -714,6 +985,7 @@ async function loadPeriods() {
                         <td>
                             ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
                             ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
+                            ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -852,6 +1124,7 @@ function buildDayAggregatedData() {
                 start_time: slot ? slot.start_time : null,
                 end_time: slot ? slot.end_time : null,
                 is_assigned: !!entry,
+                entry_id: entry ? entry.id : null,
                 assigned_start: entry ? entry.start_time : null,
                 assigned_end: entry ? entry.end_time : null,
             });
@@ -947,16 +1220,8 @@ function renderBuilderCalendar() {
 
 // --- Calendar Event Helpers ---
 
-function isAllDayEvent(event) {
-    return event.start && event.start.length === 10;
-}
-
 function getEventsForDate(dateStr) {
-    return adminCalendarEvents.filter(event => {
-        const eventStart = (event.start || '').substring(0, 10);
-        const eventEnd = (event.end || '').substring(0, 10);
-        return eventStart === dateStr || (eventStart < dateStr && eventEnd > dateStr);
-    });
+    return _getEventsForDate(adminCalendarEvents, dateStr);
 }
 
 function renderAdminEventsSection(dateStr) {
@@ -1128,6 +1393,7 @@ function createWorkerCard(worker, dateStr, idx) {
                 <span class="time-separator">〜</span>
                 <input type="time" class="form-control popup-time-input" value="${aEnd}"
                     id="assigned-end-${worker.user_id}" data-action="applyWorkerTime" data-user-id="${worker.user_id}" data-date="${dateStr}">
+                ${worker.entry_id ? `<button class="btn btn-outline btn-sm" data-action="openVacancyDialog" data-entry-id="${worker.entry_id}" title="欠員補充" style="margin-left:4px;padding:2px 6px;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i></button>` : ''}
             </div>
         `;
     }
@@ -1257,12 +1523,6 @@ function applyWorkerTime(userId, dateStr) {
 
 // --- Sidebar renderers ---
 
-function formatSubmittedAt(isoStr) {
-    if (!isoStr) return '';
-    const d = new Date(isoStr);
-    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 function renderSubmissionsSummary(submissions) {
     const container = document.getElementById('submissions-summary');
     if (!submissions || submissions.length === 0) {
@@ -1375,26 +1635,188 @@ async function confirmSchedule() {
     );
 }
 
-function showConfirmDialog(title, message, btnClass, btnLabel, onConfirm) {
-    const overlay = document.createElement('div');
-    overlay.className = 'confirm-dialog-overlay';
-    overlay.innerHTML = `
-        <div class="confirm-dialog">
-            <h3>${title}</h3>
-            <p>${message}</p>
-            <div class="confirm-dialog-actions">
-                <button class="btn btn-outline" id="confirm-cancel">キャンセル</button>
-                <button class="btn ${btnClass}" id="confirm-ok">${btnLabel}</button>
+// --- Reminder Settings ---
+
+async function loadReminderSettings() {
+    try {
+        const data = await api.get('/api/admin/reminder-settings');
+        const daysDeadline = document.getElementById('reminder-days-deadline');
+        const timeDeadline = document.getElementById('reminder-time-deadline');
+        const daysShift = document.getElementById('reminder-days-shift');
+        const timeShift = document.getElementById('reminder-time-shift');
+        if (daysDeadline) daysDeadline.value = data.reminder_days_before_deadline ?? 1;
+        if (timeDeadline) timeDeadline.value = data.reminder_time_deadline || '09:00';
+        if (daysShift) daysShift.value = data.reminder_days_before_shift ?? 1;
+        if (timeShift) timeShift.value = data.reminder_time_shift || '21:00';
+    } catch (e) {
+        console.warn('Failed to load reminder settings:', e);
+    }
+}
+
+async function saveReminderSettings() {
+    try {
+        await api.put('/api/admin/reminder-settings', {
+            reminder_days_before_deadline: Number(document.getElementById('reminder-days-deadline').value),
+            reminder_time_deadline: document.getElementById('reminder-time-deadline').value,
+            reminder_days_before_shift: Number(document.getElementById('reminder-days-shift').value),
+            reminder_time_shift: document.getElementById('reminder-time-shift').value,
+        });
+        showToast('リマインド設定を保存しました', 'success');
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function sendPeriodReminder(periodId) {
+    showConfirmDialog(
+        '未提出者にリマインドを送信しますか？',
+        'まだシフト希望を提出していないアルバイトにメールで通知します。',
+        'btn-primary',
+        '送信する',
+        async () => {
+            try {
+                const result = await api.post(`/api/admin/reminders/send/${periodId}`);
+                showToast(`リマインド送信: ${result.sent}件送信, ${result.skipped}件スキップ`, 'success');
+            } catch (e) {
+                showToast(`送信に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+// --- Vacancy Management ---
+
+async function loadVacancies() {
+    const container = document.getElementById('vacancy-list');
+    if (!container) return;
+    try {
+        const vacancies = await api.get('/api/admin/vacancy');
+        if (!vacancies || vacancies.length === 0) {
+            container.innerHTML = '<p class="help-text">欠員補充リクエストはありません</p>';
+            return;
+        }
+        const statusLabel = { open: '募集中', notified: '通知済', accepted: '補充完了', expired: '期限切れ', cancelled: '取消' };
+        const statusColor = { open: '#3b82f6', notified: '#f59e0b', accepted: '#22c55e', expired: '#6b7280', cancelled: '#ef4444' };
+        container.innerHTML = vacancies.map(v => `
+            <div class="flex-between mb-8" style="padding:8px 0;border-bottom:1px solid var(--color-neutral-100);">
+                <div>
+                    <span style="font-weight:600;">${escapeHtml(v.original_user_name || '不明')}</span>
+                    <span style="color:var(--color-neutral-400);font-size:0.85em;margin-left:8px;">${v.shift_date || ''} ${v.start_time || ''}-${v.end_time || ''}</span>
+                    <span style="color:${statusColor[v.status] || '#666'};font-size:0.82em;margin-left:8px;font-weight:600;">${statusLabel[v.status] || v.status}</span>
+                    ${v.accepted_by_name ? `<span style="color:#22c55e;font-size:0.82em;margin-left:4px;">→ ${escapeHtml(v.accepted_by_name)}</span>` : ''}
+                </div>
+                ${v.status === 'open' || v.status === 'notified' ? `<button class="btn btn-outline btn-sm" data-action="cancelVacancy" data-id="${v.id}" title="キャンセル"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}
             </div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-    overlay.querySelector('#confirm-cancel').onclick = () => overlay.remove();
-    overlay.querySelector('#confirm-ok').onclick = () => {
-        overlay.remove();
-        onConfirm();
-    };
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        container.innerHTML = '<p class="help-text">読み込みに失敗しました</p>';
+    }
+}
+
+async function openVacancyDialog(entryId) {
+    try {
+        const candidates = await api.get(`/api/admin/vacancy/candidates/${entryId}`);
+        if (!candidates || candidates.length === 0) {
+            showToast('候補者が見つかりません（この日に勤務可能な未割当スタッフがいません）', 'warning');
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-dialog-overlay';
+        overlay.innerHTML = `
+            <div class="confirm-dialog" style="max-width:500px;">
+                <h3>欠員補充 — 候補者選択</h3>
+                <p style="color:var(--color-neutral-400);font-size:0.9em;margin-bottom:16px;">候補者を選択して通知を送信します。労働時間が少ない順に並んでいます。</p>
+                <div class="form-group">
+                    <label>理由（任意）</label>
+                    <input type="text" id="vacancy-reason" class="form-control" placeholder="例: 体調不良による欠勤">
+                </div>
+                <div style="max-height:300px;overflow-y:auto;margin-bottom:16px;">
+                    ${candidates.map(c => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--color-neutral-100);cursor:pointer;">
+                            <input type="checkbox" class="vacancy-candidate-cb" value="${c.user_id}" checked>
+                            <span style="flex:1;">
+                                <strong>${escapeHtml(c.user_name)}</strong>
+                                <span style="color:var(--color-neutral-400);font-size:0.85em;margin-left:8px;">週${c.weekly_hours}h</span>
+                            </span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="confirm-dialog-actions">
+                    <button class="btn btn-outline" id="vacancy-dialog-cancel">キャンセル</button>
+                    <button class="btn btn-primary" id="vacancy-dialog-send">通知を送信</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#vacancy-dialog-cancel').onclick = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        overlay.querySelector('#vacancy-dialog-send').onclick = async () => {
+            const selectedIds = [...overlay.querySelectorAll('.vacancy-candidate-cb:checked')].map(cb => Number(cb.value));
+            if (selectedIds.length === 0) {
+                showToast('候補者を選択してください', 'warning');
+                return;
+            }
+            const reason = overlay.querySelector('#vacancy-reason').value;
+            try {
+                const vacancy = await api.post('/api/admin/vacancy', {
+                    schedule_entry_id: entryId,
+                    reason: reason,
+                });
+                await api.post(`/api/admin/vacancy/${vacancy.id}/notify`, {
+                    candidate_user_ids: selectedIds,
+                });
+                showToast('欠員補充通知を送信しました', 'success');
+                overlay.remove();
+                loadVacancies();
+            } catch (e) {
+                showToast(`送信に失敗しました: ${e.message}`, 'error');
+            }
+        };
+    } catch (e) {
+        showToast(`候補者の取得に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function cancelVacancy(id) {
+    showConfirmDialog(
+        '欠員補充リクエストをキャンセルしますか？',
+        'キャンセルすると、候補者への通知は無効になります。',
+        'btn-danger',
+        'キャンセルする',
+        async () => {
+            try {
+                await api.delete(`/api/admin/vacancy/${id}`);
+                showToast('リクエストをキャンセルしました', 'success');
+                loadVacancies();
+            } catch (e) {
+                showToast(`キャンセルに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+// --- Change Log ---
+
+async function loadChangeLog() {
+    const container = document.getElementById('change-log-list');
+    if (!container) return;
+    try {
+        const logs = await api.get('/api/admin/change-log');
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p class="help-text">変更履歴はありません</p>';
+            return;
+        }
+        container.innerHTML = logs.map(l => `
+            <div style="padding:6px 0;border-bottom:1px solid var(--color-neutral-100);font-size:0.85em;">
+                <div><strong>${l.shift_date || ''}</strong> ${escapeHtml(l.original_user_name || '?')} → ${escapeHtml(l.new_user_name || '?')}</div>
+                <div style="color:var(--color-neutral-400);">${l.reason ? escapeHtml(l.reason) : ''} ${l.performed_at ? `(${new Date(l.performed_at).toLocaleDateString('ja-JP')})` : ''}</div>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="help-text">読み込みに失敗しました</p>';
+    }
 }
 
 init().finally(() => { if (window.lucide) lucide.createIcons(); });

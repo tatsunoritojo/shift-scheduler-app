@@ -1007,8 +1007,8 @@
 
         <div class="content">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('settings-tab')">設定</button>
-                <button class="tab-button" onclick="showTab('results-tab')">結果</button>
+                <button class="tab-button active" data-tab="settings-tab">設定</button>
+                <button class="tab-button" data-tab="results-tab">結果</button>
             </div>
 
             <div class="tab-content">
@@ -1059,31 +1059,31 @@
                         <label>除外する曜日</label>
                         <div class="checkbox-group">
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude0" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude0">
                                 <label for="exclude0">日</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude1" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude1">
                                 <label for="exclude1">月</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude2" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude2">
                                 <label for="exclude2">火</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude3" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude3">
                                 <label for="exclude3">水</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude4" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude4">
                                 <label for="exclude4">木</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude5" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude5">
                                 <label for="exclude5">金</label>
                             </div>
                             <div class="checkbox-item">
-                                <input type="checkbox" id="exclude6" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="exclude6">
                                 <label for="exclude6">土</label>
                             </div>
                         </div>
@@ -1149,7 +1149,7 @@
 
                         <div class="form-group">
                             <div class="checkbox-item">
-                                <input type="checkbox" id="allowSplitShifts" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="allowSplitShifts">
                                 <label for="allowSplitShifts" class="tooltip" data-tooltip="1日に複数の時間帯で勤務可能">
                                     分割シフト許可 ⓘ
                                 </label>
@@ -1158,7 +1158,7 @@
 
                         <div class="form-group">
                             <div class="checkbox-item">
-                                <input type="checkbox" id="excludeHolidays" onchange="updateCheckboxUI(this)">
+                                <input type="checkbox" id="excludeHolidays">
                                 <label for="excludeHolidays" class="tooltip" data-tooltip="日本の祝日を出勤不可にする">
                                     祝日を出勤不可にする ⓘ
                                 </label>
@@ -1170,19 +1170,19 @@
 
             <!-- 認証・実行ボタン -->
             <div style="text-align: center; margin: 30px 0;">
-                <button class="btn btn-success" onclick="authenticateGoogle()" id="authButton">
+                <button class="btn btn-success" id="authButton">
                     🔐 Googleアカウント認証
                 </button>
-                <button class="btn" onclick="calculateShifts()" id="calculateButton" disabled>
+                <button class="btn" id="calculateButton" disabled>
                     🔄 シフト可能日を計算
                 </button>
-                <button class="btn btn-special" onclick="showSpecialConditionsDialog()" id="specialConditionsBtn">
+                <button class="btn btn-special" id="specialConditionsBtn">
                     ⚙️ 特殊な条件で検索
                 </button>
-                <button class="btn btn-secondary" onclick="saveSettings()">
+                <button class="btn btn-secondary" id="saveSettingsBtn">
                     💾 設定を保存
                 </button>
-                <button class="btn btn-secondary" onclick="loadSettings()">
+                <button class="btn btn-secondary" id="loadSettingsBtn">
                     📂 設定を読込
                 </button>
             </div>
@@ -1202,10 +1202,10 @@
                             
                             <!-- 表示切り替えボタン -->
                             <div style="text-align: center; margin: 20px 0;">
-                                <button class="view-toggle-btn" onclick="showResultView('calendar')" id="calendarViewBtn">
+                                <button class="view-toggle-btn" id="calendarViewBtn" data-view="calendar">
                                     📅 カレンダー表示
                                 </button>
-                                <button class="view-toggle-btn" onclick="showResultView('list')" id="listViewBtn">
+                                <button class="view-toggle-btn" id="listViewBtn" data-view="list">
                                     📋 リスト表示
                                 </button>
                             </div>
@@ -1261,13 +1261,13 @@
                             </div>
                             
                             <div style="text-align: center; margin-top: 30px;">
-                                <button class="btn btn-success" onclick="exportToPDF()">
+                                <button class="btn btn-success" id="exportPdfBtn">
                                     📄 PDF出力
                                 </button>
-                                <button class="btn btn-secondary" onclick="exportToCSV()">
+                                <button class="btn btn-secondary" id="exportCsvBtn">
                                     📊 CSV出力
                                 </button>
-                                <button class="btn" onclick="testWithDummyData()" style="background: #f59e0b; margin-left: 10px;">
+                                <button class="btn" id="testDummyBtn" style="background: #f59e0b; margin-left: 10px;">
                                     🧪 ダミーデータでテスト
                                 </button>
                             </div>
@@ -1360,6 +1360,48 @@
             document.addEventListener('input', updateSettingsDisplay);
             document.addEventListener('change', updateSettingsDisplay);
 
+            // --- タブ切り替えボタン ---
+            document.querySelectorAll('.tab-button[data-tab]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    showTab(btn.getAttribute('data-tab'));
+                });
+            });
+
+            // --- チェックボックス UI 更新（除外曜日 + 高度な設定） ---
+            ['exclude0','exclude1','exclude2','exclude3','exclude4','exclude5','exclude6',
+             'allowSplitShifts','excludeHolidays'].forEach(function(id) {
+                document.getElementById(id).addEventListener('change', function() {
+                    updateCheckboxUI(this);
+                });
+            });
+
+            // --- 認証・実行ボタン群 ---
+            document.getElementById('authButton').addEventListener('click', authenticateGoogle);
+            document.getElementById('calculateButton').addEventListener('click', calculateShifts);
+            document.getElementById('specialConditionsBtn').addEventListener('click', showSpecialConditionsDialog);
+            document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+            document.getElementById('loadSettingsBtn').addEventListener('click', loadSettings);
+
+            // --- 表示切り替えボタン ---
+            document.querySelectorAll('.view-toggle-btn[data-view]').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    showResultView(btn.getAttribute('data-view'));
+                });
+            });
+
+            // --- エクスポート・テストボタン ---
+            document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
+            document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+            document.getElementById('testDummyBtn').addEventListener('click', testWithDummyData);
+
+            // --- イベント委譲: リスト内のON/OFFトグルボタン ---
+            document.getElementById('shiftResults').addEventListener('click', function(e) {
+                var btn = e.target.closest('[data-toggle-index]');
+                if (btn) {
+                    toggleShiftDay(parseInt(btn.getAttribute('data-toggle-index'), 10));
+                }
+            });
+
             // 初期表示は設定タブ
             showTab('settings-tab');
 
@@ -1379,7 +1421,7 @@
 
             // 指定されたタブコンテンツを表示し、activeクラスを追加
             document.getElementById(tabId).classList.add('active');
-            document.querySelector(`.tab-button[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
 
             // 結果タブに切り替わった際にresultsSectionを表示
             if (tabId === 'results-tab') {
@@ -2032,8 +2074,8 @@
                     `<span class="time-badge unavailable">${shift.reason}</span>`;
 
                 // ON/OFFボタン（利用可能日のみ）
-                const toggleButton = (shift.status === 'available' || shift.status === 'partial') ? 
-                    `<button class="shift-toggle-btn on" id="toggle-${index}" onclick="toggleShiftDay(${index})" data-enabled="true">
+                const toggleButton = (shift.status === 'available' || shift.status === 'partial') ?
+                    `<button class="shift-toggle-btn on" id="toggle-${index}" data-toggle-index="${index}" data-enabled="true">
                         <span class="toggle-text">ON</span>
                     </button>` : '';
 
@@ -2181,13 +2223,13 @@
                 <h3>シフト設定</h3>
                 <div class="date-display">${dateStr} (${dayName})</div>
                 <div class="shift-info">
-                    ${shiftData.shift.availableTime ? 
-                        `勤務可能時間: ${shiftData.shift.availableTime}` : 
+                    ${shiftData.shift.availableTime ?
+                        `勤務可能時間: ${shiftData.shift.availableTime}` :
                         '勤務時間情報なし'}
                 </div>
                 <div class="toggle-controls">
-                    <button class="shift-toggle-btn ${shiftData.enabled ? 'on' : 'off'}" 
-                            onclick="toggleFromCalendar(${index})">
+                    <button class="shift-toggle-btn ${shiftData.enabled ? 'on' : 'off'}"
+                            data-popup-toggle="${index}">
                         <span class="toggle-text">${shiftData.enabled ? 'ON' : 'OFF'}</span>
                     </button>
                 </div>
@@ -2197,8 +2239,8 @@
                         <input type="time" id="custom-start-${index}" class="time-edit-input" placeholder="開始時間">
                         <span>〜</span>
                         <input type="time" id="custom-end-${index}" class="time-edit-input" placeholder="終了時間">
-                        <button class="time-edit-btn" onclick="applyCustomWorkHours(${index})">適用</button>
-                        <button class="time-edit-btn time-reset-btn" onclick="resetCustomWorkHours(${index})">リセット</button>
+                        <button class="time-edit-btn" data-apply-hours="${index}">適用</button>
+                        <button class="time-edit-btn time-reset-btn" data-reset-hours="${index}">リセット</button>
                     </div>
                 </div>
                 <div class="event-details" id="event-details-${index}">
@@ -2206,14 +2248,26 @@
                     <div class="loading">📅 予定を読み込み中...</div>
                 </div>
                 <div>
-                    <button class="close-btn" onclick="closeCalendarPopup()">閉じる</button>
+                    <button class="close-btn" data-close-popup>閉じる</button>
                 </div>
             `;
-            
+
             // DOMに追加
             document.body.appendChild(overlay);
             document.body.appendChild(popup);
-            
+
+            // ポップアップ内のイベントリスナーを設定
+            popup.querySelector('[data-popup-toggle]').addEventListener('click', function() {
+                toggleFromCalendar(index);
+            });
+            popup.querySelector('[data-apply-hours]').addEventListener('click', function() {
+                applyCustomWorkHours(index);
+            });
+            popup.querySelector('[data-reset-hours]').addEventListener('click', function() {
+                resetCustomWorkHours(index);
+            });
+            popup.querySelector('[data-close-popup]').addEventListener('click', closeCalendarPopup);
+
             // クリックでポップアップを閉じる
             overlay.addEventListener('click', closeCalendarPopup);
             
@@ -2332,30 +2386,35 @@
             dialog.innerHTML = `
                 <h3>⚙️ 特殊な条件で検索</h3>
                 <p>通常の営業時間と異なる日の設定を追加できます</p>
-                
+
                 <div id="exception-dates-container">
                     <!-- 例外日設定がここに表示される -->
                 </div>
-                
+
                 <div class="exception-controls">
-                    <button class="add-exception-btn" onclick="addExceptionDate()">
+                    <button class="add-exception-btn" data-action="add-exception">
                         📅 例外日を追加
                     </button>
                 </div>
-                
+
                 <div class="dialog-actions">
-                    <button class="calculate-with-exceptions-btn" onclick="calculateWithExceptions()">
+                    <button class="calculate-with-exceptions-btn" data-action="calc-with-exceptions">
                         🔄 例外条件でシフト計算
                     </button>
-                    <button class="cancel-exceptions-btn" onclick="closeSpecialConditionsDialog()">
+                    <button class="cancel-exceptions-btn" data-action="cancel-exceptions">
                         ❌ キャンセル
                     </button>
                 </div>
             `;
-            
+
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
-            
+
+            // ダイアログ内のイベントリスナーを設定
+            dialog.querySelector('[data-action="add-exception"]').addEventListener('click', addExceptionDate);
+            dialog.querySelector('[data-action="calc-with-exceptions"]').addEventListener('click', calculateWithExceptions);
+            dialog.querySelector('[data-action="cancel-exceptions"]').addEventListener('click', closeSpecialConditionsDialog);
+
             // 背景クリックで閉じる
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -2365,6 +2424,28 @@
             
             window.currentSpecialDialog = overlay;
             renderExceptionDates();
+
+            // イベント委譲: 例外日コンテナ内の変更・クリックイベント（コンテナに1回だけ設定）
+            var exContainer = document.getElementById('exception-dates-container');
+            if (exContainer) {
+                exContainer.addEventListener('change', function(e) {
+                    var field = e.target.getAttribute('data-exception-field');
+                    if (field) {
+                        var group = e.target.closest('[data-exception-id]');
+                        if (group) {
+                            var id = parseInt(group.getAttribute('data-exception-id'), 10);
+                            updateExceptionDate(id, field, e.target.value);
+                        }
+                    }
+                });
+                exContainer.addEventListener('click', function(e) {
+                    var removeBtn = e.target.closest('[data-remove-exception]');
+                    if (removeBtn) {
+                        var id = parseInt(removeBtn.getAttribute('data-remove-exception'), 10);
+                        removeExceptionDate(id);
+                    }
+                });
+            }
         }
 
         // 特殊条件ダイアログを閉じる
@@ -2407,37 +2488,37 @@
             }
             
             container.innerHTML = window.exceptionDates.map(exception => `
-                <div class="exception-date-group">
+                <div class="exception-date-group" data-exception-id="${exception.id}">
                     <h4>📅 例外営業時間</h4>
                     <div class="form-row">
                         <div class="form-group">
                             <label>日付</label>
-                            <input type="date" value="${exception.date}" 
-                                   onchange="updateExceptionDate(${exception.id}, 'date', this.value)"
+                            <input type="date" value="${exception.date}"
+                                   data-exception-field="date"
                                    class="form-control">
                         </div>
                         <div class="form-group">
                             <label>営業時間</label>
                             <div class="time-range">
-                                <input type="time" value="${exception.startTime}" 
-                                       onchange="updateExceptionDate(${exception.id}, 'startTime', this.value)"
+                                <input type="time" value="${exception.startTime}"
+                                       data-exception-field="startTime"
                                        class="form-control form-control-small">
                                 <span>〜</span>
-                                <input type="time" value="${exception.endTime}" 
-                                       onchange="updateExceptionDate(${exception.id}, 'endTime', this.value)"
+                                <input type="time" value="${exception.endTime}"
+                                       data-exception-field="endTime"
                                        class="form-control form-control-small">
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>備考</label>
-                        <input type="text" value="${exception.description}" 
+                        <input type="text" value="${exception.description}"
                                placeholder="例：祝日営業、イベント開催日など"
-                               onchange="updateExceptionDate(${exception.id}, 'description', this.value)"
+                               data-exception-field="description"
                                class="form-control">
                     </div>
                     <div style="text-align: right;">
-                        <button class="remove-exception-btn" onclick="removeExceptionDate(${exception.id})">
+                        <button class="remove-exception-btn" data-remove-exception="${exception.id}">
                             🗑️ 削除
                         </button>
                     </div>

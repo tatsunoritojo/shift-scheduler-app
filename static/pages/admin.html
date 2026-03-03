@@ -23,6 +23,7 @@
                 <button class="tab-btn active" data-tab="settings">設定</button>
                 <button class="tab-btn" data-tab="periods">シフト期間</button>
                 <button class="tab-btn" data-tab="builder">シフト構築</button>
+                <button class="tab-btn" data-tab="members">メンバー管理</button>
             </div>
 
             <!-- Settings Tab -->
@@ -76,6 +77,33 @@
                         <button class="btn btn-outline" id="btn-go-exceptions-list"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
                         <button class="btn btn-outline" id="btn-go-opening-hours"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
                     </div>
+                </div>
+
+                <!-- Reminder Settings Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="bell" style="width:18px;height:18px;vertical-align:text-bottom;"></i> リマインド通知設定</h3>
+                    <p class="help-text mb-16">提出期限やシフト前のリマインド通知を自動送信する設定です。</p>
+                    <div class="grid-2 mb-16">
+                        <div class="form-group">
+                            <label>提出期限の何日前に通知</label>
+                            <input type="number" id="reminder-days-deadline" class="form-control" value="1" min="0" max="14" style="width:100px;">
+                            <div class="field-hint">0 = 無効</div>
+                        </div>
+                        <div class="form-group">
+                            <label>提出期限リマインド送信時刻</label>
+                            <input type="time" id="reminder-time-deadline" class="form-control" value="09:00" style="width:auto;">
+                        </div>
+                        <div class="form-group">
+                            <label>シフトの何日前に通知</label>
+                            <input type="number" id="reminder-days-shift" class="form-control" value="1" min="0" max="14" style="width:100px;">
+                            <div class="field-hint">0 = 無効</div>
+                        </div>
+                        <div class="form-group">
+                            <label>シフト前リマインド送信時刻</label>
+                            <input type="time" id="reminder-time-shift" class="form-control" value="21:00" style="width:auto;">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-save-reminder-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
                 </div>
 
                 <!-- Manual Settings (collapsed) -->
@@ -155,6 +183,70 @@
                 </div>
             </div>
 
+            <!-- Members Tab -->
+            <div id="tab-members" class="tab-content">
+                <!-- Invite Link Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="link" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 招待リンク</h3>
+                    <p class="help-text mb-16">招待リンクを共有すると、誰でもアルバイトとして組織に参加できます。</p>
+                    <div id="invite-code-section">
+                        <div id="invite-code-content" style="display:none;">
+                            <div class="flex gap-8 mb-16" style="align-items:center;flex-wrap:wrap;">
+                                <input type="text" id="invite-url-display" class="form-control" readonly style="flex:1;min-width:200px;">
+                                <button class="btn btn-primary" id="btn-copy-invite-url"><i data-lucide="copy" style="width:15px;height:15px;"></i> コピー</button>
+                                <button class="btn btn-outline" id="btn-regenerate-invite-code"><i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> 再生成</button>
+                            </div>
+                            <div class="flex gap-16 mb-16" style="align-items:flex-start;flex-wrap:wrap;">
+                                <div id="invite-qr-code" style="background:#fff;padding:8px;border-radius:8px;border:1px solid var(--color-neutral-200);cursor:pointer;" title="タップで拡大表示"></div>
+                                <div style="flex:1;">
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="checkbox" id="invite-code-enabled-toggle">
+                                        <span>招待リンクを有効にする</span>
+                                    </label>
+                                    <p class="help-text mt-8">無効にすると、リンクを開いてもログインできません。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="invite-code-empty">
+                            <p class="mb-16" style="color:var(--color-neutral-400);">招待コードがまだ生成されていません。</p>
+                            <button class="btn btn-primary" id="btn-generate-invite-code"><i data-lucide="plus" style="width:15px;height:15px;"></i> 招待コードを生成</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual Invitation Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="mail" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 個別招待</h3>
+                    <p class="help-text mb-16">メールアドレスを指定して招待します。ロールを選択でき、メールで通知が送られます。</p>
+                    <div class="flex gap-8 mb-16" style="align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
+                            <label>メールアドレス（任意）</label>
+                            <input type="email" id="invitation-email" class="form-control" placeholder="example@gmail.com">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>ロール</label>
+                            <select id="invitation-role" class="form-control">
+                                <option value="worker">アルバイト</option>
+                                <option value="admin">管理者</option>
+                                <option value="owner">事業主</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>有効期限（時間）</label>
+                            <input type="number" id="invitation-expires" class="form-control" value="72" min="1" max="720" style="width:100px;">
+                        </div>
+                        <button class="btn btn-primary" id="btn-create-invitation"><i data-lucide="send" style="width:15px;height:15px;"></i> 招待を作成</button>
+                    </div>
+                    <div id="invitations-table"></div>
+                </div>
+
+                <!-- Member List Card -->
+                <div class="card">
+                    <h3><i data-lucide="users" style="width:18px;height:18px;vertical-align:text-bottom;"></i> メンバー一覧</h3>
+                    <div id="members-table"></div>
+                </div>
+            </div>
+
             <!-- Builder Tab -->
             <div id="tab-builder" class="tab-content">
                 <div class="card mb-16">
@@ -206,6 +298,17 @@
                                 <p class="help-text mb-8">アルバイトは期間中に何度でも再提出できます。日時は最終提出時刻です。</p>
                                 <div id="submissions-summary"></div>
                             </div>
+                            <div class="card mt-16">
+                                <h3><i data-lucide="user-minus" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 欠員補充</h3>
+                                <p class="help-text mb-8">シフト枠の欠員を他のスタッフに依頼します。</p>
+                                <div id="vacancy-list"></div>
+                            </div>
+                            <div class="card mt-16">
+                                <h3><i data-lucide="history" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 変更ログ</h3>
+                                <div id="change-log-list">
+                                    <p class="help-text">変更履歴はありません</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -214,6 +317,7 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.575.0/dist/umd/lucide.min.js" integrity="sha384-GzE8qT1LzDfRNjtvLN/dXDLPlJOB3BBom3Twb9/RwHkXCgNl6OU1pBxM9397HWGU" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js" crossorigin="anonymous"></script>
     <script type="module" src="/static/js/admin-app.js"></script>
     <script src="/static/js/init.js"></script>
 </body>

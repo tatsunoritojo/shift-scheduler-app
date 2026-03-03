@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import logging
 import os
 
-from app.extensions import db, cors, limiter, server_session
+from app.extensions import db, migrate, cors, limiter, server_session
 from app.config import config_by_name
 
 
@@ -38,14 +38,21 @@ def create_app(config_name=None):
 
     # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)
     app.config['SESSION_SQLALCHEMY'] = db
     server_session.init_app(app)
     limiter.init_app(app)
     cors_origins = app.config.get('CORS_ALLOWED_ORIGINS')
     if cors_origins:
         cors.init_app(app, origins=cors_origins, supports_credentials=True)
+    elif app.debug or app.config.get('TESTING'):
+        cors.init_app(app)  # Allow all origins in dev/test only
     else:
-        cors.init_app(app)
+        # Production: no CORS_ALLOWED_ORIGINS → same-origin only (no CORS headers)
+        logging.getLogger(__name__).warning(
+            "CORS_ALLOWED_ORIGINS not set in production — cross-origin requests will be blocked"
+        )
+        cors.init_app(app, origins=[])
 
     # Import all models so they are registered with SQLAlchemy
     from app import models  # noqa: F401
@@ -57,6 +64,8 @@ def create_app(config_name=None):
     from app.blueprints.api_admin import api_admin_bp
     from app.blueprints.api_worker import api_worker_bp
     from app.blueprints.api_owner import api_owner_bp
+    from app.blueprints.api_cron import api_cron_bp
+    from app.blueprints.api_dashboard import api_dashboard_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_calendar_bp)
@@ -64,14 +73,17 @@ def create_app(config_name=None):
     app.register_blueprint(api_admin_bp)
     app.register_blueprint(api_worker_bp)
     app.register_blueprint(api_owner_bp)
+    app.register_blueprint(api_cron_bp)
+    app.register_blueprint(api_dashboard_bp)
 
     # Register security headers and error handlers
     _register_security_headers(app)
     _register_error_handlers(app)
 
-    # Create tables
-    with app.app_context():
-        db.create_all()
+    # Create tables directly only in testing (production uses flask db upgrade)
+    if app.config.get('TESTING'):
+        with app.app_context():
+            db.create_all()
 
     return app
 
@@ -93,33 +105,46 @@ def _register_security_headers(app):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data:; "
-            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com"
+            "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://unpkg.com"
         )
         return response
 
 
 def _register_error_handlers(app):
     """Register global error handlers that return JSON responses."""
+    from app.utils.errors import APIError, error_response
+
+    @app.errorhandler(APIError)
+    def handle_api_error(e):
+        return error_response(e.message, e.status_code, e.code, e.details)
+
+    @app.errorhandler(400)
+    def bad_request(e):
+        return error_response("Bad request", 400, code="BAD_REQUEST")
 
     @app.errorhandler(404)
     def not_found(e):
-        return jsonify({"error": "Not found"}), 404
+        return error_response("Not found", 404, code="NOT_FOUND")
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        return jsonify({"error": "Method not allowed"}), 405
+        return error_response("Method not allowed", 405, code="METHOD_NOT_ALLOWED")
+
+    @app.errorhandler(415)
+    def unsupported_media_type(e):
+        return error_response("Unsupported media type", 415, code="UNSUPPORTED_MEDIA_TYPE")
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        return jsonify({"error": "Too many requests"}), 429
+        return error_response("Too many requests", 429, code="RATE_LIMIT_EXCEEDED")
 
     @app.errorhandler(500)
     def internal_server_error(e):
-        return jsonify({"error": "Internal server error"}), 500
+        return error_response("Internal server error", 500, code="INTERNAL_ERROR")
 
     @app.errorhandler(Exception)
     def unhandled_exception(e):
         app.logger.exception("Unhandled exception: %s", e)
         if app.debug:
-            return jsonify({"error": str(e)}), 500
-        return jsonify({"error": "Internal server error"}), 500
+            return error_response(str(e), 500, code="INTERNAL_ERROR")
+        return error_response("Internal server error", 500, code="INTERNAL_ERROR")

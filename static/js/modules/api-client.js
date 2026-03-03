@@ -17,8 +17,13 @@ async function request(method, path, data = null) {
     const res = await fetch(`${BASE_URL}${path}`, opts);
 
     if (res.status === 401) {
-        window.location.href = '/auth/google/login';
-        throw new Error('Unauthorized');
+        const body = await res.json().catch(() => ({}));
+        if (body.code === 'CREDENTIALS_EXPIRED') {
+            showReauthModal(body.error || 'Google認証の有効期限が切れました。再ログインしてください。');
+        } else {
+            window.location.href = '/auth/google/login';
+        }
+        throw new Error(body.error || 'Unauthorized');
     }
 
     if (!res.ok) {
@@ -28,6 +33,23 @@ async function request(method, path, data = null) {
 
     if (res.status === 204) return null;
     return res.json();
+}
+
+function showReauthModal(message) {
+    // Prevent duplicate modals
+    if (document.getElementById('reauth-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'reauth-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;';
+    overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 12px;font-size:1.15em;color:#1f2937;">再認証が必要です</h3>
+            <p style="margin:0 0 24px;color:#6b7280;font-size:0.9em;line-height:1.6;">${message}</p>
+            <a href="/auth/google/login" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:500;font-size:0.95em;">Googleで再ログイン</a>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 }
 
 export const api = {

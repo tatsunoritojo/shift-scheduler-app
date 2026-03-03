@@ -84,6 +84,7 @@ class ProductionConfig(BaseConfig):
 
 class TestConfig(BaseConfig):
     TESTING = True
+    SECRET_KEY = 'test-secret-key'
     SESSION_COOKIE_SECURE = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 

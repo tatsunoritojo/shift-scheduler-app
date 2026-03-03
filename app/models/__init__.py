@@ -6,3 +6,8 @@ from app.models.shift import (
     ShiftSchedule, ShiftScheduleEntry,
 )
 from app.models.approval import ApprovalHistory
+from app.models.membership import OrganizationMember, InvitationToken
+from app.models.async_task import AsyncTask
+from app.models.audit_log import AuditLog
+from app.models.reminder import Reminder
+from app.models.vacancy import VacancyRequest, VacancyCandidate, ShiftChangeLog

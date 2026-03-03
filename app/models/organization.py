@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from app.extensions import db
 
@@ -11,6 +12,8 @@ class Organization(db.Model):
     owner_email = db.Column(db.String(255))
     settings_json = db.Column(db.Text, default='{}')
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    invite_code = db.Column(db.String(32), unique=True, nullable=True)
+    invite_code_enabled = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -21,6 +24,21 @@ class Organization(db.Model):
                                                lazy='dynamic', cascade='all, delete-orphan')
     shift_periods = db.relationship('ShiftPeriod', backref='organization', lazy='dynamic',
                                     cascade='all, delete-orphan')
+
+    def get_setting(self, key, default=None):
+        try:
+            settings = json.loads(self.settings_json or '{}')
+            return settings.get(key, default)
+        except (json.JSONDecodeError, TypeError):
+            return default
+
+    def set_setting(self, key, value):
+        try:
+            settings = json.loads(self.settings_json or '{}')
+        except (json.JSONDecodeError, TypeError):
+            settings = {}
+        settings[key] = value
+        self.settings_json = json.dumps(settings)
 
     def __repr__(self):
         return f'<Organization {self.name}>'

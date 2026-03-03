@@ -6,6 +6,7 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 
 from app.extensions import db
@@ -50,7 +51,7 @@ def extract_user_info(credentials):
 
         # Already decoded (dict) — use directly
         if isinstance(token_data, dict):
-            current_app.logger.info(f"id_token is dict, sub={token_data.get('sub')}")
+            current_app.logger.debug(f"id_token is dict, sub={token_data.get('sub')}")
             return token_data.get('sub'), token_data.get('email'), token_data.get('name')
 
         # JWT string — verify and decode
@@ -58,7 +59,7 @@ def extract_user_info(credentials):
             decoded = id_token.verify_oauth2_token(
                 token_data, google_requests.Request(), client_id
             )
-            current_app.logger.info(f"id_token verified, sub={decoded.get('sub')}")
+            current_app.logger.debug(f"id_token verified, sub={decoded.get('sub')}")
             return decoded.get('sub'), decoded.get('email'), decoded.get('name')
         except Exception as e:
             current_app.logger.warning(f"id_token verification failed: {e}")
@@ -67,7 +68,7 @@ def extract_user_info(credentials):
     try:
         service = build('oauth2', 'v2', credentials=credentials)
         user_info = service.userinfo().get().execute()
-        current_app.logger.info(f"userinfo API: id={user_info.get('id')}")
+        current_app.logger.debug(f"userinfo API: id={user_info.get('id')}")
         return user_info.get('id'), user_info.get('email'), user_info.get('name')
     except Exception as e:
         current_app.logger.error(f"userinfo API failed: {e}")
@@ -75,7 +76,25 @@ def extract_user_info(credentials):
 
 
 def determine_role(email):
-    """Determine user role based on email and config."""
+    """Determine user role from DB membership, falling back to env config for bootstrap.
+
+    Priority:
+    1. Existing OrganizationMember record → that role
+    2. ADMIN_EMAIL / OWNER_EMAIL env vars → for initial bootstrap only
+    3. Default → 'worker'
+    """
+    from app.models.membership import OrganizationMember
+
+    # Check existing membership first
+    user = User.query.filter_by(email=email).first()
+    if user:
+        membership = OrganizationMember.query.filter_by(
+            user_id=user.id, is_active=True
+        ).first()
+        if membership:
+            return membership.role
+
+    # Fallback to env config (bootstrap)
     admin_emails = [e.strip() for e in current_app.config.get('ADMIN_EMAIL', '').split(',') if e.strip()]
     owner_emails = [e.strip() for e in current_app.config.get('OWNER_EMAIL', '').split(',') if e.strip()]
 
@@ -86,9 +105,19 @@ def determine_role(email):
     return 'worker'
 
 
-def upsert_user(google_id, email, display_name):
-    """Create or update a user record. Returns the User."""
+def upsert_user(google_id, email, display_name, invitation_token=None, invite_code_org=None):
+    """Create or update a user record.
+
+    If *invitation_token* is provided (an InvitationToken instance),
+    the user is assigned to the token's org with the token's role.
+    If *invite_code_org* is provided (an Organization instance),
+    the user is assigned to that org as a worker.
+    Otherwise, existing membership is preserved or env-config bootstrap applies.
+
+    Priority: invitation_token > invite_code_org > env bootstrap > no org.
+    """
     from app.models.organization import Organization
+    from app.models.membership import OrganizationMember, InvitationToken
 
     user = User.query.filter_by(google_id=google_id).first()
     role = determine_role(email)
@@ -110,12 +139,41 @@ def upsert_user(google_id, email, display_name):
             role=role,
         )
         db.session.add(user)
+        db.session.flush()  # get user.id
 
-    # Assign to default organization if not set
-    if not user.organization_id:
-        org = Organization.query.first()
-        if org:
-            user.organization_id = org.id
+    # --- Org / membership assignment ---
+    has_active_membership = OrganizationMember.query.filter_by(
+        user_id=user.id, is_active=True
+    ).first() is not None
+
+    if invitation_token and invitation_token.is_valid:
+        # Invitation-based assignment (highest priority)
+        _accept_invitation(user, invitation_token)
+    elif invite_code_org and not has_active_membership:
+        # Invite code — assign as worker (check membership, not org_id)
+        _accept_invite_code(user, invite_code_org)
+    elif not user.organization_id:
+        # Bootstrap: only auto-assign for env-configured admin/owner emails
+        admin_emails = [e.strip() for e in current_app.config.get('ADMIN_EMAIL', '').split(',') if e.strip()]
+        owner_emails = [e.strip() for e in current_app.config.get('OWNER_EMAIL', '').split(',') if e.strip()]
+        if email in admin_emails or email in owner_emails:
+            org = Organization.query.first()
+            if org:
+                user.organization_id = org.id
+                user.role = role
+                _ensure_membership(user, org.id, role)
+        # Otherwise: user remains without organization (must be invited)
+
+    # Sync role from membership (authoritative source)
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, is_active=True
+    ).first()
+    if membership:
+        user.role = membership.role
+        user.organization_id = membership.organization_id
+    else:
+        # Clear stale organization_id when no active membership exists
+        user.organization_id = None
 
     try:
         db.session.commit()
@@ -123,6 +181,86 @@ def upsert_user(google_id, email, display_name):
         db.session.rollback()
         raise
     return user
+
+
+def _accept_invitation(user, token):
+    """Accept an invitation token: assign user to org with the specified role."""
+    from app.models.membership import OrganizationMember
+    from datetime import datetime
+
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=token.organization_id
+    ).first()
+
+    if membership:
+        membership.role = token.role
+        membership.is_active = True
+    else:
+        membership = OrganizationMember(
+            user_id=user.id,
+            organization_id=token.organization_id,
+            role=token.role,
+            invited_by=token.created_by,
+        )
+        db.session.add(membership)
+
+    user.organization_id = token.organization_id
+    user.role = token.role
+
+    # Mark token as used
+    token.used_at = datetime.utcnow()
+    token.used_by = user.id
+
+
+def _accept_invite_code(user, org):
+    """Accept an invite_code: assign user to org as worker (no-op if already a member)."""
+    from app.models.membership import OrganizationMember
+
+    membership = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=org.id
+    ).first()
+
+    if membership:
+        auth_svc_logger.info(
+            "INVITE_CODE_ACCEPT: existing membership user_id=%s org_id=%s active=%s",
+            user.id, org.id, membership.is_active,
+        )
+        if not membership.is_active:
+            membership.is_active = True
+            membership.role = 'worker'
+        return
+
+    membership = OrganizationMember(
+        user_id=user.id,
+        organization_id=org.id,
+        role='worker',
+    )
+    db.session.add(membership)
+    auth_svc_logger.info(
+        "INVITE_CODE_ACCEPT: new membership user_id=%s org_id=%s",
+        user.id, org.id,
+    )
+
+    user.organization_id = org.id
+    user.role = 'worker'
+
+
+def _ensure_membership(user, org_id, role):
+    """Create an OrganizationMember record if one doesn't exist."""
+    from app.models.membership import OrganizationMember
+
+    existing = OrganizationMember.query.filter_by(
+        user_id=user.id, organization_id=org_id
+    ).first()
+    if not existing:
+        db.session.add(OrganizationMember(
+            user_id=user.id,
+            organization_id=org_id,
+            role=role,
+        ))
+    elif not existing.is_active:
+        existing.is_active = True
+        existing.role = role
 
 
 def save_refresh_token(user, refresh_token, scopes=None):
@@ -202,7 +340,27 @@ def get_credentials_for_user(user):
                 'token': credentials.token,
                 'refresh_token': credentials.refresh_token,
             }
+        except RefreshError as e:
+            # Token is permanently invalid (expired, revoked, or consent withdrawn).
+            # Mark the stored token as stale so we don't retry next time.
+            auth_svc_logger.warning(
+                "CREDENTIALS_EXPIRED: user_id=%s error=%s — clearing stale token",
+                user.id, e,
+            )
+            token.refresh_token = None
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            raise CredentialsExpiredError(
+                "Google認証の有効期限が切れました。再ログインしてください。"
+            ) from e
         except Exception as e:
             raise RuntimeError(f"Failed to refresh access token: {e}")
 
     return credentials
+
+
+class CredentialsExpiredError(Exception):
+    """Raised when Google OAuth credentials are permanently invalid."""
+    pass
