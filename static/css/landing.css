@@ -1237,6 +1237,11 @@
     color: #16a34a;
 }
 
+.mock-admin-period-badge.reviewing {
+    background: rgba(59,130,246,0.1);
+    color: #2563eb;
+}
+
 .mock-admin-toolbar-spacer {
     flex: 1;
 }
