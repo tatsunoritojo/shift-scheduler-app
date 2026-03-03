@@ -214,7 +214,10 @@ def _accept_invite_code(user, org):
     ).first()
 
     if membership:
-        # Already a member — no-op
+        auth_svc_logger.info(
+            "INVITE_CODE_ACCEPT: existing membership user_id=%s org_id=%s active=%s",
+            user.id, org.id, membership.is_active,
+        )
         if not membership.is_active:
             membership.is_active = True
             membership.role = 'worker'
@@ -226,6 +229,10 @@ def _accept_invite_code(user, org):
         role='worker',
     )
     db.session.add(membership)
+    auth_svc_logger.info(
+        "INVITE_CODE_ACCEPT: new membership user_id=%s org_id=%s",
+        user.id, org.id,
+    )
 
     user.organization_id = org.id
     user.role = 'worker'

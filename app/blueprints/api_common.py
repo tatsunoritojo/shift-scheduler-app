@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, jsonify, session, current_app, redirect, request, make_response
 
 from app.extensions import db, limiter
@@ -5,6 +7,7 @@ from app.middleware.auth_middleware import get_current_user, _check_active_membe
 from app.utils.errors import error_response
 
 api_common_bp = Blueprint('api_common', __name__)
+page_logger = logging.getLogger('pages')
 
 
 @api_common_bp.route('/health')
@@ -239,7 +242,12 @@ def worker_page():
     user = get_current_user()
     if not user:
         return redirect('/login')
-    if not user.organization_id or not _check_active_membership(user):
+    membership = _check_active_membership(user)
+    if not user.organization_id or not membership:
+        page_logger.warning(
+            "WORKER_NO_ORG: user_id=%s org_id=%s membership=%s",
+            user.id, user.organization_id, membership,
+        )
         return redirect('/no-organization')
     if user.role != 'worker':
         return redirect('/')
