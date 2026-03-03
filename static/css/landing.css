@@ -1208,6 +1208,58 @@
     font-weight: 700;
 }
 
+/* Admin toolbar with period name, status badge, and legend */
+.mock-admin-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    background: #fff;
+    border-bottom: 1px solid var(--color-neutral-100);
+    flex-shrink: 0;
+}
+
+.mock-admin-period-name {
+    font-size: 5px;
+    font-weight: 700;
+    color: var(--color-neutral-800);
+}
+
+.mock-admin-period-badge {
+    font-size: 3.5px;
+    padding: 1px 4px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.mock-admin-period-badge.approved {
+    background: rgba(34,197,94,0.12);
+    color: #16a34a;
+}
+
+.mock-admin-toolbar-spacer {
+    flex: 1;
+}
+
+.mock-admin-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.5px;
+    font-size: 3.5px;
+    color: var(--color-neutral-500);
+}
+
+.mock-legend-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 1.5px;
+}
+
+.mock-legend-dot.full { background: #dcfce7; border-left: 1.5px solid #22c55e; }
+.mock-legend-dot.part { background: #fef9c3; border-left: 1.5px solid #f59e0b; }
+.mock-legend-dot.empty { background: #dbeafe; border-left: 1.5px solid #3b82f6; }
+.mock-legend-dot.closed { background: #f1f5f9; border-left: 1.5px solid #cbd5e1; }
+
 .mock-admin-layout {
     display: flex;
     flex: 1;
@@ -1224,34 +1276,200 @@
     border-left: 2px solid var(--color-primary-500);
 }
 
+/* PC-specific calendar grid with richer cells */
+.mock-cal-head-pc {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 4px;
+    font-weight: 700;
+    color: var(--color-neutral-400);
+    padding: 1px 0;
+    gap: 1.5px;
+}
+
+.mock-cal-head-pc span:first-child { color: #ef4444; }
+.mock-cal-head-pc span:last-child { color: #3b82f6; }
+
+.mock-cal-grid-pc {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1.5px;
+}
+
+.mock-pc-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5px 2px;
+    border-radius: 2px;
+    min-height: 14px;
+    border: 0.3px solid var(--color-neutral-200);
+}
+
+.mock-pc-cell.full {
+    background: #f0fdf4;
+    border-left: 1.5px solid #22c55e;
+}
+
+.mock-pc-cell.part {
+    background: #fffbeb;
+    border-left: 1.5px solid #f59e0b;
+}
+
+.mock-pc-cell.empty {
+    background: #eff6ff;
+    border-left: 1.5px solid var(--color-primary-500);
+}
+
+.mock-pc-cell.closed {
+    background: var(--color-neutral-50);
+    border-color: transparent;
+}
+
+.mock-pc-cell.empty-cell {
+    background: transparent;
+    border: none;
+    min-height: 0;
+}
+
+.mock-pc-day {
+    font-size: 4.5px;
+    font-weight: 700;
+    color: var(--color-neutral-700);
+    line-height: 1;
+}
+
+.mock-pc-cell.closed .mock-pc-day {
+    color: var(--color-neutral-300);
+}
+
+.mock-pc-badge {
+    font-size: 3.5px;
+    font-weight: 700;
+    padding: 0.5px 2px;
+    border-radius: 2px;
+    margin-top: 1px;
+    line-height: 1.2;
+}
+
+.mock-pc-badge.full {
+    background: rgba(34,197,94,0.12);
+    color: #16a34a;
+}
+
+.mock-pc-badge.part {
+    background: rgba(245,158,11,0.12);
+    color: #b45309;
+}
+
+.mock-pc-badge.empty {
+    background: rgba(59,130,246,0.1);
+    color: #1d4ed8;
+}
+
+.mock-pc-hours {
+    font-size: 3px;
+    color: var(--color-neutral-400);
+    margin-top: auto;
+    line-height: 1;
+}
+
+.mock-pc-closed {
+    font-size: 3px;
+    color: var(--color-neutral-300);
+    margin-top: 1px;
+}
+
+/* Sidebar */
 .mock-admin-side {
-    width: 68px;
+    width: 72px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mock-side-section {
     background: var(--color-neutral-100);
     border-radius: 5px;
     padding: 4px;
     border-left: 2px solid var(--color-primary-500);
-    flex-shrink: 0;
 }
 
-.mock-admin-side .mock-card-t {
-    font-size: 5px;
+.mock-side-section .mock-card-t {
+    font-size: 4.5px;
     margin-bottom: 3px;
     color: var(--color-primary-700);
+    font-weight: 700;
 }
 
+/* Submission progress bar */
+.mock-side-progress {
+    height: 3px;
+    background: var(--color-neutral-200);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1.5px;
+}
+
+.mock-side-progress-bar {
+    height: 100%;
+    background: var(--color-primary-500);
+    border-radius: 2px;
+}
+
+.mock-side-progress-label {
+    font-size: 3.5px;
+    color: var(--color-neutral-500);
+    text-align: center;
+}
+
+/* Worker hour rows with mini bar chart */
 .mock-side-row {
     display: flex;
-    justify-content: space-between;
-    font-size: 4.5px;
+    align-items: center;
+    gap: 2px;
+    font-size: 4px;
     padding: 1.5px 0;
     color: var(--color-neutral-600);
-    border-bottom: 1px solid #e8ecf0;
+    border-bottom: 0.5px solid #e8ecf0;
 }
 
 .mock-side-row:last-child { border-bottom: none; }
 
-.mock-side-name { font-weight: 600; }
-.mock-side-hrs { color: var(--color-neutral-400); }
+.mock-side-name {
+    font-weight: 600;
+    width: 14px;
+    flex-shrink: 0;
+}
+
+.mock-side-bar-wrap {
+    flex: 1;
+    height: 3px;
+    background: var(--color-neutral-200);
+    border-radius: 1.5px;
+    overflow: hidden;
+}
+
+.mock-side-bar {
+    display: block;
+    height: 100%;
+    background: var(--color-primary-400);
+    border-radius: 1.5px;
+}
+
+.mock-side-bar.warn {
+    background: var(--color-warning-400);
+}
+
+.mock-side-hrs {
+    font-size: 3.5px;
+    color: var(--color-neutral-400);
+    width: 14px;
+    text-align: right;
+    flex-shrink: 0;
+}
 
 /* Small phone frame (admin SP overlay) */
 .mock-screen-sm {
