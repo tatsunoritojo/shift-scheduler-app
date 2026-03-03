@@ -113,8 +113,7 @@ def create_organization():
     except Exception as e:
         db.session.rollback()
         logger.exception("Failed to create organization for user %s: %s", user.email, e)
-        detail = f"{type(e).__name__}: {e}"
-        return error_response(f"Failed to create organization: {detail}", 500, code="INTERNAL_ERROR")
+        return error_response("Failed to create organization", 500, code="INTERNAL_ERROR")
 
     return jsonify({
         'id': org_id,

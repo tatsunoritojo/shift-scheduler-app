@@ -70,12 +70,15 @@ def accept_invite(token):
 
 @auth_bp.route('/invite/code/<code>')
 def accept_invite_code(code):
-    """Store invite_code in cookie and redirect to OAuth login."""
+    """Store invite_code in cookie + session and redirect to OAuth login."""
     from app.models.organization import Organization
 
     org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
     if not org or not org.is_active:
         return error_response("Invalid or disabled invite code", 400, code="BAD_REQUEST")
+
+    # Store in session as fallback (cookies can be lost on mobile OAuth redirects)
+    session['invite_code'] = code
 
     resp = make_response(redirect(url_for('auth.login')))
     _set_invite_cookie(resp, COOKIE_INVITE_CODE, code)
@@ -199,14 +202,20 @@ def _resolve_invitation(email):
 
 
 def _resolve_invite_code():
-    """Resolve invite_code from cookie → Organization."""
+    """Resolve invite_code from cookie, falling back to session."""
     from app.models.organization import Organization
 
+    # Try cookie first
     signed = request.cookies.get(COOKIE_INVITE_CODE)
-    if not signed:
-        return None
+    if signed:
+        code = _unsign_token(signed)
+        if code:
+            org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
+            if org and org.is_active:
+                return org
 
-    code = _unsign_token(signed)
+    # Fallback to session (mobile browsers may lose cookies during OAuth redirect)
+    code = session.get('invite_code')
     if not code:
         return None
 

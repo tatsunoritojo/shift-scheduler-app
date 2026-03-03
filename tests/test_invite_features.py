@@ -175,6 +175,39 @@ class TestCookieTokenPassing:
         resp = client.get("/auth/invite/code/nonexistent")
         assert resp.status_code == 400
 
+    def test_accept_invite_code_stores_session(self, client, org, db_session):
+        """Invite code should be stored in session as fallback for mobile browsers."""
+        org.invite_code = secrets.token_urlsafe(16)
+        org.invite_code_enabled = True
+        db_session.commit()
+
+        with client.session_transaction() as sess:
+            assert 'invite_code' not in sess
+
+        client.get(f"/auth/invite/code/{org.invite_code}")
+
+        with client.session_transaction() as sess:
+            assert sess.get('invite_code') == org.invite_code
+
+    def test_resolve_invite_code_session_fallback(self, client, org, db_session):
+        """When cookie is lost (mobile), invite code should resolve from session."""
+        org.invite_code = secrets.token_urlsafe(16)
+        org.invite_code_enabled = True
+        db_session.commit()
+
+        # Simulate: session has invite_code but cookie is missing
+        with client.session_transaction() as sess:
+            sess['invite_code'] = org.invite_code
+
+        from app.blueprints.auth import _resolve_invite_code
+        with client.application.test_request_context():
+            # Import fresh — no cookies set on this request
+            from flask import session as flask_session
+            flask_session['invite_code'] = org.invite_code
+            result = _resolve_invite_code()
+            assert result is not None
+            assert result.id == org.id
+
 
 # ---------------------------------------------------------------------------
 # Invitation Email
