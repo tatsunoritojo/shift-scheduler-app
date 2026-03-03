@@ -690,6 +690,18 @@
     opacity: 0.85;
 }
 
+/* Personal events — default GCal blue */
+.mock-week-ev.ev-personal {
+    background: #4285f4;
+    border-left-color: #1a73e8;
+}
+
+/* Shift events — eye-catching coral/orange */
+.mock-week-ev.ev-shift {
+    background: #f4511e;
+    border-left-color: #d63c0a;
+}
+
 .mock-week-col.closed {
     background-image: none;
     background-color: #f8f9fa;
@@ -1539,150 +1551,4 @@
     flex: 1;
 }
 
-/* --- Mock 5: Google Calendar (Schedule view) --- */
-.mock-gcal {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overflow: hidden;
-    border-radius: 18px;
-}
-
-/* Toolbar — matches Step 1 GCal chrome */
-.mock-gcal-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 8px;
-    border-bottom: 1px solid #e8eaed;
-    flex-shrink: 0;
-}
-
-.mock-gcal-hamburger {
-    font-size: 8px;
-    color: #5f6368;
-    line-height: 1;
-}
-
-.mock-gcal-toolbar-title {
-    font-size: 7.5px;
-    font-weight: 600;
-    color: #3c4043;
-}
-
-.mock-gcal-toolbar-spacer {
-    flex: 1;
-}
-
-.mock-gcal-toolbar-search {
-    font-size: 6px;
-    line-height: 1;
-}
-
-.mock-gcal-toolbar-avatar {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #ea4335;
-    color: #fff;
-    font-size: 5px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.mock-gcal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0;
-}
-
-/* Month divider label */
-.mock-gcal-month-divider {
-    font-size: 6px;
-    font-weight: 600;
-    color: #1a73e8;
-    padding: 5px 10px 2px;
-}
-
-.mock-gcal-row {
-    display: flex;
-    align-items: flex-start;
-    padding: 3px 8px;
-    min-height: 20px;
-    border-bottom: 1px solid #f1f3f4;
-}
-
-.mock-gcal-date {
-    width: 26px;
-    text-align: center;
-    flex-shrink: 0;
-    padding-top: 1px;
-}
-
-.mock-gcal-dow {
-    font-size: 4.5px;
-    color: #70757a;
-    text-transform: uppercase;
-    line-height: 1;
-}
-
-.mock-gcal-num {
-    font-size: 10px;
-    font-weight: 500;
-    color: #3c4043;
-    line-height: 1.2;
-}
-
-.mock-gcal-num.today {
-    background: #4285f4;
-    color: #fff;
-    border-radius: 50%;
-    width: 15px;
-    height: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 7.5px;
-    margin: 0 auto;
-}
-
-.mock-gcal-events {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-top: 3px;
-}
-
-.mock-gcal-ev {
-    font-size: 5.5px;
-    padding: 2.5px 5px;
-    border-radius: 3px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.mock-gcal-ev-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #1a73e8;
-    flex-shrink: 0;
-}
-
-.mock-gcal-ev.shift {
-    color: #3c4043;
-}
-
-.mock-gcal-ev.none {
-    color: #9aa0a6;
-    font-style: italic;
-    padding-left: 7px;
-}
+/* (Mock 5 now reuses Mock 1 GCal week view structure) */

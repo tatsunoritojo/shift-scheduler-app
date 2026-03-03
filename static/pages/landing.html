@@ -377,47 +377,66 @@
                 <div class="lp-phone-frame">
                     <div class="lp-phone-notch"></div>
                     <div class="lp-screenshot" id="ss-calendar">
-                        <div class="mock-gcal">
-                            <div class="mock-gcal-toolbar">
-                                <span class="mock-gcal-hamburger">☰</span>
-                                <span class="mock-gcal-toolbar-title">スケジュール</span>
-                                <span class="mock-gcal-toolbar-spacer"></span>
-                                <span class="mock-gcal-toolbar-search">🔍</span>
-                                <span class="mock-gcal-toolbar-avatar">田</span>
+                        <div class="mock-gcal-week">
+                            <div class="mock-gcal-week-toolbar">
+                                <span class="mock-gcal-week-hamburger">☰</span>
+                                <span class="mock-gcal-week-title">3月 2026</span>
+                                <span class="mock-gcal-week-avatar">田</span>
                             </div>
-                            <div class="mock-gcal-body">
-                                <div class="mock-gcal-month-divider">3月</div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">火</div><div class="mock-gcal-num today">3</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>09:00 – 17:00 シフト</div></div>
+                            <div class="mock-week-days">
+                                <span class="mock-week-days-spacer"></span>
+                                <div class="mock-week-day"><div class="mock-week-day-name">日</div><div class="mock-week-day-num sun">1</div></div>
+                                <div class="mock-week-day"><div class="mock-week-day-name">月</div><div class="mock-week-day-num">2</div></div>
+                                <div class="mock-week-day today-col"><div class="mock-week-day-name">火</div><div class="mock-week-day-num today">3</div></div>
+                                <div class="mock-week-day"><div class="mock-week-day-name">水</div><div class="mock-week-day-num">4</div></div>
+                                <div class="mock-week-day"><div class="mock-week-day-name">木</div><div class="mock-week-day-num">5</div></div>
+                                <div class="mock-week-day"><div class="mock-week-day-name">金</div><div class="mock-week-day-num">6</div></div>
+                                <div class="mock-week-day"><div class="mock-week-day-name">土</div><div class="mock-week-day-num sat">7</div></div>
+                            </div>
+                            <div class="mock-week-grid">
+                                <div class="mock-week-now" style="top:18%"></div>
+                                <div class="mock-week-times">
+                                    <span class="mock-week-time">8</span>
+                                    <span class="mock-week-time">10</span>
+                                    <span class="mock-week-time">12</span>
+                                    <span class="mock-week-time">14</span>
+                                    <span class="mock-week-time">16</span>
+                                    <span class="mock-week-time">18</span>
+                                    <span class="mock-week-time">20</span>
+                                    <span class="mock-week-time">22</span>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">水</div><div class="mock-gcal-num">4</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev none">予定なし</div></div>
+                                <!-- 日 3/1: シフト10-15, 個人16-18 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-shift" style="top:14.3%;height:35.7%"><div class="mock-week-ev-title">シフト</div></div>
+                                    <div class="mock-week-ev ev-personal" style="top:57.1%;height:14.3%"><div class="mock-week-ev-title">カフェ</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">木</div><div class="mock-gcal-num">5</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>09:00 – 15:00 シフト</div></div>
+                                <!-- 月 3/2: シフト9-14, 個人15-16 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-shift" style="top:7.1%;height:35.7%"><div class="mock-week-ev-title">シフト</div></div>
+                                    <div class="mock-week-ev ev-personal" style="top:50%;height:7.1%"><div class="mock-week-ev-title">歯医者</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">金</div><div class="mock-gcal-num">6</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>17:00 – 22:00 シフト</div></div>
+                                <!-- 火 3/3 (today): 個人9-10, シフト11-17 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-personal" style="top:7.1%;height:7.1%"><div class="mock-week-ev-title">MTG</div></div>
+                                    <div class="mock-week-ev ev-shift" style="top:21.4%;height:42.9%"><div class="mock-week-ev-title">シフト</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">土</div><div class="mock-gcal-num">7</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>10:00 – 18:00 シフト</div></div>
+                                <!-- 水 3/4 (定休): 個人のみ10-11:30 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-personal" style="top:14.3%;height:10.7%"><div class="mock-week-ev-title">ジム</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">日</div><div class="mock-gcal-num">8</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev none">予定なし</div></div>
+                                <!-- 木 3/5: シフト9-15 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-shift" style="top:7.1%;height:42.9%"><div class="mock-week-ev-title">シフト</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">月</div><div class="mock-gcal-num">9</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>09:00 – 17:00 シフト</div></div>
+                                <!-- 金 3/6: シフト9-17, 個人19-21 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-shift" style="top:7.1%;height:57.1%"><div class="mock-week-ev-title">シフト</div></div>
+                                    <div class="mock-week-ev ev-personal" style="top:78.6%;height:14.3%"><div class="mock-week-ev-title">飲み会</div></div>
                                 </div>
-                                <div class="mock-gcal-row">
-                                    <div class="mock-gcal-date"><div class="mock-gcal-dow">火</div><div class="mock-gcal-num">10</div></div>
-                                    <div class="mock-gcal-events"><div class="mock-gcal-ev shift"><span class="mock-gcal-ev-dot"></span>09:00 – 17:00 シフト</div></div>
+                                <!-- 土 3/7: 個人8-9, シフト10-18 -->
+                                <div class="mock-week-col">
+                                    <div class="mock-week-ev ev-personal" style="top:0%;height:7.1%"><div class="mock-week-ev-title">ヨガ</div></div>
+                                    <div class="mock-week-ev ev-shift" style="top:14.3%;height:57.1%"><div class="mock-week-ev-title">シフト</div></div>
                                 </div>
                             </div>
                             <div class="mock-gcal-week-nav">
