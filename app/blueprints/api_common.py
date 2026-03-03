@@ -137,12 +137,6 @@ def callback_landing_page():
     return current_app.send_static_file('pages/callback-landing.html')
 
 
-@api_common_bp.route('/ui-preview')
-def ui_preview_page():
-    """Dev-only: preview page for UI components."""
-    return current_app.send_static_file('pages/ui-preview.html')
-
-
 @api_common_bp.route('/api/invite/info')
 @limiter.limit("20 per minute")
 def invite_info():
