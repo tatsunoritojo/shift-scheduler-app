@@ -51,7 +51,7 @@ def extract_user_info(credentials):
 
         # Already decoded (dict) — use directly
         if isinstance(token_data, dict):
-            current_app.logger.info(f"id_token is dict, sub={token_data.get('sub')}")
+            current_app.logger.debug(f"id_token is dict, sub={token_data.get('sub')}")
             return token_data.get('sub'), token_data.get('email'), token_data.get('name')
 
         # JWT string — verify and decode
@@ -59,7 +59,7 @@ def extract_user_info(credentials):
             decoded = id_token.verify_oauth2_token(
                 token_data, google_requests.Request(), client_id
             )
-            current_app.logger.info(f"id_token verified, sub={decoded.get('sub')}")
+            current_app.logger.debug(f"id_token verified, sub={decoded.get('sub')}")
             return decoded.get('sub'), decoded.get('email'), decoded.get('name')
         except Exception as e:
             current_app.logger.warning(f"id_token verification failed: {e}")
@@ -68,7 +68,7 @@ def extract_user_info(credentials):
     try:
         service = build('oauth2', 'v2', credentials=credentials)
         user_info = service.userinfo().get().execute()
-        current_app.logger.info(f"userinfo API: id={user_info.get('id')}")
+        current_app.logger.debug(f"userinfo API: id={user_info.get('id')}")
         return user_info.get('id'), user_info.get('email'), user_info.get('name')
     except Exception as e:
         current_app.logger.error(f"userinfo API failed: {e}")
@@ -142,11 +142,15 @@ def upsert_user(google_id, email, display_name, invitation_token=None, invite_co
         db.session.flush()  # get user.id
 
     # --- Org / membership assignment ---
+    has_active_membership = OrganizationMember.query.filter_by(
+        user_id=user.id, is_active=True
+    ).first() is not None
+
     if invitation_token and invitation_token.is_valid:
         # Invitation-based assignment (highest priority)
         _accept_invitation(user, invitation_token)
-    elif invite_code_org and not user.organization_id:
-        # Invite code — assign as worker
+    elif invite_code_org and not has_active_membership:
+        # Invite code — assign as worker (check membership, not org_id)
         _accept_invite_code(user, invite_code_org)
     elif not user.organization_id:
         # Bootstrap: only auto-assign for env-configured admin/owner emails
@@ -167,6 +171,9 @@ def upsert_user(google_id, email, display_name, invitation_token=None, invite_co
     if membership:
         user.role = membership.role
         user.organization_id = membership.organization_id
+    else:
+        # Clear stale organization_id when no active membership exists
+        user.organization_id = None
 
     try:
         db.session.commit()

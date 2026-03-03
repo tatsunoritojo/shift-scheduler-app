@@ -244,10 +244,6 @@ def worker_page():
         return redirect('/login')
     membership = _check_active_membership(user)
     if not user.organization_id or not membership:
-        page_logger.warning(
-            "WORKER_NO_ORG: user_id=%s org_id=%s membership=%s",
-            user.id, user.organization_id, membership,
-        )
         return redirect('/no-organization')
     if user.role != 'worker':
         return redirect('/')

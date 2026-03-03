@@ -8,8 +8,10 @@ from unittest.mock import patch
 import pytest
 
 from app.extensions import db
+from app.models.user import User
 from app.models.organization import Organization
 from app.models.membership import OrganizationMember, InvitationToken
+from app.services.auth_service import upsert_user
 
 
 # ---------------------------------------------------------------------------
@@ -275,3 +277,75 @@ class TestTokenEntropy:
         db_session.add(token)
         db_session.flush()
         assert len(token.token) == 43
+
+
+# ---------------------------------------------------------------------------
+# Stale organization_id regression (the cascading-fix bug)
+# ---------------------------------------------------------------------------
+
+class TestStaleOrganizationId:
+    """Verify invite_code works even when user has a stale organization_id
+    but no active membership — the root cause of the /worker → /no-organization
+    redirect loop."""
+
+    def test_invite_code_with_stale_org_id(self, org, admin_user, db_session):
+        """User with stale org_id and no active membership should be
+        assigned via invite_code."""
+        org.invite_code = secrets.token_urlsafe(16)
+        org.invite_code_enabled = True
+
+        # Create a second org to make the stale org_id different
+        stale_org = Organization(name="Stale Org", admin_email="x@test.com")
+        db_session.add(stale_org)
+        db_session.flush()
+
+        # Create user with stale org_id but NO membership
+        stale_user = User(
+            google_id="gid_stale",
+            email="stale@test.com",
+            display_name="Stale User",
+            role="worker",
+            organization_id=stale_org.id,  # stale — no membership for this
+        )
+        db_session.add(stale_user)
+        db_session.flush()
+        org_id = org.id
+
+        # Verify precondition: no active membership
+        assert OrganizationMember.query.filter_by(
+            user_id=stale_user.id, is_active=True
+        ).first() is None
+
+        user = upsert_user(
+            "gid_stale", "stale@test.com", "Stale User",
+            invite_code_org=org,
+        )
+
+        # Should now have active membership in the invite_code org
+        membership = OrganizationMember.query.filter_by(
+            user_id=user.id, is_active=True
+        ).first()
+        assert membership is not None
+        assert membership.organization_id == org_id
+        assert user.organization_id == org_id
+
+    def test_no_membership_clears_stale_org_id(self, db_session):
+        """User with stale org_id and no invite should get org_id cleared."""
+        stale_org = Organization(name="Gone Org", admin_email="y@test.com")
+        db_session.add(stale_org)
+        db_session.flush()
+
+        stale_user = User(
+            google_id="gid_orphan",
+            email="orphan@test.com",
+            display_name="Orphan",
+            role="worker",
+            organization_id=stale_org.id,
+        )
+        db_session.add(stale_user)
+        db_session.flush()
+
+        user = upsert_user("gid_orphan", "orphan@test.com", "Orphan")
+
+        # org_id should be cleared since there's no active membership
+        assert user.organization_id is None

@@ -136,12 +136,6 @@ def callback():
 
     # Check for invite_code (cookie → session fallback)
     invite_code_org = _resolve_invite_code()
-    auth_logger.info(
-        "INVITE_RESOLVE: invitation=%s invite_code_org=%s session_keys=%s cookie_invite_code=%s",
-        invitation, invite_code_org,
-        list(session.keys()),
-        bool(request.cookies.get(COOKIE_INVITE_CODE)),
-    )
 
     user = upsert_user(google_id, email, display_name,
                        invitation_token=invitation,
