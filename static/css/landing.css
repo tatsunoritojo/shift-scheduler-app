@@ -800,7 +800,7 @@
     }
 }
 
-/* Admin confirm dialog inside dual screen */
+/* Admin submission status inside dual screen */
 .mock-admin-notify {
     position: absolute;
     inset: 0;
@@ -828,46 +828,73 @@
 
 .mock-admin-notify-body {
     flex: 1;
+    padding: 6px;
+    overflow-y: auto;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
+    flex-direction: column;
+    gap: 5px;
 }
 
-/* Confirm dialog overlay */
-.mock-confirm {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    padding: 10px;
-    width: 100%;
-}
-
-.mock-confirm-title {
-    font-size: 7px;
+/* Submission status list */
+.mock-status-header {
+    font-size: 6px;
     font-weight: 700;
-    color: var(--color-neutral-800);
+    color: var(--color-primary-700);
+    margin-bottom: 2px;
+}
+
+.mock-status-sub {
+    font-size: 4.5px;
+    color: var(--color-neutral-400);
     margin-bottom: 4px;
 }
 
-.mock-confirm-text {
-    font-size: 5.5px;
-    color: var(--color-neutral-500);
-    line-height: 1.5;
-    margin-bottom: 8px;
-}
-
-.mock-confirm-actions {
+.mock-status-row {
     display: flex;
+    align-items: center;
     gap: 5px;
-    justify-content: flex-end;
+    padding: 4px 5px;
+    background: #fff;
+    border-radius: 5px;
+    border: 0.5px solid var(--color-neutral-200);
 }
 
-.mock-confirm-actions .mock-btn {
-    width: auto;
-    padding: 3.5px 10px;
+.mock-status-avatar {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-neutral-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 5.5px;
-    border-radius: 4px;
+    font-weight: 700;
+    color: var(--color-neutral-600);
+    flex-shrink: 0;
+}
+
+.mock-status-name {
+    flex: 1;
+    font-size: 6px;
+    font-weight: 600;
+    color: var(--color-neutral-700);
+}
+
+.mock-status-badge {
+    font-size: 4.5px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 100px;
+}
+
+.mock-status-badge.done {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mock-status-badge.pending {
+    background: #fef9c3;
+    color: #854d0e;
 }
 
 .mock-btn-outline {
