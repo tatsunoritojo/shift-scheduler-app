@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin - シフリー</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <link rel="stylesheet" href="/static/css/master.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header master-header">
+            <h1>シフリー <span class="master-label">MASTER</span></h1>
+            <div class="user-info">
+                <span id="user-name"></span>
+                <span class="role-badge master-badge">System Admin</span>
+                <button class="logout-btn" id="btn-logout">ログアウト</button>
+            </div>
+        </header>
+        <main class="main-content">
+
+            <!-- Health Check Banner -->
+            <div id="health-banner" class="health-banner mb-24" style="display:none;">
+                <div class="health-banner-content">
+                    <span class="health-icon">!</span>
+                    <span id="health-banner-text"></span>
+                    <button class="btn btn-sm btn-outline" id="btn-go-health" style="border-color:#fff;color:#fff;">詳細を見る</button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div id="stats-grid" class="stats-grid mb-24">
+                <div class="stat-card"><div class="stat-value" id="stat-users">-</div><div class="stat-label">ユーザー</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-orgs">-</div><div class="stat-label">組織</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-members">-</div><div class="stat-label">メンバー</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-periods">-</div><div class="stat-label">シフト期間</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-tasks-pending">-</div><div class="stat-label">タスク (Pending)</div></div>
+                <div class="stat-card stat-card-danger"><div class="stat-value" id="stat-tasks-failed">-</div><div class="stat-label">タスク (Failed/Dead)</div></div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="users">ユーザー</button>
+                <button class="tab-btn" data-tab="organizations">組織</button>
+                <button class="tab-btn" data-tab="members">メンバー</button>
+                <button class="tab-btn" data-tab="periods">シフト期間</button>
+                <button class="tab-btn" data-tab="schedules">スケジュール</button>
+                <button class="tab-btn" data-tab="tasks">非同期タスク</button>
+                <button class="tab-btn" data-tab="health">ヘルスチェック</button>
+                <button class="tab-btn" data-tab="audit">監査ログ</button>
+                <button class="tab-btn" data-tab="query">SQL</button>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="tab-users" class="tab-content active">
+                <div class="table-toolbar">
+                    <input type="text" class="form-control search-input" id="search-users" placeholder="メール・名前で検索...">
+                    <div class="toolbar-legend">
+                        <span class="token-legend token-ok">認証OK</span>
+                        <span class="token-legend token-ng">認証なし</span>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="table-users">
+                        <thead><tr><th>ID</th><th>名前</th><th>メール</th><th>ロール</th><th>組織</th><th>認証</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Organizations Tab -->
+            <div id="tab-organizations" class="tab-content">
+                <div class="table-wrap">
+                    <table class="data-table" id="table-organizations">
+                        <thead><tr><th>ID</th><th>名前</th><th>メンバー数</th><th>招待コード</th><th>状態</th><th>作成日</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Members Tab -->
+            <div id="tab-members" class="tab-content">
+                <div class="table-toolbar">
+                    <input type="text" class="form-control search-input" id="search-members" placeholder="メール・組織名で検索...">
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="table-members">
+                        <thead><tr><th>ID</th><th>ユーザー</th><th>組織</th><th>ロール</th><th>状態</th><th>参加日</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Periods Tab (Scenario 3 & 5) -->
+            <div id="tab-periods" class="tab-content">
+                <div class="table-wrap">
+                    <table class="data-table" id="table-periods">
+                        <thead><tr><th>ID</th><th>名前</th><th>組織</th><th>期間</th><th>締切</th><th>ステータス</th><th>提出</th><th>スケジュール</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Schedules Tab (Scenario 3 & 4) -->
+            <div id="tab-schedules" class="tab-content">
+                <div class="table-wrap">
+                    <table class="data-table" id="table-schedules">
+                        <thead><tr><th>ID</th><th>期間</th><th>組織</th><th>ステータス</th><th>エントリ数</th><th>同期状況</th><th>作成日</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tasks Tab (Scenario 1) -->
+            <div id="tab-tasks" class="tab-content">
+                <div class="table-toolbar">
+                    <select class="form-control" id="filter-task-status" style="width:auto;">
+                        <option value="">全ステータス</option>
+                        <option value="pending">Pending</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="dead">Dead</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" id="btn-refresh-tasks">更新</button>
+                    <button class="btn btn-primary btn-sm" id="btn-process-now">今すぐタスク処理</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="table-tasks">
+                        <thead><tr><th>ID</th><th>タイプ</th><th>ステータス</th><th>リトライ</th><th>エラー</th><th>作成日</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Health Check Tab (Scenario 6) -->
+            <div id="tab-health" class="tab-content">
+                <div class="mb-16">
+                    <button class="btn btn-primary" id="btn-run-health">ヘルスチェック実行</button>
+                </div>
+                <div id="health-results"></div>
+            </div>
+
+            <!-- Audit Log Tab -->
+            <div id="tab-audit" class="tab-content">
+                <div class="table-toolbar">
+                    <select class="form-control" id="filter-audit-action" style="width:auto;">
+                        <option value="">全アクション</option>
+                        <option value="ROLE_CHANGED">ROLE_CHANGED</option>
+                        <option value="MEMBER_REMOVED">MEMBER_REMOVED</option>
+                        <option value="INVITATION_CREATED">INVITATION_CREATED</option>
+                        <option value="MASTER_TASK_RETRY">MASTER_TASK_RETRY</option>
+                        <option value="MASTER_CRON_TRIGGER">MASTER_CRON_TRIGGER</option>
+                        <option value="MASTER_PERIOD_STATUS_OVERRIDE">MASTER_PERIOD_STATUS_OVERRIDE</option>
+                        <option value="MASTER_SCHEDULE_STATUS_OVERRIDE">MASTER_SCHEDULE_STATUS_OVERRIDE</option>
+                        <option value="MASTER_HEALTH_FIX">MASTER_HEALTH_FIX</option>
+                        <option value="MASTER_PROXY_SUBMISSION">MASTER_PROXY_SUBMISSION</option>
+                        <option value="MASTER_SCHEDULE_RESYNC">MASTER_SCHEDULE_RESYNC</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" id="btn-refresh-audit">更新</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="table-audit">
+                        <thead><tr><th>ID</th><th>日時</th><th>実行者</th><th>アクション</th><th>対象</th><th>ステータス</th><th>詳細</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SQL Query Tab -->
+            <div id="tab-query" class="tab-content">
+                <div class="card">
+                    <h3>SQLクエリ実行 (SELECT のみ)</h3>
+                    <p class="help-text mb-16">読み取り専用。Ctrl+Enterで実行。</p>
+                    <textarea class="form-control query-input" id="sql-input" placeholder="SELECT * FROM users LIMIT 10;" rows="4"></textarea>
+                    <div class="mt-16">
+                        <button class="btn btn-primary" id="btn-run-query">実行</button>
+                    </div>
+                </div>
+                <div id="query-result" class="mt-24" style="display:none;">
+                    <div class="flex-between mb-8"><span class="help-text" id="query-count"></span></div>
+                    <div class="table-wrap">
+                        <table class="data-table" id="table-query"><thead><tr></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+                <div id="query-error" class="mt-16" style="display:none;">
+                    <div class="error-box">
+                        <div class="error-box-title">クエリエラー</div>
+                        <div class="error-box-message" id="query-error-msg"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="/static/js/master-app.js"></script>
+</body>
+</html>
