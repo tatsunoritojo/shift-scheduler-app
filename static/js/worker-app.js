@@ -6,6 +6,7 @@ import { showToast } from './modules/notification.js';
 import { escapeHtml } from './modules/escape-html.js';
 import { showConfirmDialog } from './modules/ui-dialogs.js';
 import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt as _formatSubmittedAt } from './modules/event-utils.js';
+import { WEEKDAY_NAMES_FULL } from './modules/date-constants.js';
 
 let currentUser = null;
 let currentPeriod = null;
@@ -14,8 +15,6 @@ let cachedCalendarEvents = [];  // Module-level cache for calendar events
 let calendarList = [];           // Available Google Calendars
 let selectedCalendarIds = [];    // Currently selected calendar IDs
 let cachedOpeningHours = null;   // Cached opening hours for recalculation
-
-const WEEKDAY_NAMES_FULL = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
 
 // --- Calc Settings ---
 const CALC_SETTINGS_KEY = 'shift_calc_settings';

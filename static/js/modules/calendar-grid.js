@@ -1,6 +1,7 @@
 /**
  * Calendar grid rendering module.
  */
+import { WEEKDAY_NAMES } from './date-constants.js';
 
 /**
  * Render a multi-month calendar in the target container.
@@ -46,8 +47,7 @@ function createMonthCalendar(month, dataMap, options) {
     const grid = document.createElement('div');
     grid.className = 'calendar-grid';
 
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-    weekdays.forEach(day => {
+    WEEKDAY_NAMES.forEach(day => {
         const header = document.createElement('div');
         header.className = 'calendar-header';
         header.textContent = day;

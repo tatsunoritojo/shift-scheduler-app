@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>欠員補充が完了しました</h3>
+    <p>以下のシフトの欠員補充が完了しました。</p>
+    <p>日付: <strong>{{ shift_date }}</strong></p>
+    <p>時間: <strong>{{ start_time }} 〜 {{ end_time }}</strong></p>
+    <p>変更前: {{ original_name }} → 変更後: <strong>{{ new_name }}</strong></p>
+{% endblock %}

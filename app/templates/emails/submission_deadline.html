@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>シフト希望の提出期限が近づいています</h3>
+    <p>{{ worker_name }} さん、シフト期間「{{ period_name }}」の希望提出期限が近づいています。</p>
+    <p>提出期限: <strong>{{ deadline_str }}</strong></p>
+    <p><a href="{{ submit_url }}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">シフト希望を提出する</a></p>
+{% endblock %}

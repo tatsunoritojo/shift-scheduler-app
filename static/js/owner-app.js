@@ -2,6 +2,7 @@ import { api, getCurrentUser } from './modules/api-client.js';
 import { showToast } from './modules/notification.js';
 import { escapeHtml } from './modules/escape-html.js';
 import { showConfirmDialog } from './modules/ui-dialogs.js';
+import { WEEKDAY_NAMES } from './modules/date-constants.js';
 
 let currentUser = null;
 let currentScheduleId = null;
@@ -90,7 +91,6 @@ async function viewSchedule(scheduleId) {
         `;
 
         // Entries
-        const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
         if (data.entries && data.entries.length > 0) {
             const sorted = data.entries.sort((a, b) => a.shift_date.localeCompare(b.shift_date) || a.start_time.localeCompare(b.start_time));
             document.getElementById('detail-entries').innerHTML = `
@@ -101,7 +101,7 @@ async function viewSchedule(scheduleId) {
                             const dt = new Date(e.shift_date);
                             return `<tr>
                                 <td>${e.shift_date}</td>
-                                <td>${WEEKDAYS[dt.getDay()]}</td>
+                                <td>${WEEKDAY_NAMES[dt.getDay()]}</td>
                                 <td>${escapeHtml(e.user_name) || `User ${e.user_id}`}</td>
                                 <td>${e.start_time} - ${e.end_time}</td>
                             </tr>`;

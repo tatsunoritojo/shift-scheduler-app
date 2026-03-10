@@ -1,6 +1,7 @@
 /**
  * Time utility functions shared across the shift management system.
  */
+import { WEEKDAY_NAMES } from './date-constants.js';
 
 export function timeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -33,6 +34,5 @@ export function formatDate(date) {
 
 export function formatDateJP(dateStr) {
     const d = new Date(dateStr);
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-    return `${d.getMonth() + 1}/${d.getDate()}(${weekdays[d.getDay()]})`;
+    return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_NAMES[d.getDay()]})`;
 }

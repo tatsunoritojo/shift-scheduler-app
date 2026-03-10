@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>明日のシフトのお知らせ</h3>
+    <p>{{ worker_name }} さん、明日のシフト予定をお知らせします。</p>
+    <p>日付: <strong>{{ shift_date_str }}</strong></p>
+    <p>時間: <strong>{{ start_time }} 〜 {{ end_time }}</strong></p>
+    <p>遅刻・欠勤の場合は早めにご連絡ください。</p>
+{% endblock %}

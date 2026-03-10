@@ -6,6 +6,7 @@ import { escapeHtml } from './modules/escape-html.js';
 import { showConfirmDialog } from './modules/ui-dialogs.js';
 import { setLoading, withLoading } from './modules/btn-loading.js';
 import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt } from './modules/event-utils.js';
+import { WEEKDAY_NAMES } from './modules/date-constants.js';
 
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
@@ -16,8 +17,6 @@ let dayAggregatedData = {}; // dateStr -> aggregated day info
 let workersData = []; // workers list
 let builderLoadGeneration = 0; // Guard against stale async responses
 let adminCalendarEvents = []; // Google Calendar events for the admin
-
-const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
 
 // Worker colors for timeline
 const WORKER_COLORS = [

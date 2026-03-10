@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>シフトの欠員補充のお願い</h3>
+    <p>{{ user_name }} さん、以下のシフトに欠員が発生しました。代わりに出勤いただけないでしょうか？</p>
+    <p>日付: <strong>{{ shift_date }}</strong></p>
+    <p>時間: <strong>{{ start_time }} 〜 {{ end_time }}</strong></p>
+    {% if reason %}
+    <p>理由: {{ reason }}</p>
+    {% endif %}
+    <p>
+        <a href="{{ accept_url }}" style="display:inline-block;padding:12px 24px;background:#22c55e;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;margin-right:12px;">引き受ける</a>
+        <a href="{{ decline_url }}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">辞退する</a>
+    </p>
+    <p style="color:#999;font-size:0.85em;">このリンクは本人専用です。他の方と共有しないでください。</p>
+{% endblock %}

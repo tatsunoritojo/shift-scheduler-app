@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>{{ org_name }} への招待</h3>
+    <p>{{ inviter_name }} さんがあなたを「{{ org_name }}」に{{ role_ja }}として招待しました。</p>
+    <p>以下のリンクをクリックして参加してください:</p>
+    <p><a href="{{ invite_url }}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">招待を受ける</a></p>
+    <p style="color:#999;font-size:0.85em;">このリンクの有効期限: {{ expires_str }}</p>
+{% endblock %}
