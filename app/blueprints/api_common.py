@@ -32,12 +32,6 @@ def index():
     return redirect('/login')
 
 
-@api_common_bp.route('/app')
-def legacy_app():
-    """Serve the original shift calculator app for backwards compatibility."""
-    return current_app.send_static_file('shift_scheduler_app.html')
-
-
 @api_common_bp.route('/lp')
 def landing_page():
     return current_app.send_static_file('pages/landing.html')
