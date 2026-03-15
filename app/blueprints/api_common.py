@@ -93,7 +93,7 @@ def create_organization():
         return error_response("Organization name too long", 400, code="VALIDATION_ERROR")
 
     try:
-        org = Organization(name=name, admin_email=user.email)
+        org = Organization(name=name, admin_email=user.email, owner_email=user.email)
         db.session.add(org)
         db.session.flush()
 
@@ -103,6 +103,10 @@ def create_organization():
             role='admin',
         )
         db.session.add(member)
+
+        # Initialize default opening hours (Mon-Sun 09:00-21:00)
+        from app.models.opening_hours import OpeningHours
+        OpeningHours.create_defaults(org.id)
 
         # Sync denormalized fields directly (avoid lazy-load on new member)
         user.role = 'admin'

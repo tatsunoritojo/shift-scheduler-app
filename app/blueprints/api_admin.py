@@ -33,10 +33,12 @@ def _get_or_create_org(user):
     if user.organization_id:
         return db.session.get(Organization, user.organization_id)
     # Create a new org for this user instead of assigning to an arbitrary existing one
-    org = Organization(name=f'{user.display_name or user.email} の組織', admin_email=user.email)
+    org = Organization(name=f'{user.display_name or user.email} の組織', admin_email=user.email, owner_email=user.email)
     db.session.add(org)
     db.session.flush()
     user.organization_id = org.id
+    # Initialize default opening hours (Mon-Sun 09:00-21:00)
+    OpeningHours.create_defaults(org.id)
     try:
         db.session.commit()
     except Exception:

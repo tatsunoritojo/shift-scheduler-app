@@ -61,7 +61,7 @@ def approve(schedule_id):
 
     result, error = approve_schedule(schedule_id, user, comment)
     if error:
-        return error_response(error, 400)
+        return error_response(error, 400, code="APPROVAL_ERROR")
     return jsonify(result.to_dict())
 
 
@@ -78,5 +78,5 @@ def reject(schedule_id):
 
     result, error = reject_schedule(schedule_id, user, comment)
     if error:
-        return error_response(error, 400)
+        return error_response(error, 400, code="REJECTION_ERROR")
     return jsonify(result.to_dict())

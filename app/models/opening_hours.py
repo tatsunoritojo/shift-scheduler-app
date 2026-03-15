@@ -18,6 +18,19 @@ class OpeningHours(db.Model):
         db.UniqueConstraint('organization_id', 'day_of_week', name='uq_opening_hours_org_day'),
     )
 
+    @classmethod
+    def create_defaults(cls, org_id, start_time='09:00', end_time='21:00'):
+        """Create default opening hours (Mon-Sun) for a new organization."""
+        from app.extensions import db as _db
+        for dow in range(7):
+            _db.session.add(cls(
+                organization_id=org_id,
+                day_of_week=dow,
+                start_time=start_time,
+                end_time=end_time,
+                is_closed=False,
+            ))
+
     def to_dict(self):
         return {
             'id': self.id,
