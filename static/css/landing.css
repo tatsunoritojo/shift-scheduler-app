@@ -907,15 +907,24 @@
 }
 
 /* --- Scroll Animations --- */
-[data-animate] {
+/* JS adds .lp-anim-ready to body; without JS, content stays visible */
+.lp-anim-ready [data-animate] {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
-[data-animate].lp-animated {
+.lp-anim-ready [data-animate].lp-animated {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-anim-ready [data-animate] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
 }
 
 /* --- Responsive: Desktop --- */
