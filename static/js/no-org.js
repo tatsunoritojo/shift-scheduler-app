@@ -32,23 +32,7 @@ document.getElementById('create-org-btn')?.addEventListener('click', async () =>
         const data = await res.json();
 
         if (res.ok) {
-            // Show success state
-            const formSection = document.getElementById('create-form-section');
-            const successSection = document.getElementById('create-success');
-            const divider = document.querySelector('.divider');
-            const steps = document.querySelector('.steps');
-
-            if (formSection) formSection.style.display = 'none';
-            if (divider) divider.style.display = 'none';
-            if (steps) steps.style.display = 'none';
-
-            document.getElementById('success-org-name').textContent = data.name || name || '新しい組織';
-            if (successSection) {
-                successSection.style.display = '';
-                successSection.classList.add('fade-in');
-            }
-
-            setTimeout(() => { window.location.href = '/'; }, 1500);
+            showSetupTransition(data.name || name || '新しい組織');
         } else {
             errorEl.textContent = data.error || '組織の作成に失敗しました (' + res.status + ')';
             errorEl.style.display = 'block';
@@ -56,7 +40,7 @@ document.getElementById('create-org-btn')?.addEventListener('click', async () =>
             btn.classList.remove('btn-loading');
         }
     } catch (e) {
-        errorEl.textContent = '通信エラー: サーバーに接続できませんでした。インターネット接続を確認してください。';
+        errorEl.textContent = '通信エラー: サーバーに接続できませんでした。';
         errorEl.style.display = 'block';
         btn.disabled = false;
         btn.classList.remove('btn-loading');
@@ -69,3 +53,41 @@ document.getElementById('org-name')?.addEventListener('keydown', (e) => {
         document.getElementById('create-org-btn')?.click();
     }
 });
+
+function showSetupTransition(orgName) {
+    const welcomeState = document.getElementById('welcome-state');
+    const setupState = document.getElementById('setup-state');
+    const orgNameEl = document.getElementById('setup-org-name');
+
+    // Fade out welcome, show setup
+    welcomeState.classList.add('fade-out');
+    setTimeout(() => {
+        welcomeState.style.display = 'none';
+        orgNameEl.textContent = orgName;
+        setupState.classList.add('active', 'fade-in');
+
+        // Animate steps sequentially
+        animateSteps();
+    }, 300);
+}
+
+function animateSteps() {
+    const steps = ['step-org', 'step-hours', 'step-ready'];
+    let i = 0;
+
+    function nextStep() {
+        if (i >= steps.length) {
+            // All done — redirect
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 600);
+            return;
+        }
+        document.getElementById(steps[i]).classList.add('done');
+        i++;
+        setTimeout(nextStep, 500);
+    }
+
+    // Start first step after a brief pause
+    setTimeout(nextStep, 400);
+}

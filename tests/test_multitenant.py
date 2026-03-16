@@ -186,7 +186,7 @@ class TestNoOrgRedirects:
         auth.login_as(user)
         resp = client.get("/no-organization")
         assert resp.status_code == 200
-        assert "組織に参加していません" in resp.data.decode("utf-8")
+        assert "シフリーへようこそ" in resp.data.decode("utf-8")
 
 
 # ---------------------------------------------------------------------------
