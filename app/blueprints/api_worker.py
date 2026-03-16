@@ -209,6 +209,8 @@ def sync_confirmed_shift(entry_id):
     if not entry:
         return error_response("Shift not found", 404, code="NOT_FOUND")
 
+    entry.last_sync_attempt_at = datetime.utcnow()
+
     # Idempotency: already synced
     if entry.calendar_event_id:
         data = entry.to_dict()
@@ -261,3 +263,86 @@ def sync_confirmed_shift(entry_id):
     data = entry.to_dict()
     data.update(_sync_meta(entry))
     return jsonify(data)
+
+
+@api_worker_bp.route('/confirmed-shifts/sync-all', methods=['POST'])
+@require_role('worker')
+@limiter.limit("5 per minute")
+def sync_all_confirmed_shifts():
+    """Sync all unsynced confirmed shift entries to the worker's Google Calendar."""
+    user = get_current_user()
+
+    entries = (
+        ShiftScheduleEntry.query
+        .join(ShiftSchedule, ShiftScheduleEntry.schedule_id == ShiftSchedule.id)
+        .join(ShiftPeriod, ShiftSchedule.shift_period_id == ShiftPeriod.id)
+        .filter(
+            ShiftScheduleEntry.user_id == user.id,
+            ShiftSchedule.status == 'confirmed',
+            ShiftPeriod.organization_id == user.organization_id,
+            ShiftScheduleEntry.calendar_event_id.is_(None),
+        )
+        .order_by(ShiftScheduleEntry.shift_date)
+        .all()
+    )
+
+    if not entries:
+        return jsonify({'synced': 0, 'failed': 0, 'skipped': 0, 'results': []})
+
+    # Get credentials once
+    try:
+        credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        for entry in entries:
+            entry.last_sync_attempt_at = datetime.utcnow()
+            entry.sync_error = 'CREDENTIALS_EXPIRED'
+        db.session.commit()
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
+    except Exception as e:
+        return error_response(str(e), 500, code="CREDENTIALS_UNAVAILABLE")
+
+    if not credentials:
+        for entry in entries:
+            entry.last_sync_attempt_at = datetime.utcnow()
+            entry.sync_error = 'NO_CREDENTIALS'
+        db.session.commit()
+        return error_response(
+            "Google連携未設定。再ログインしてください。", 401, code="NO_CREDENTIALS"
+        )
+
+    synced_count = 0
+    failed_count = 0
+    results = []
+
+    for entry in entries:
+        entry.last_sync_attempt_at = datetime.utcnow()
+        summary = f"シフト: {user.display_name or user.email}"
+        start_dt = f"{entry.shift_date.isoformat()}T{entry.start_time}:00"
+        end_dt = f"{entry.shift_date.isoformat()}T{entry.end_time}:00"
+
+        try:
+            event_id = create_event(
+                credentials, 'primary', summary, start_dt, end_dt,
+                description="シフリーにより自動作成"
+            )
+            entry.calendar_event_id = event_id
+            entry.synced_at = datetime.utcnow()
+            entry.sync_error = None
+            synced_count += 1
+            results.append({'id': entry.id, 'status': 'synced'})
+        except Exception as e:
+            current_app.logger.error(
+                "Bulk sync failed for user %s entry %s: %s", user.id, entry.id, e
+            )
+            error_code = classify_calendar_error(e)
+            entry.sync_error = error_code
+            failed_count += 1
+            results.append({'id': entry.id, 'status': 'failed', 'error': error_code})
+
+    db.session.commit()
+    return jsonify({
+        'synced': synced_count,
+        'failed': failed_count,
+        'skipped': 0,
+        'results': results,
+    })

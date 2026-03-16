@@ -501,11 +501,24 @@ def get_schedule(period_id):
         return jsonify(None)
 
     data = schedule.to_dict()
-    data['entries'] = [e.to_dict() for e in schedule.entries.all()]
+    entries = schedule.entries.all()
+    data['entries'] = [e.to_dict() for e in entries]
     data['hours_summary'] = get_worker_hours_summary(schedule.id)
     data['history'] = [h.to_dict() for h in schedule.history.order_by(
         db.text('performed_at desc')
     ).all()]
+
+    # Sync summary for confirmed schedules
+    if schedule.status == 'confirmed' and entries:
+        statuses = [e.get_sync_status() for e in entries]
+        data['sync_summary'] = {
+            'total': len(entries),
+            'synced': statuses.count('synced'),
+            'reauth_required': statuses.count('reauth_required'),
+            'failed': statuses.count('failed'),
+            'pending': statuses.count('pending'),
+        }
+
     return jsonify(data)
 
 
@@ -623,6 +636,8 @@ def _sync_schedule_to_calendar(schedule, admin_user):
         end_dt = f"{entry.shift_date.isoformat()}T{entry.end_time}:00"
 
         try:
+            entry.last_sync_attempt_at = datetime.utcnow()
+
             # Worker credentials の取得
             if worker.id not in credentials_cache:
                 try:

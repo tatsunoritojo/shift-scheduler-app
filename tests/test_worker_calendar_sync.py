@@ -224,3 +224,142 @@ class TestSyncConfirmedShift:
 
         refreshed = db_session.get(ShiftScheduleEntry, entry_id)
         assert refreshed.sync_error == "CALENDAR_PERMISSION_DENIED"
+
+
+# ---------------------------------------------------------------------------
+# POST /api/worker/confirmed-shifts/sync-all
+# ---------------------------------------------------------------------------
+
+class TestSyncAllConfirmedShifts:
+
+    def test_sync_all_success(self, client, auth, worker_user, admin_user, period, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 20))
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 21))
+        # Already synced — should be excluded
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 22),
+                     calendar_event_id="evt_existing", synced_at=datetime(2026, 3, 15))
+        db_session.commit()
+        auth.login_as(worker_user)
+
+        call_count = 0
+        def fake_create(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return f"evt_bulk_{call_count}"
+
+        fake_creds = object()
+        with patch("app.blueprints.api_worker.get_credentials_for_user", return_value=fake_creds), \
+             patch("app.blueprints.api_worker.create_event", side_effect=fake_create):
+            resp = client.post("/api/worker/confirmed-shifts/sync-all")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["synced"] == 2
+        assert data["failed"] == 0
+        assert len(data["results"]) == 2
+
+    def test_sync_all_no_unsynced(self, client, auth, worker_user, admin_user, period, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        _make_entry(db_session, schedule, worker_user, calendar_event_id="evt_1", synced_at=datetime(2026, 3, 15))
+        db_session.commit()
+        auth.login_as(worker_user)
+
+        resp = client.post("/api/worker/confirmed-shifts/sync-all")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["synced"] == 0
+        assert data["results"] == []
+
+    def test_sync_all_credentials_expired(self, client, auth, worker_user, admin_user, period, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        _make_entry(db_session, schedule, worker_user)
+        db_session.commit()
+        auth.login_as(worker_user)
+
+        with patch("app.blueprints.api_worker.get_credentials_for_user",
+                    side_effect=CredentialsExpiredError("expired")):
+            resp = client.post("/api/worker/confirmed-shifts/sync-all")
+
+        assert resp.status_code == 401
+        assert resp.get_json()["code"] == "CREDENTIALS_EXPIRED"
+
+    def test_sync_all_partial_failure(self, client, auth, worker_user, admin_user, period, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 20))
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 21))
+        db_session.commit()
+        auth.login_as(worker_user)
+
+        call_count = 0
+        def fake_create(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                raise Exception("403 Forbidden")
+            return f"evt_bulk_{call_count}"
+
+        fake_creds = object()
+        with patch("app.blueprints.api_worker.get_credentials_for_user", return_value=fake_creds), \
+             patch("app.blueprints.api_worker.create_event", side_effect=fake_create):
+            resp = client.post("/api/worker/confirmed-shifts/sync-all")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["synced"] == 1
+        assert data["failed"] == 1
+
+    def test_sync_all_sets_last_sync_attempt_at(self, client, auth, worker_user, admin_user, period, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        entry = _make_entry(db_session, schedule, worker_user)
+        db_session.commit()
+        entry_id = entry.id
+        auth.login_as(worker_user)
+
+        fake_creds = object()
+        with patch("app.blueprints.api_worker.get_credentials_for_user", return_value=fake_creds), \
+             patch("app.blueprints.api_worker.create_event", return_value="evt_1"):
+            client.post("/api/worker/confirmed-shifts/sync-all")
+
+        refreshed = db_session.get(ShiftScheduleEntry, entry_id)
+        assert refreshed.last_sync_attempt_at is not None
+
+
+# ---------------------------------------------------------------------------
+# GET /api/admin/schedules/<id> — sync_summary
+# ---------------------------------------------------------------------------
+
+class TestAdminSyncSummary:
+
+    def test_sync_summary_in_confirmed_schedule(self, client, auth, admin_user, period, worker_user, db_session):
+        schedule = _make_confirmed_schedule(db_session, period, admin_user)
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 20),
+                     calendar_event_id="evt_1", synced_at=datetime(2026, 3, 15))
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 21))
+        _make_entry(db_session, schedule, worker_user, shift_date=date(2026, 3, 22),
+                     sync_error="CREDENTIALS_EXPIRED")
+        db_session.commit()
+        auth.login_as(admin_user)
+
+        resp = client.get(f"/api/admin/periods/{period.id}/schedule")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        summary = data.get("sync_summary")
+        assert summary is not None
+        assert summary["total"] == 3
+        assert summary["synced"] == 1
+        assert summary["pending"] == 1
+        assert summary["reauth_required"] == 1
+
+    def test_no_sync_summary_for_draft(self, client, auth, admin_user, period, worker_user, db_session):
+        s = ShiftSchedule(shift_period_id=period.id, status="draft", created_by=admin_user.id)
+        db_session.add(s)
+        db_session.flush()
+        _make_entry(db_session, s, worker_user)
+        db_session.commit()
+        auth.login_as(admin_user)
+
+        resp = client.get(f"/api/admin/periods/{period.id}/schedule")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "sync_summary" not in data

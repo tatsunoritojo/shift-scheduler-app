@@ -853,7 +853,12 @@ async function loadConfirmedShifts() {
 }
 
 function renderConfirmedShifts(container, shifts) {
-    const html = shifts.map(s => {
+    const unsyncedCount = shifts.filter(s => s.can_sync).length;
+    const syncAllBtn = unsyncedCount > 0
+        ? `<div class="mb-8" style="text-align:right;"><button class="btn btn-primary btn-sm" id="btn-sync-all"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> すべてカレンダーに追加（${unsyncedCount}件）</button></div>`
+        : '';
+
+    const html = syncAllBtn + shifts.map(s => {
         const d = new Date(s.shift_date + 'T00:00:00');
         const dow = WEEKDAY_SHORT[d.getDay()];
         const label = SYNC_STATUS_LABELS[s.sync_status] || SYNC_STATUS_LABELS.pending;
@@ -883,6 +888,12 @@ function renderConfirmedShifts(container, shifts) {
     container.querySelectorAll('.btn-sync-shift').forEach(btn => {
         btn.addEventListener('click', () => syncSingleShift(btn));
     });
+
+    // Sync all button
+    const syncAllBtn2 = container.querySelector('#btn-sync-all');
+    if (syncAllBtn2) {
+        syncAllBtn2.addEventListener('click', () => syncAllShifts(syncAllBtn2));
+    }
 }
 
 async function syncSingleShift(btn) {
@@ -907,6 +918,27 @@ async function syncSingleShift(btn) {
         showToast(`同期に失敗しました: ${e.message}`, 'error');
         btn.disabled = false;
         btn.textContent = 'カレンダーに追加';
+    }
+}
+
+async function syncAllShifts(btn) {
+    btn.disabled = true;
+    btn.textContent = '同期中...';
+    try {
+        const result = await api.post('/api/worker/confirmed-shifts/sync-all');
+        if (result.synced > 0) {
+            showToast(`${result.synced}件をカレンダーに追加しました`, 'success');
+        }
+        if (result.failed > 0) {
+            showToast(`${result.failed}件の同期に失敗しました`, 'error');
+        }
+        // Reload the confirmed shifts section
+        await loadConfirmedShifts();
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        showToast(`同期に失敗しました: ${e.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = 'すべてカレンダーに追加';
     }
 }
 

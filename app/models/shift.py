@@ -158,6 +158,7 @@ class ShiftScheduleEntry(db.Model):
     calendar_event_id = db.Column(db.String(255), nullable=True)
     synced_at = db.Column(db.DateTime, nullable=True)
     sync_error = db.Column(db.String(50), nullable=True)
+    last_sync_attempt_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -196,6 +197,7 @@ class ShiftScheduleEntry(db.Model):
             'calendar_event_id': self.calendar_event_id,
             'synced_at': self.synced_at.isoformat() if self.synced_at else None,
             'sync_error': self.sync_error,
+            'last_sync_attempt_at': self.last_sync_attempt_at.isoformat() if self.last_sync_attempt_at else None,
         }
 
     def __repr__(self):

@@ -1304,6 +1304,7 @@ async function loadBuilderData() {
         buildDayAggregatedData();
         renderBuilderCalendar();
         renderHoursSummary();
+        renderSyncStatusSummary(schedule);
     } catch (e) {
         if (thisGeneration !== builderLoadGeneration) return;
         showToast('データの読み込みに失敗しました', 'error');
@@ -1786,6 +1787,33 @@ function renderHoursSummary() {
             <span style="font-weight:600;">${s.hours.toFixed(1)}h (${s.shifts}日)</span>
         </div>
     `).join('');
+}
+
+
+function renderSyncStatusSummary(schedule) {
+    const card = document.getElementById('sync-status-card');
+    const container = document.getElementById('sync-status-summary');
+    if (!card || !container) return;
+
+    if (!schedule || schedule.status !== 'confirmed' || !schedule.sync_summary) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+    const s = schedule.sync_summary;
+    const rows = [];
+    if (s.synced > 0) rows.push(`<div class="flex-between mb-4"><span>同期済み</span><span class="sync-count sync-count-success">${s.synced}</span></div>`);
+    if (s.reauth_required > 0) rows.push(`<div class="flex-between mb-4"><span>要再認証</span><span class="sync-count sync-count-warning">${s.reauth_required}</span></div>`);
+    if (s.failed > 0) rows.push(`<div class="flex-between mb-4"><span>同期失敗</span><span class="sync-count sync-count-danger">${s.failed}</span></div>`);
+    if (s.pending > 0) rows.push(`<div class="flex-between mb-4"><span>未同期</span><span class="sync-count sync-count-neutral">${s.pending}</span></div>`);
+
+    const allSynced = s.synced === s.total;
+    const statusMsg = allSynced
+        ? '<p class="help-text" style="color:var(--color-success-600);margin-top:8px;">全員のカレンダーに同期済みです</p>'
+        : `<p class="help-text" style="margin-top:8px;">${s.total - s.synced}件が未同期です。スタッフに再ログインを依頼してください。</p>`;
+
+    container.innerHTML = rows.join('') + statusMsg;
 }
 
 async function saveSchedule() {
