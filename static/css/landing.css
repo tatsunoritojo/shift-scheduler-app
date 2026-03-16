@@ -2,6 +2,107 @@
    Landing Page Styles
    ============================================ */
 
+/* --- Skip Link --- */
+.lp-skip-link {
+    position: absolute;
+    top: -100px;
+    left: 8px;
+    background: var(--color-primary-500);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    z-index: 1000;
+    text-decoration: none;
+}
+
+.lp-skip-link:focus {
+    top: 8px;
+}
+
+/* --- Sticky Header --- */
+.lp-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.lp-header-visible {
+    transform: translateY(0);
+}
+
+.lp-header-hidden {
+    transform: translateY(-100%);
+}
+
+.lp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 10px 20px;
+}
+
+.lp-nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-neutral-800);
+}
+
+.lp-nav-logo img {
+    border-radius: 6px;
+}
+
+.lp-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.lp-nav-link {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-neutral-500);
+    text-decoration: none;
+    transition: color 0.2s;
+    display: none;
+}
+
+.lp-nav-link:hover {
+    color: var(--color-neutral-800);
+}
+
+.lp-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-primary-500);
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: 8px 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.lp-nav-cta:hover {
+    background: var(--color-primary-600);
+}
+
 /* --- Layout --- */
 .lp-body {
     background: #fff;
@@ -22,11 +123,12 @@
 .lp-hero {
     position: relative;
     min-height: 100vh;
+    min-height: 100svh;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 80px 24px 96px;
+    padding: 60px 24px 48px;
     overflow: hidden;
 }
 
@@ -83,8 +185,16 @@
 .lp-hero-sub {
     font-size: 1rem;
     color: var(--color-neutral-500);
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     line-height: 1.7;
+}
+
+.lp-hero-target {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-neutral-400);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
 }
 
 /* --- Hero Badges --- */
@@ -169,6 +279,33 @@
 
 .lp-cta-secondary:hover {
     color: var(--color-primary-500);
+}
+
+.lp-cta-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-primary-500);
+    background: transparent;
+    border: 2px solid var(--color-primary-200);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.lp-cta-ghost:hover {
+    border-color: var(--color-primary-400);
+    background: rgba(59, 130, 246, 0.04);
+}
+
+/* --- Mid CTA --- */
+.lp-mid-cta {
+    text-align: center;
+    padding: 32px 24px;
+    background: var(--color-neutral-50);
 }
 
 /* --- Section Title --- */
@@ -650,18 +787,158 @@
     color: var(--color-primary-500);
 }
 
-.lp-footer-sep {
-    color: var(--color-neutral-200);
+/* --- Social Proof --- */
+.lp-social-proof {
+    background: var(--color-neutral-50);
+    padding-top: 56px;
+    padding-bottom: 56px;
+}
+
+.lp-proof-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.lp-proof-stat {
+    text-align: center;
+}
+
+.lp-proof-num {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-primary-500);
+    line-height: 1.1;
+}
+
+.lp-proof-label {
+    font-size: 0.82rem;
+    color: var(--color-neutral-500);
+    font-weight: 500;
+}
+
+.lp-proof-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--color-neutral-200);
+}
+
+.lp-proof-voices {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.lp-proof-voice {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    border: 1px solid var(--color-neutral-100);
+}
+
+.lp-proof-voice p {
+    font-size: 0.95rem;
+    color: var(--color-neutral-700);
+    line-height: 1.7;
+    margin: 0 0 12px;
+    font-style: italic;
+}
+
+.lp-proof-author {
+    font-size: 0.82rem;
+    color: var(--color-neutral-400);
+    font-weight: 500;
+}
+
+/* --- Footer --- */
+.lp-footer {
+    background: var(--color-neutral-900);
+    color: var(--color-neutral-400);
+    padding: 32px 24px;
+}
+
+.lp-footer-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.lp-footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.lp-footer-brand img {
+    border-radius: 4px;
+}
+
+.lp-footer-links {
+    display: flex;
+    gap: 20px;
+    font-size: 0.82rem;
+}
+
+.lp-footer-links a {
+    color: var(--color-neutral-400);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.lp-footer-links a:hover {
+    color: #fff;
+}
+
+.lp-footer-copy {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-neutral-600);
+    margin: 0;
+}
+
+/* --- Scroll Animations --- */
+[data-animate] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+[data-animate].lp-animated {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* --- Responsive: Desktop --- */
 @media (min-width: 768px) {
+    .lp-nav-link {
+        display: inline;
+    }
+
     .lp-hero-title {
         font-size: 2.2rem;
     }
 
     .lp-section {
         padding: 96px 40px;
+    }
+
+    .lp-proof-voices {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .lp-footer-inner {
+        flex-direction: row;
+        justify-content: space-between;
     }
 
     .lp-section-title {

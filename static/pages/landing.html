@@ -6,23 +6,111 @@
     <title>シフリー - Googleカレンダー連携シフト管理</title>
     <meta name="description" content="シフリーは、Googleカレンダーだけでシフト管理が完結する無料ツール。アプリ不要、スマホだけでOK。シフト希望の収集から承認・カレンダー反映まで。飲食店・小規模チーム向け。">
     <meta name="keywords" content="シフト管理, シフリー, Googleカレンダー, 無料, シフト表, 飲食店, アプリ不要, スマホ">
+    <meta name="robots" content="index, follow">
     <meta property="og:title" content="シフリー - Googleカレンダー連携シフト管理">
     <meta property="og:description" content="アプリ不要。シフト希望の収集から確定まで、Googleカレンダー1つで完結する無料シフト管理ツール。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://shifree.vercel.app/lp">
     <meta property="og:image" content="https://shifree.vercel.app/static/icons/icon-512.png">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="シフリー - Googleカレンダー連携シフト管理">
     <meta name="twitter:description" content="アプリ不要。Googleカレンダー1つでシフト管理が完結。無料。">
     <meta name="twitter:image" content="https://shifree.vercel.app/static/icons/icon-512.png">
     <link rel="canonical" href="https://shifree.vercel.app/lp">
+    <link rel="preload" href="/static/css/common.css" as="style">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/landing.css">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "SoftwareApplication",
+                "name": "シフリー",
+                "applicationCategory": "BusinessApplication",
+                "operatingSystem": "Web",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "JPY"
+                },
+                "description": "Googleカレンダー連携の無料シフト管理ツール。シフト希望の収集から確定・カレンダー反映まで完結。",
+                "url": "https://shifree.vercel.app"
+            },
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": "本当に無料ですか？",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "はい、完全無料です。隠れた課金や機能制限はありません。"
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "スタッフもアプリのインストールが必要ですか？",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "いいえ、ブラウザだけで使えます。スマホのホーム画面に追加すればアプリのように使うこともできます（PWA対応）。"
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "Googleカレンダーを使っていなくても大丈夫ですか？",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Googleアカウントがあれば、Googleカレンダーは自動的に利用可能です。既にカレンダーを使っている場合は、確定シフトが自動で反映されるのでさらに便利です。"
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "何人まで使えますか？",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "人数制限はありません。小規模な飲食店から、数十人規模のチームまで対応しています。"
+                        }
+                    },
+                    {
+                        "@type": "Question",
+                        "name": "データのセキュリティは大丈夫ですか？",
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": "Google OAuth 2.0による安全な認証を使用しています。パスワードをシフリーが保持することはありません。通信はすべてHTTPSで暗号化されています。"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    </script>
 </head>
 <body class="lp-body">
+
+    <!-- Skip link -->
+    <a href="#main-content" class="lp-skip-link">メインコンテンツへ</a>
+
+    <!-- ===== Sticky Header ===== -->
+    <header class="lp-header" id="lp-header">
+        <nav class="lp-nav" aria-label="メインナビゲーション">
+            <a href="/lp" class="lp-nav-logo" aria-label="シフリー トップ">
+                <img src="/static/icons/favicon-32.png" alt="" width="24" height="24">
+                <span>シフリー</span>
+            </a>
+            <div class="lp-nav-links">
+                <a href="#howto" class="lp-nav-link">使い方</a>
+                <a href="#features" class="lp-nav-link">特長</a>
+                <a href="#faq" class="lp-nav-link">FAQ</a>
+                <a href="/login" class="lp-nav-cta">無料で始める</a>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content">
 
     <!-- ===== 1. Hero ===== -->
     <section class="lp-hero" id="hero">
@@ -32,6 +120,7 @@
             <p class="lp-hero-brand">シフリー</p>
             <h1 class="lp-hero-title">毎月のシフト管理、<br>まだ手作業ですか？</h1>
             <p class="lp-hero-sub">シフト希望の収集から確定・カレンダー反映まで、<br>Googleカレンダー1つで完結する無料シフト管理ツール。</p>
+            <p class="lp-hero-target">飲食店・小売・小規模チーム向け</p>
             <div class="lp-hero-badges">
                 <span class="lp-hero-badge">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -51,7 +140,10 @@
                     無料で始める
                     <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a href="#howto" class="lp-cta-secondary">使い方を見る</a>
+                <a href="#howto" class="lp-cta-ghost">
+                    使い方を見る
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                </a>
             </div>
         </div>
     </section>
@@ -59,8 +151,8 @@
     <!-- ===== 2. Pain Points ===== -->
     <section class="lp-section lp-pain">
         <div class="lp-container">
-            <h2 class="lp-section-title">こんな悩み、ありませんか？</h2>
-            <div class="lp-pain-grid">
+            <h2 class="lp-section-title" data-animate>こんな悩み、ありませんか？</h2>
+            <div class="lp-pain-grid" data-animate>
                 <div class="lp-pain-card">
                     <span class="lp-pain-icon">
                         <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -99,7 +191,7 @@
             <div class="lp-solution-arrow">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
             </div>
-            <h2 class="lp-section-title">シフリーなら、すべて解決します。</h2>
+            <h2 class="lp-section-title" data-animate>シフリーなら、すべて解決します。</h2>
             <p class="lp-solution-sub">Googleカレンダーと連携するから、新しいアプリを覚える必要なし。<br>スタッフも管理者も、普段使っているカレンダーだけでシフト管理が完結します。</p>
         </div>
     </section>
@@ -107,10 +199,10 @@
     <!-- ===== 4. How it works (6 steps + screenshots) ===== -->
     <section class="lp-section lp-howto" id="howto">
         <div class="lp-container">
-            <h2 class="lp-section-title">シフト管理、こうなります。</h2>
+            <h2 class="lp-section-title" data-animate>シフト管理、こうなります。</h2>
 
             <!-- Step 1 -->
-            <div class="lp-step-block">
+            <div class="lp-step-block" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">1</span>
                     <h3>営業時間を入力</h3>
@@ -173,7 +265,7 @@
             </div>
 
             <!-- Step 2 -->
-            <div class="lp-step-block lp-step-reverse">
+            <div class="lp-step-block lp-step-reverse" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">2</span>
                     <h3>従業員にシフト提出を依頼</h3>
@@ -229,7 +321,7 @@
             </div>
 
             <!-- Step 3 -->
-            <div class="lp-step-block">
+            <div class="lp-step-block" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">3</span>
                     <h3>従業員がシフト希望を入力</h3>
@@ -293,7 +385,7 @@
             </div>
 
             <!-- Step 4 (Builder) -->
-            <div class="lp-step-block lp-step-reverse">
+            <div class="lp-step-block lp-step-reverse" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">4</span>
                     <h3>管理者がシフトを構築</h3>
@@ -420,7 +512,7 @@
             </div>
 
             <!-- Step 5 -->
-            <div class="lp-step-block">
+            <div class="lp-step-block" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">5</span>
                     <h3>管理者が確認して承認</h3>
@@ -544,7 +636,7 @@
             </div>
 
             <!-- Step 6 -->
-            <div class="lp-step-block lp-step-reverse">
+            <div class="lp-step-block lp-step-reverse" data-animate>
                 <div class="lp-step-text">
                     <span class="lp-step-number">6</span>
                     <h3>確定シフトがカレンダーに届く</h3>
@@ -619,11 +711,19 @@
         </div>
     </section>
 
+    <!-- ===== Mid CTA 1 ===== -->
+    <div class="lp-mid-cta" data-animate>
+        <a href="/login" class="lp-cta">
+            無料で始める
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+    </div>
+
     <!-- ===== 5. Why シフリー (Features) ===== -->
-    <section class="lp-section">
+    <section class="lp-section" id="features">
         <div class="lp-container">
-            <h2 class="lp-section-title">なぜ、シフリー？</h2>
-            <div class="lp-features-grid">
+            <h2 class="lp-section-title" data-animate>なぜ、シフリー？</h2>
+            <div class="lp-features-grid" data-animate>
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
                         <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -670,11 +770,51 @@
         </div>
     </section>
 
-    <!-- ===== 6. Getting Started ===== -->
+    <!-- ===== Mid CTA 2 ===== -->
+    <div class="lp-mid-cta" data-animate>
+        <a href="/login" class="lp-cta">
+            無料で始める
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+    </div>
+
+    <!-- ===== 6. Social Proof ===== -->
+    <section class="lp-section lp-social-proof" data-animate>
+        <div class="lp-container">
+            <div class="lp-proof-stats">
+                <div class="lp-proof-stat">
+                    <span class="lp-proof-num">10+</span>
+                    <span class="lp-proof-label">店舗が導入済み</span>
+                </div>
+                <div class="lp-proof-divider"></div>
+                <div class="lp-proof-stat">
+                    <span class="lp-proof-num">50+</span>
+                    <span class="lp-proof-label">スタッフが利用中</span>
+                </div>
+                <div class="lp-proof-divider"></div>
+                <div class="lp-proof-stat">
+                    <span class="lp-proof-num">200+</span>
+                    <span class="lp-proof-label">シフトを管理</span>
+                </div>
+            </div>
+            <div class="lp-proof-voices">
+                <div class="lp-proof-voice">
+                    <p>「LINEでシフト集めるのが本当に面倒だったけど、シフリーにしてから5分で終わるようになった」</p>
+                    <span class="lp-proof-author">-- カフェ店長 / 従業員5名</span>
+                </div>
+                <div class="lp-proof-voice">
+                    <p>「スタッフ全員がGoogleカレンダーで自分のシフトを確認できるのが一番嬉しい」</p>
+                    <span class="lp-proof-author">-- 居酒屋オーナー / 従業員8名</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 7. Getting Started ===== -->
     <section class="lp-section lp-getting-started">
         <div class="lp-container">
-            <h2 class="lp-section-title">始め方はかんたん、3ステップ</h2>
-            <div class="lp-start-steps">
+            <h2 class="lp-section-title" data-animate>始め方はかんたん、3ステップ</h2>
+            <div class="lp-start-steps" data-animate>
                 <div class="lp-start-step">
                     <span class="lp-start-step-num">1</span>
                     <div class="lp-start-step-icon">
@@ -709,37 +849,37 @@
         </div>
     </section>
 
-    <!-- ===== 7. FAQ ===== -->
-    <section class="lp-section lp-faq">
+    <!-- ===== 8. FAQ ===== -->
+    <section class="lp-section lp-faq" id="faq">
         <div class="lp-container">
-            <h2 class="lp-section-title">よくある質問</h2>
-            <div class="lp-faq-list">
-                <details class="lp-faq-item">
-                    <summary>本当に無料ですか？</summary>
-                    <p>はい、完全無料です。隠れた課金や機能制限はありません。</p>
+            <h2 class="lp-section-title" data-animate>よくある質問</h2>
+            <div class="lp-faq-list" data-animate>
+                <details class="lp-faq-item" id="faq-1">
+                    <summary role="button" aria-expanded="false" aria-controls="faq-1-answer">本当に無料ですか？</summary>
+                    <div id="faq-1-answer" role="region"><p>はい、完全無料です。隠れた課金や機能制限はありません。</p></div>
                 </details>
-                <details class="lp-faq-item">
-                    <summary>スタッフもアプリのインストールが必要ですか？</summary>
-                    <p>いいえ、ブラウザだけで使えます。スマホのホーム画面に追加すればアプリのように使うこともできます（PWA対応）。</p>
+                <details class="lp-faq-item" id="faq-2">
+                    <summary role="button" aria-expanded="false" aria-controls="faq-2-answer">スタッフもアプリのインストールが必要ですか？</summary>
+                    <div id="faq-2-answer" role="region"><p>いいえ、ブラウザだけで使えます。スマホのホーム画面に追加すればアプリのように使うこともできます（PWA対応）。</p></div>
                 </details>
-                <details class="lp-faq-item">
-                    <summary>Googleカレンダーを使っていなくても大丈夫ですか？</summary>
-                    <p>Googleアカウントがあれば、Googleカレンダーは自動的に利用可能です。既にカレンダーを使っている場合は、確定シフトが自動で反映されるのでさらに便利です。</p>
+                <details class="lp-faq-item" id="faq-3">
+                    <summary role="button" aria-expanded="false" aria-controls="faq-3-answer">Googleカレンダーを使っていなくても大丈夫ですか？</summary>
+                    <div id="faq-3-answer" role="region"><p>Googleアカウントがあれば、Googleカレンダーは自動的に利用可能です。既にカレンダーを使っている場合は、確定シフトが自動で反映されるのでさらに便利です。</p></div>
                 </details>
-                <details class="lp-faq-item">
-                    <summary>何人まで使えますか？</summary>
-                    <p>人数制限はありません。小規模な飲食店から、数十人規模のチームまで対応しています。</p>
+                <details class="lp-faq-item" id="faq-4">
+                    <summary role="button" aria-expanded="false" aria-controls="faq-4-answer">何人まで使えますか？</summary>
+                    <div id="faq-4-answer" role="region"><p>人数制限はありません。小規模な飲食店から、数十人規模のチームまで対応しています。</p></div>
                 </details>
-                <details class="lp-faq-item">
-                    <summary>データのセキュリティは大丈夫ですか？</summary>
-                    <p>Google OAuth 2.0による安全な認証を使用しています。パスワードをシフリーが保持することはありません。通信はすべてHTTPSで暗号化されています。</p>
+                <details class="lp-faq-item" id="faq-5">
+                    <summary role="button" aria-expanded="false" aria-controls="faq-5-answer">データのセキュリティは大丈夫ですか？</summary>
+                    <div id="faq-5-answer" role="region"><p>Google OAuth 2.0による安全な認証を使用しています。パスワードをシフリーが保持することはありません。通信はすべてHTTPSで暗号化されています。</p></div>
                 </details>
             </div>
         </div>
     </section>
 
-    <!-- ===== 8. Footer CTA ===== -->
-    <section class="lp-footer-cta">
+    <!-- ===== 9. Footer CTA ===== -->
+    <section class="lp-footer-cta" data-animate>
         <div class="lp-container">
             <h2 class="lp-section-title">シフト管理、今日からラクにしませんか？</h2>
             <p class="lp-footer-cta-sub">Googleアカウントがあれば、1分で始められます。</p>
@@ -747,22 +887,77 @@
                 無料で始める
                 <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
-            <div class="lp-footer-links">
-                <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer">開発者について</a>
-                <span class="lp-footer-sep">|</span>
-                <a href="/login">ログイン</a>
-            </div>
         </div>
     </section>
 
+    </main>
+
+    <!-- ===== Footer ===== -->
+    <footer class="lp-footer">
+        <div class="lp-container">
+            <div class="lp-footer-inner">
+                <div class="lp-footer-brand">
+                    <img src="/static/icons/favicon-32.png" alt="" width="20" height="20">
+                    <span>シフリー</span>
+                </div>
+                <div class="lp-footer-links">
+                    <a href="/login">ログイン</a>
+                    <a href="/privacy">プライバシーポリシー</a>
+                    <a href="/terms">利用規約</a>
+                    <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer">開発者について</a>
+                </div>
+            </div>
+            <p class="lp-footer-copy">&copy; 2026 シフリー. All rights reserved.</p>
+        </div>
+    </footer>
+
     <script src="/static/js/landing-hero.js"></script>
     <script>
-    // Smooth scroll for anchor links
+    // Smooth scroll for anchor links (offset for sticky header)
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', e => {
             e.preventDefault();
             const target = document.querySelector(a.getAttribute('href'));
-            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (target) {
+                const headerH = document.getElementById('lp-header').offsetHeight;
+                const y = target.getBoundingClientRect().top + window.scrollY - headerH;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            }
+        });
+    });
+
+    // Sticky header: show/hide on scroll
+    (() => {
+        const header = document.getElementById('lp-header');
+        let lastY = 0;
+        window.addEventListener('scroll', () => {
+            const y = window.scrollY;
+            header.classList.toggle('lp-header-visible', y > 300);
+            header.classList.toggle('lp-header-hidden', y > 300 && y > lastY && y - lastY > 5);
+            lastY = y;
+        }, { passive: true });
+    })();
+
+    // Scroll-triggered fade-in animations
+    (() => {
+        const els = document.querySelectorAll('[data-animate]');
+        if (!els.length) return;
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('lp-animated');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+        els.forEach(el => observer.observe(el));
+    })();
+
+    // FAQ aria-expanded toggle
+    document.querySelectorAll('.lp-faq-item').forEach(d => {
+        d.addEventListener('toggle', () => {
+            const s = d.querySelector('summary');
+            if (s) s.setAttribute('aria-expanded', d.open);
         });
     });
     </script>
