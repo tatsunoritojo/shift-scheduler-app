@@ -8,6 +8,36 @@ from app.extensions import db, migrate, cors, limiter, server_session
 from app.config import config_by_name
 
 
+def _patch_session_bytes_bug(app):
+    """Patch Flask-Session 0.8.0 + Werkzeug 3.1 compatibility bug.
+
+    Flask-Session's SQLAlchemy backend may pass session_id as bytes to
+    response.set_cookie(), but Werkzeug 3.1+ requires str values.
+    Wrap save_session to decode bytes before set_cookie is called.
+    """
+    from functools import wraps
+
+    iface = app.session_interface
+    original_save = iface.save_session
+
+    @wraps(original_save)
+    def safe_save_session(app_arg, session, response, *args, **kwargs):
+        orig_set_cookie = response.set_cookie
+
+        def _safe_set_cookie(key, value='', **kw):
+            if isinstance(value, bytes):
+                value = value.decode('utf-8')
+            return orig_set_cookie(key, value, **kw)
+
+        response.set_cookie = _safe_set_cookie
+        try:
+            return original_save(app_arg, session, response, *args, **kwargs)
+        finally:
+            response.set_cookie = orig_set_cookie
+
+    iface.save_session = safe_save_session
+
+
 def create_app(config_name=None):
     """Application factory."""
     # Load .env
@@ -41,6 +71,7 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     app.config['SESSION_SQLALCHEMY'] = db
     server_session.init_app(app)
+    _patch_session_bytes_bug(app)
     limiter.init_app(app)
     cors_origins = app.config.get('CORS_ALLOWED_ORIGINS')
     if cors_origins:
