@@ -1,5 +1,8 @@
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 from flask import current_app
+
+JST = ZoneInfo("Asia/Tokyo")
 
 from app.extensions import db
 from app.models.opening_hours import OpeningHoursException, OpeningHoursCalendarSync, SyncOperationLog
@@ -152,8 +155,8 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             if 'T' not in start_str or 'T' not in end_str:
                 continue  # Skip all-day events
 
-            event_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
-            event_end_dt = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+            event_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00')).astimezone(JST)
+            event_end_dt = datetime.fromisoformat(end_str.replace('Z', '+00:00')).astimezone(JST)
             event_date = event_dt.date()
             st = event_dt.strftime('%H:%M')
             et = event_end_dt.strftime('%H:%M')

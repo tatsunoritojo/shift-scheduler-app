@@ -7,8 +7,9 @@ def fetch_events(credentials, start_date, end_date, calendar_id='primary', query
     """Fetch Google Calendar events within a date range."""
     service = build('calendar', 'v3', credentials=credentials)
 
-    start_time = datetime.fromisoformat(start_date).isoformat() + 'Z'
-    end_time = datetime.fromisoformat(end_date).isoformat() + 'Z'
+    # Use JST timezone to ensure correct date boundaries for Japan-based users
+    start_time = datetime.fromisoformat(start_date).isoformat() + '+09:00'
+    end_time = datetime.fromisoformat(end_date).isoformat() + '+09:00'
 
     params = dict(
         calendarId=calendar_id,
