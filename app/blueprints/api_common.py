@@ -42,6 +42,11 @@ def robots():
     return current_app.send_static_file('robots.txt')
 
 
+@api_common_bp.route('/google2393a5d02ead6152.html')
+def google_verification():
+    return current_app.send_static_file('google2393a5d02ead6152.html')
+
+
 @api_common_bp.route('/sitemap.xml')
 def sitemap():
     return current_app.send_static_file('sitemap.xml')
