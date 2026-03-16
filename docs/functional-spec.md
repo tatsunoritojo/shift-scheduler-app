@@ -1,6 +1,6 @@
 # Shifree (シフリー) — L2: 機能仕様書
 
-> 最終更新: 2026-03-16
+> 最終更新: 2026-03-17
 > 対象読者: プロダクト / QA / デザイン
 
 ---
@@ -70,6 +70,9 @@
 | 自動計算 | Google Calendar のイベントから空き時間を自動判定 |
 | 日別ポップアップ | タップで出勤可否トグル・勤務時間指定 |
 | 希望提出 | 全日程の出勤可否 + 備考を一括送信 |
+| 確定シフト一覧 | 自分の確定シフトを同期状態バッジ付きで表示 (synced/reauth_required/failed/pending) |
+| 手動カレンダー同期 | 未同期・失敗したシフトを個別 or 一括で Google Calendar に同期 |
+| マルチアカウント連携 | 別の Google アカウント (プライベート等) のカレンダーを読み取り専用で追加・解除 |
 
 ### 2.3 事業主画面 (owner.html)
 
@@ -113,8 +116,11 @@ draft ──→ open ──→ closed ──→ finalized
 
 ```
 draft ──→ pending_approval ──→ approved ──→ confirmed
-                    │
-                    └──→ rejected ──→ draft (再構築)
+                    │                         │
+                    └──→ rejected              ▼
+                          │            [エントリ単位の同期]
+                          └──→ draft    各 ShiftScheduleEntry に
+                               (再構築)  sync_status を個別追跡
 ```
 
 | 状態 | 意味 | 遷移条件 |
@@ -123,7 +129,28 @@ draft ──→ pending_approval ──→ approved ──→ confirmed
 | pending_approval | 承認待ち | 管理者が承認依頼 |
 | approved | 承認済み | 事業主が承認 |
 | rejected | 差戻し | 事業主が差戻し |
-| confirmed | 確定 | 管理者が確定 → カレンダー同期 |
+| confirmed | 確定 | 管理者が確定 → カレンダー同期試行 |
+
+### 3.2.1 シフトエントリ同期状態 (ShiftScheduleEntry.sync_status)
+
+```
+pending ──→ synced (calendar_event_id 取得)
+   │
+   └──→ reauth_required (CREDENTIALS_EXPIRED / NO_CREDENTIALS)
+   │         │
+   │         └──→ スタッフが再認証後に手動同期 → synced
+   │
+   └──→ failed (CALENDAR_API_ERROR 等)
+              │
+              └──→ スタッフが手動リトライ → synced
+```
+
+| 状態 | 判定条件 | 対処 |
+|---|---|---|
+| synced | calendar_event_id あり | 完了 |
+| reauth_required | sync_error が CREDENTIALS_EXPIRED or NO_CREDENTIALS | スタッフが再ログイン後に手動同期 |
+| failed | sync_error がその他 | スタッフが手動リトライ |
+| pending | calendar_event_id なし & sync_error なし | 初回同期待ち |
 
 ### 3.3 欠員リクエスト (VacancyRequest.status)
 
@@ -221,11 +248,47 @@ pending ──→ running ──→ completed
 5. 組織作成 or 招待コード入力で参加
 ```
 
-### 6.3 Google Calendar 連携
+### 6.3 Google Calendar 連携 (プライマリアカウント)
 
 ```
 1. 初回 OAuth 時に calendar スコープを取得
 2. refresh_token を Fernet 暗号化して DB 保存
 3. カレンダー参照時: refresh_token → access_token 自動更新
 4. ユーザーが Google 側で連携解除 → RefreshError → 再認証モーダル表示
+```
+
+### 6.4 マルチアカウントカレンダー連携
+
+```
+スタッフ: 「別アカウントを連携」ボタン → OAuth (calendar.readonly スコープ)
+  │
+  ▼
+Google OAuth: 別アカウントでログイン・承認
+  │
+  ▼
+コールバック: LinkedCalendarAccount に refresh_token 保存 (暗号化)
+  │
+  ▼
+シフト希望提出時: プライマリ + リンク済みアカウントのカレンダーを統合表示
+```
+
+- リンク済みアカウントは**読み取り専用** (calendar.readonly)
+- ログインアカウントと同じアカウントの重複連携は拒否
+- リンク先の認証失効時は graceful degradation (プライマリは影響なし)
+- スタッフがいつでも連携解除可能
+
+### 6.5 確定シフトの手動同期
+
+```
+スケジュール確定 → 各エントリの Calendar 同期試行
+  │
+  ├─ 成功: calendar_event_id 保存
+  │
+  └─ 失敗: sync_error コード保存
+       │
+       ▼
+  スタッフ画面に「未同期シフト」表示
+       │
+       ├─ 個別同期: POST /confirmed-shifts/<id>/sync
+       └─ 一括同期: POST /confirmed-shifts/sync-all
 ```

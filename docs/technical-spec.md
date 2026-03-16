@@ -1,6 +1,6 @@
 # Shifree (シフリー) — L3: 技術仕様書
 
-> 最終更新: 2026-03-16
+> 最終更新: 2026-03-17
 > 対象読者: 開発者
 
 ---
@@ -16,11 +16,11 @@ shift-scheduler-app/
 │   ├── config.py                 # 環境別設定 (97行)
 │   ├── extensions.py             # SQLAlchemy, Migrate, CORS, Limiter, Session
 │   ├── models/                   # SQLAlchemy モデル (10ファイル, ~900行)
-│   │   ├── user.py               # User, UserToken
+│   │   ├── user.py               # User, UserToken, LinkedCalendarAccount
 │   │   ├── organization.py       # Organization
 │   │   ├── membership.py         # OrganizationMember, InvitationToken
 │   │   ├── shift.py              # ShiftPeriod, ShiftSubmission, ShiftSubmissionSlot,
-│   │   │                         #   ShiftSchedule, ShiftScheduleEntry
+│   │   │                         #   ShiftSchedule, ShiftScheduleEntry (+sync_error, +last_sync_attempt_at)
 │   │   ├── approval.py           # ApprovalHistory
 │   │   ├── opening_hours.py      # OpeningHours, OpeningHoursException,
 │   │   │                         #   OpeningHoursCalendarSync, SyncOperationLog
@@ -81,7 +81,8 @@ Organization (1) ──< OrganizationMember >── (N) User
      │                                          │
      │ (1)                                      │ (1)
      ├──< OpeningHours (7: 曜日別)               ├──< UserToken (1)
-     ├──< OpeningHoursException (N)              ├──< ShiftSubmission (N)
+     ├──< OpeningHoursException (N)              ├──< LinkedCalendarAccount (N)  ★NEW
+     │                                          ├──< ShiftSubmission (N)
      ├──< OpeningHoursCalendarSync (N)           │
      ├──< InvitationToken (N)                    │
      ├──< Reminder (N)                           │
@@ -114,6 +115,7 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | opening_hours | (organization_id, day_of_week) UNIQUE |
 | reminders | (reminder_type, reference_id, user_id) UNIQUE |
 | vacancy_candidates | (vacancy_request_id, user_id) UNIQUE |
+| linked_calendar_accounts | (user_id, google_sub) UNIQUE |
 
 ---
 
@@ -129,6 +131,8 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | GET | `/auth/invite/code/<code>` | — | 招待コード受理 |
 | GET | `/auth/me` | — | 現在のユーザー情報 |
 | POST | `/auth/logout` | — | ログアウト |
+| POST | `/auth/google/link-calendar` | — | 別アカウントカレンダー連携 OAuth 開始 |
+| GET | `/auth/google/callback-link` | — | カレンダー連携 OAuth コールバック |
 
 ### 3.2 管理者 API (api_admin_bp: `/api/admin/*`)
 
@@ -192,6 +196,11 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | GET | `/calendar/events` | Calendar イベント取得 |
 | GET | `/periods/<id>/availability` | 自分の提出取得 |
 | POST | `/periods/<id>/availability` | 希望提出 |
+| GET | `/confirmed-shifts` | 確定シフト一覧 (sync_status 付き) |
+| POST | `/confirmed-shifts/<id>/sync` | 個別手動カレンダー同期 (30/min) |
+| POST | `/confirmed-shifts/sync-all` | 一括カレンダー同期 (5/min) |
+| GET | `/calendar-links` | リンク済みアカウント一覧 |
+| DELETE | `/calendar-links/<id>` | アカウント連携解除 |
 
 ### 3.4 事業主 API (api_owner_bp: `/api/owner/*`)
 
@@ -210,6 +219,7 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | GET | `/api/admin/dashboard/overview` | admin | 概要統計 |
 | GET | `/api/admin/dashboard/tasks` | admin | タスク一覧 |
 | GET | `/api/admin/dashboard/audit-logs` | admin | 監査ログ |
+| GET | `/api/calendar/events` | auth | カレンダーイベント取得 (?linkedAccountId= 対応) |
 | GET | `/api/invite/info` | public | 招待情報確認 |
 | GET | `/vacancy/respond` | public (token) | 欠員応答 |
 | POST | `/api/organizations` | auth | 組織作成 (5/hour) |
@@ -228,6 +238,8 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | `upsert_user(google_id, email, name, invitation_token, invite_code_org)` | ... | User | ユーザー作成/更新 + 組織割当 |
 | `save_refresh_token(user, token)` | User, str | — | Fernet 暗号化して DB 保存 |
 | `get_credentials_for_user(user)` | User | Credentials\|None | refresh_token → access_token 自動更新 |
+| `save_linked_calendar_token(user, sub, email, token, scopes)` | ... | LinkedCalendarAccount | リンクアカウントの refresh_token 暗号化保存 (upsert) |
+| `get_credentials_for_linked_account(link)` | LinkedCalendarAccount | Credentials | リンクアカウントの認証情報取得 (失効時 is_active=False) |
 
 ### 4.2 shift_service.py (239行)
 
@@ -281,6 +293,12 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | `notify_preshift(entry, user)` | シフト前日リマインド |
 | `notify_vacancy_request(vacancy, candidate, base_url)` | 欠員補充依頼 |
 | `notify_vacancy_accepted(vacancy, acceptor)` | 欠員承諾通知 |
+
+### 4.7 calendar_service.py (追加)
+
+| 関数 | 説明 |
+|---|---|
+| `classify_calendar_error(exception)` | Google Calendar API エラーをコード分類 (CREDENTIALS_EXPIRED / CALENDAR_PERMISSION_DENIED / CALENDAR_TEMPORARY_FAILURE / CALENDAR_API_ERROR) |
 
 ---
 
@@ -347,7 +365,7 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | CORS | 本番: CORS_ALLOWED_ORIGINS 未設定 → same-origin only |
 | CSP | default-src 'self'; script-src 'self' unpkg.com; ... |
 | HSTS | 本番: max-age=31536000 |
-| レート制限 | OAuth 10/min, 組織作成 5/hour, デフォルト 200/hour |
+| レート制限 | OAuth 10/min, 組織作成 5/hour, 個別同期 30/min, 一括同期 5/min, デフォルト 200/hour |
 | SMTP 保護 | Subject の CR/LF/NUL 除去 |
 | XSS | フロントエンド escapeHtml() + CSP |
 
@@ -394,7 +412,7 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | test_rbac.py | 13 | RBAC + 招待 |
 | test_multitenant.py | 14 | マルチテナント隔離 |
 | test_invite_features.py | 18 | 招待トークン + コード |
-| test_approval_workflow.py | 10 | 承認ワークフロー |
+| test_approval_workflow.py | 15 | 承認ワークフロー + 同期サマリー |
 | test_validation.py | 38 | 入力バリデーション |
 | test_error_format.py | 12 | エラーレスポンス形式 |
 | test_async_tasks.py | 18 | 非同期タスク + Cron |
@@ -402,7 +420,9 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | test_audit_log.py | 17 | 監査ログ |
 | test_reminder.py | 14 | リマインダー |
 | test_vacancy.py | 16 | 欠員補充 |
-| **合計** | **207** | |
+| test_worker_calendar_sync.py | 24 | カレンダー同期 (手動同期・一括・sync_status) |
+| test_linked_calendar.py | 9 | マルチアカウント連携 |
+| **合計** | **237** | |
 
 実行: `python -m pytest tests/`
 
@@ -418,3 +438,6 @@ SyncOperationLog (独立テーブル — 同期操作履歴)
 | b2c3d4e5f6a7 | audit_logs テーブル |
 | c3d4e5f6a7b8 | Organization.invite_code カラム追加 |
 | d4e5f6a7b8c9 | reminders, vacancy_requests, vacancy_candidates, shift_change_logs |
+| c978c2afbe91 | shift_schedule_entries に sync_error カラム追加 |
+| a801ab39a1e4 | shift_schedule_entries に last_sync_attempt_at カラム追加 |
+| bcfcf6d59ef3 | linked_calendar_accounts テーブル追加 |
