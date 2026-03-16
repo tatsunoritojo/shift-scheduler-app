@@ -15,7 +15,6 @@
     <meta name="twitter:title" content="シフリー - Googleカレンダー連携シフト管理">
     <meta name="twitter:description" content="アプリ不要。Googleカレンダー1つでシフト管理が完結。無料。">
     <meta name="twitter:image" content="https://shifree.vercel.app/static/icons/icon-512.png">
-    <meta name="robots" content="noindex, nofollow">
     <link rel="canonical" href="https://shifree.vercel.app/lp">
     <link rel="stylesheet" href="/static/css/common.css">
     <link rel="stylesheet" href="/static/css/landing.css">
@@ -31,17 +30,82 @@
         <div class="lp-container lp-hero-content">
             <img src="/static/icons/icon-192.png" alt="シフリー" class="lp-hero-icon">
             <p class="lp-hero-brand">シフリー</p>
-            <h1 class="lp-hero-title">毎月、シフトに追われていませんか？</h1>
-            <p class="lp-hero-sub">シフト希望の収集から確定まで、Googleカレンダー1つで完結します。</p>
-            <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer" class="lp-cta">
-                開発者に相談する
-                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </a>
+            <h1 class="lp-hero-title">毎月のシフト管理、<br>まだ手作業ですか？</h1>
+            <p class="lp-hero-sub">シフト希望の収集から確定・カレンダー反映まで、<br>Googleカレンダー1つで完結する無料シフト管理ツール。</p>
+            <div class="lp-hero-badges">
+                <span class="lp-hero-badge">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    完全無料
+                </span>
+                <span class="lp-hero-badge">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    アプリ不要
+                </span>
+                <span class="lp-hero-badge">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    最短1分で開始
+                </span>
+            </div>
+            <div class="lp-hero-ctas">
+                <a href="/login" class="lp-cta">
+                    無料で始める
+                    <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+                <a href="#howto" class="lp-cta-secondary">使い方を見る</a>
+            </div>
         </div>
     </section>
 
-    <!-- ===== 2. How it works (3 steps + screenshots) ===== -->
-    <section class="lp-section lp-howto">
+    <!-- ===== 2. Pain Points ===== -->
+    <section class="lp-section lp-pain">
+        <div class="lp-container">
+            <h2 class="lp-section-title">こんな悩み、ありませんか？</h2>
+            <div class="lp-pain-grid">
+                <div class="lp-pain-card">
+                    <span class="lp-pain-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </span>
+                    <h3>LINEでシフト希望を<br>集めるのが大変</h3>
+                    <p>個別にリマインドして、既読スルーに追われる日々</p>
+                </div>
+                <div class="lp-pain-card">
+                    <span class="lp-pain-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </span>
+                    <h3>Excelで毎月<br>シフト表を手作り</h3>
+                    <p>コピペ・色塗り・印刷…毎月同じ作業の繰り返し</p>
+                </div>
+                <div class="lp-pain-card">
+                    <span class="lp-pain-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </span>
+                    <h3>急な欠員の対応が<br>いつもバタバタ</h3>
+                    <p>「誰か出られる？」の連絡を一人ずつ送る手間</p>
+                </div>
+                <div class="lp-pain-card">
+                    <span class="lp-pain-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </span>
+                    <h3>確定シフトの共有が<br>面倒</h3>
+                    <p>写真で送る？掲示板に貼る？結局見てない人がいる</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 3. Solution (Arrow transition) ===== -->
+    <section class="lp-section lp-solution">
+        <div class="lp-container">
+            <div class="lp-solution-arrow">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            </div>
+            <h2 class="lp-section-title">シフリーなら、すべて解決します。</h2>
+            <p class="lp-solution-sub">Googleカレンダーと連携するから、新しいアプリを覚える必要なし。<br>スタッフも管理者も、普段使っているカレンダーだけでシフト管理が完結します。</p>
+        </div>
+    </section>
+
+    <!-- ===== 4. How it works (6 steps + screenshots) ===== -->
+    <section class="lp-section lp-howto" id="howto">
         <div class="lp-container">
             <h2 class="lp-section-title">シフト管理、こうなります。</h2>
 
@@ -83,29 +147,22 @@
                                     <span class="mock-week-time">20</span>
                                     <span class="mock-week-time">22</span>
                                 </div>
-                                <!-- 日: 10-21 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:12.5%;height:56.25%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">10:00-21:00</div></div>
                                 </div>
-                                <!-- 月: 9-22 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:6.25%;height:62.5%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">9:00-22:00</div></div>
                                 </div>
-                                <!-- 火: 9-22 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:6.25%;height:62.5%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">9:00-22:00</div></div>
                                 </div>
-                                <!-- 水: 定休 -->
                                 <div class="mock-week-col closed"></div>
-                                <!-- 木: 9-22 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:6.25%;height:62.5%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">9:00-22:00</div></div>
                                 </div>
-                                <!-- 金: 9-22 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:6.25%;height:62.5%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">9:00-22:00</div></div>
                                 </div>
-                                <!-- 土: 10-21 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev" style="top:12.5%;height:56.25%"><div class="mock-week-ev-title">営業</div><div class="mock-week-ev-time">10:00-21:00</div></div>
                                 </div>
@@ -123,7 +180,6 @@
                     <p>ワンタップで全員に通知。「今月のシフト出してね」の連絡はもう要りません。</p>
                 </div>
                 <div class="mock-dual" id="ss-notify">
-                    <!-- 管理者側 -->
                     <div>
                         <div class="mock-dual-phone">
                             <div class="mock-dual-notch"></div>
@@ -148,7 +204,6 @@
                         <div class="mock-dual-label">管理者</div>
                     </div>
                     <span class="mock-dual-arrow">→</span>
-                    <!-- 従業員側 -->
                     <div>
                         <div class="mock-dual-phone">
                             <div class="mock-dual-notch"></div>
@@ -202,7 +257,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Day popup overlay -->
                         <div class="mock-popup-overlay">
                             <div class="mock-popup">
                                 <div class="mock-popup-header">
@@ -238,7 +292,7 @@
                 </div>
             </div>
 
-            <!-- Step 4 (NEW: Builder) -->
+            <!-- Step 4 (Builder) -->
             <div class="lp-step-block lp-step-reverse">
                 <div class="lp-step-text">
                     <span class="lp-step-number">4</span>
@@ -315,7 +369,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Builder day popup overlay -->
                         <div class="mock-builder-overlay">
                             <div class="mock-builder-popup">
                                 <div class="mock-builder-popup-hdr">
@@ -405,7 +458,6 @@
                                             <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
                                         </div>
                                         <div class="mock-cal-grid-pc">
-                                            <!-- Week 1 -->
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">1</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">2</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell part"><span class="mock-pc-day">3</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
@@ -413,7 +465,6 @@
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">5</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">6</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">7</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
-                                            <!-- Week 2 -->
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">8</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">9</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">10</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
@@ -421,7 +472,6 @@
                                             <div class="mock-pc-cell part"><span class="mock-pc-day">12</span><span class="mock-pc-badge part">2/5</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell empty"><span class="mock-pc-day">13</span><span class="mock-pc-badge empty">0/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">14</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
-                                            <!-- Week 3 -->
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">15</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">10-21</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">16</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell part"><span class="mock-pc-day">17</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
@@ -429,7 +479,6 @@
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">19</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell closed"><span class="mock-pc-day">20</span><span class="mock-pc-closed">祝休</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">21</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
-                                            <!-- Week 4 -->
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">22</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
                                             <div class="mock-pc-cell part"><span class="mock-pc-day">23</span><span class="mock-pc-badge part">2/4</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">24</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
@@ -437,7 +486,6 @@
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">26</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">27</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">28</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">10-21</span></div>
-                                            <!-- Week 5 -->
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">29</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">10-21</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">30</span><span class="mock-pc-badge full">3/3</span><span class="mock-pc-hours">9-22</span></div>
                                             <div class="mock-pc-cell full"><span class="mock-pc-day">31</span><span class="mock-pc-badge full">4/4</span><span class="mock-pc-hours">9-22</span></div>
@@ -533,35 +581,28 @@
                                     <span class="mock-week-time">20</span>
                                     <span class="mock-week-time">22</span>
                                 </div>
-                                <!-- 日 3/1: シフト10-15, 個人16-18 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-shift" style="top:14.3%;height:35.7%"><div class="mock-week-ev-title">シフト</div></div>
                                     <div class="mock-week-ev ev-personal" style="top:57.1%;height:14.3%"><div class="mock-week-ev-title">カフェ</div></div>
                                 </div>
-                                <!-- 月 3/2: シフト9-14, 個人15-16 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-shift" style="top:7.1%;height:35.7%"><div class="mock-week-ev-title">シフト</div></div>
                                     <div class="mock-week-ev ev-personal" style="top:50%;height:7.1%"><div class="mock-week-ev-title">歯医者</div></div>
                                 </div>
-                                <!-- 火 3/3 (today): 個人9-10, シフト11-17 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-personal" style="top:7.1%;height:7.1%"><div class="mock-week-ev-title">MTG</div></div>
                                     <div class="mock-week-ev ev-shift" style="top:21.4%;height:42.9%"><div class="mock-week-ev-title">シフト</div></div>
                                 </div>
-                                <!-- 水 3/4 (定休): 個人のみ10-11:30 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-personal" style="top:14.3%;height:10.7%"><div class="mock-week-ev-title">ジム</div></div>
                                 </div>
-                                <!-- 木 3/5: シフト9-15 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-shift" style="top:7.1%;height:42.9%"><div class="mock-week-ev-title">シフト</div></div>
                                 </div>
-                                <!-- 金 3/6: シフト9-17, 個人19-21 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-shift" style="top:7.1%;height:57.1%"><div class="mock-week-ev-title">シフト</div></div>
                                     <div class="mock-week-ev ev-personal" style="top:78.6%;height:14.3%"><div class="mock-week-ev-title">飲み会</div></div>
                                 </div>
-                                <!-- 土 3/7: 個人8-9, シフト10-18 -->
                                 <div class="mock-week-col">
                                     <div class="mock-week-ev ev-personal" style="top:0%;height:7.1%"><div class="mock-week-ev-title">ヨガ</div></div>
                                     <div class="mock-week-ev ev-shift" style="top:14.3%;height:57.1%"><div class="mock-week-ev-title">シフト</div></div>
@@ -578,14 +619,13 @@
         </div>
     </section>
 
-    <!-- ===== 3. Why シフリー ===== -->
+    <!-- ===== 5. Why シフリー (Features) ===== -->
     <section class="lp-section">
         <div class="lp-container">
             <h2 class="lp-section-title">なぜ、シフリー？</h2>
             <div class="lp-features-grid">
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
-                        <!-- zap -->
                         <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     </div>
                     <h3>無料で、今すぐ始められる</h3>
@@ -593,7 +633,6 @@
                 </div>
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
-                        <!-- smartphone -->
                         <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
                     </div>
                     <h3>スマホだけで完結</h3>
@@ -601,15 +640,6 @@
                 </div>
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
-                        <!-- user -->
-                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                    <h3>開発者に直接つながる</h3>
-                    <p>大企業のサポートセンターではなく、作った本人に相談できます。要望も即反映。</p>
-                </div>
-                <div class="lp-feature-card">
-                    <div class="lp-feature-icon">
-                        <!-- bell -->
                         <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                     </div>
                     <h3>リマインド通知</h3>
@@ -617,7 +647,6 @@
                 </div>
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
-                        <!-- refresh-cw -->
                         <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                     </div>
                     <h3>欠員補充</h3>
@@ -625,30 +654,117 @@
                 </div>
                 <div class="lp-feature-card">
                     <div class="lp-feature-icon">
-                        <!-- link -->
                         <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     </div>
                     <h3>かんたんメンバー登録</h3>
                     <p>招待リンクやQRコードを共有するだけ。新しいスタッフもすぐ参加できます。</p>
                 </div>
+                <div class="lp-feature-card">
+                    <div class="lp-feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <h3>開発者に直接つながる</h3>
+                    <p>大企業のサポートセンターではなく、作った本人に相談できます。要望も即反映。</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- ===== 4. Footer CTA ===== -->
+    <!-- ===== 6. Getting Started ===== -->
+    <section class="lp-section lp-getting-started">
+        <div class="lp-container">
+            <h2 class="lp-section-title">始め方はかんたん、3ステップ</h2>
+            <div class="lp-start-steps">
+                <div class="lp-start-step">
+                    <span class="lp-start-step-num">1</span>
+                    <div class="lp-start-step-icon">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    </div>
+                    <h3>Googleでログイン</h3>
+                    <p>お持ちのGoogleアカウントでログインするだけ。新規登録の手間はありません。</p>
+                </div>
+                <div class="lp-start-step-connector">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+                <div class="lp-start-step">
+                    <span class="lp-start-step-num">2</span>
+                    <div class="lp-start-step-icon">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <h3>お店を登録</h3>
+                    <p>組織名と営業時間を入力して、あなたのお店のシフト管理を始めましょう。</p>
+                </div>
+                <div class="lp-start-step-connector">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+                <div class="lp-start-step">
+                    <span class="lp-start-step-num">3</span>
+                    <div class="lp-start-step-icon">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    </div>
+                    <h3>メンバーを招待</h3>
+                    <p>招待リンクをスタッフに共有。全員が参加したら、シフト管理スタートです。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 7. FAQ ===== -->
+    <section class="lp-section lp-faq">
+        <div class="lp-container">
+            <h2 class="lp-section-title">よくある質問</h2>
+            <div class="lp-faq-list">
+                <details class="lp-faq-item">
+                    <summary>本当に無料ですか？</summary>
+                    <p>はい、完全無料です。隠れた課金や機能制限はありません。</p>
+                </details>
+                <details class="lp-faq-item">
+                    <summary>スタッフもアプリのインストールが必要ですか？</summary>
+                    <p>いいえ、ブラウザだけで使えます。スマホのホーム画面に追加すればアプリのように使うこともできます（PWA対応）。</p>
+                </details>
+                <details class="lp-faq-item">
+                    <summary>Googleカレンダーを使っていなくても大丈夫ですか？</summary>
+                    <p>Googleアカウントがあれば、Googleカレンダーは自動的に利用可能です。既にカレンダーを使っている場合は、確定シフトが自動で反映されるのでさらに便利です。</p>
+                </details>
+                <details class="lp-faq-item">
+                    <summary>何人まで使えますか？</summary>
+                    <p>人数制限はありません。小規模な飲食店から、数十人規模のチームまで対応しています。</p>
+                </details>
+                <details class="lp-faq-item">
+                    <summary>データのセキュリティは大丈夫ですか？</summary>
+                    <p>Google OAuth 2.0による安全な認証を使用しています。パスワードをシフリーが保持することはありません。通信はすべてHTTPSで暗号化されています。</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 8. Footer CTA ===== -->
     <section class="lp-footer-cta">
         <div class="lp-container">
-            <h2 class="lp-section-title">気になったら、作った人に聞いてください。</h2>
-            <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer" class="lp-cta">
-                開発者に相談する
+            <h2 class="lp-section-title">シフト管理、今日からラクにしませんか？</h2>
+            <p class="lp-footer-cta-sub">Googleアカウントがあれば、1分で始められます。</p>
+            <a href="/login" class="lp-cta lp-cta-large">
+                無料で始める
                 <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
-            <div class="lp-login-link">
-                <a href="/login">ログインはこちら →</a>
+            <div class="lp-footer-links">
+                <a href="https://tatsunoritojo.com" target="_blank" rel="noopener noreferrer">開発者について</a>
+                <span class="lp-footer-sep">|</span>
+                <a href="/login">ログイン</a>
             </div>
         </div>
     </section>
 
     <script src="/static/js/landing-hero.js"></script>
+    <script>
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            const target = document.querySelector(a.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+    </script>
 </body>
 </html>
