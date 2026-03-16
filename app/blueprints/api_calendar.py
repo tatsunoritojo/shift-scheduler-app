@@ -43,8 +43,20 @@ def get_calendar_events():
         events = fetch_events(credentials, start_date_str, end_date_str, calendar_id)
         return jsonify(events)
     except HttpError as error:
-        current_app.logger.error(f"Google Calendar API error: {error.content.decode()}")
-        return error_response("カレンダーAPIでエラーが発生しました。", error.resp.status, code="INTERNAL_ERROR")
+        error_body = error.content.decode() if error.content else ''
+        current_app.logger.error(f"Google Calendar API error: {error_body}")
+        if error.resp.status in (401, 403) or 'invalid_grant' in error_body:
+            return error_response(
+                "Googleカレンダー連携の再認証が必要です。再ログインしてください。",
+                401, code="CREDENTIALS_EXPIRED",
+            )
+        return error_response("カレンダーAPIでエラーが発生しました。", error.resp.status, code="CALENDAR_API_ERROR")
     except Exception as e:
+        error_str = str(e)
         current_app.logger.error(f"Calendar event fetch error: {e}")
+        if 'invalid_grant' in error_str or 'Token has been expired' in error_str:
+            return error_response(
+                "Googleカレンダー連携の再認証が必要です。再ログインしてください。",
+                401, code="CREDENTIALS_EXPIRED",
+            )
         return error_response("カレンダーイベントの取得に失敗しました。", 500, code="INTERNAL_ERROR")

@@ -243,24 +243,42 @@ def _resolve_invite_code():
 
 @auth_bp.route('/logout')
 def logout():
-    # Revoke Google token (best-effort)
-    creds = session.get('credentials', {})
-    token = creds.get('token')
     user_id = session.get('user_id')
-    if token:
-        try:
+
+    # Revoke Google token (best-effort)
+    try:
+        creds = session.get('credentials', {})
+        token = creds.get('token')
+        if token:
             http_requests.post(
                 'https://oauth2.googleapis.com/revoke',
                 params={'token': token},
                 headers={'Content-Type': 'application/x-www-form-urlencoded'},
                 timeout=5,
             )
+    except Exception:
+        pass  # best-effort
+
+    # Clear session (must not fail the redirect)
+    try:
+        session.clear()
+    except Exception:
+        auth_logger.warning("LOGOUT: session.clear() failed for user_id=%s", user_id)
+        try:
+            db.session.rollback()
         except Exception:
-            pass  # best-effort
+            pass
 
     auth_logger.info("LOGOUT: user_id=%s", user_id)
-    session.clear()
-    return redirect('/')
+
+    resp = make_response(redirect('/login'))
+    # Force-expire session cookie even if server-side clear failed
+    resp.delete_cookie(
+        current_app.config.get('SESSION_COOKIE_NAME', 'session'),
+        path='/',
+        domain=current_app.config.get('SESSION_COOKIE_DOMAIN'),
+    )
+    return resp
 
 
 @auth_bp.route('/me')

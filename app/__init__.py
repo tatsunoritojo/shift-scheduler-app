@@ -109,9 +109,10 @@ def create_app(config_name=None):
     app.register_blueprint(api_dashboard_bp)
     app.register_blueprint(api_master_bp)
 
-    # Register security headers and error handlers
+    # Register security headers, error handlers, and teardown
     _register_security_headers(app)
     _register_error_handlers(app)
+    _register_teardown(app)
 
     # Create tables directly only in testing (production uses flask db upgrade)
     if app.config.get('TESTING'):
@@ -141,6 +142,22 @@ def _register_security_headers(app):
             "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://unpkg.com"
         )
         return response
+
+
+def _register_teardown(app):
+    """Ensure DB session is cleaned up after each request."""
+
+    @app.teardown_request
+    def shutdown_session(exception=None):
+        if app.config.get('TESTING'):
+            return  # Tests manage their own session lifecycle
+        try:
+            if exception is not None:
+                db.session.rollback()
+        except Exception:
+            pass
+        finally:
+            db.session.remove()
 
 
 def _register_error_handlers(app):

@@ -526,7 +526,17 @@ def save_period_schedule(period_id):
     try:
         schedule = save_schedule(period_id, user.id, entries, organization_id=org.id)
     except ValueError as e:
+        current_app.logger.info(
+            "Schedule save validation error: period_id=%s user_id=%s error=%s",
+            period_id, user.id, str(e),
+        )
         return error_response(str(e), 400, code="VALIDATION_ERROR")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(
+            "Schedule save unexpected error: period_id=%s user_id=%s", period_id, user.id,
+        )
+        return error_response("スケジュールの保存に失敗しました", 500, code="INTERNAL_ERROR")
     result = schedule.to_dict()
     result['entries'] = [e.to_dict() for e in schedule.entries.all()]
     return jsonify(result)
