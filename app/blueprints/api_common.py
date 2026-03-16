@@ -123,6 +123,16 @@ def create_organization():
     }), 201
 
 
+@api_common_bp.route('/privacy')
+def privacy_page():
+    return current_app.send_static_file('pages/privacy.html')
+
+
+@api_common_bp.route('/terms')
+def terms_page():
+    return current_app.send_static_file('pages/terms.html')
+
+
 @api_common_bp.route('/invite')
 def invite_page():
     """Serve the invitation landing page."""
