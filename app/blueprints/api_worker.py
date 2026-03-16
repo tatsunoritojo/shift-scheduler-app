@@ -10,8 +10,9 @@ from app.models.user import User
 from app.services.shift_service import (
     get_opening_hours_for_period, create_or_update_submission,
 )
-from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
+from app.services.auth_service import get_credentials_for_user, get_credentials_for_linked_account, CredentialsExpiredError
 from app.services.calendar_service import fetch_events, list_calendars, create_event, classify_calendar_error
+from app.models.user import LinkedCalendarAccount
 
 api_worker_bp = Blueprint('api_worker', __name__, url_prefix='/api/worker')
 
@@ -58,24 +59,48 @@ def get_period_opening_hours(period_id):
 @require_role('worker')
 def get_worker_calendars():
     user = get_current_user()
+    all_calendars = []
 
+    # Primary account calendars
     try:
         credentials = get_credentials_for_user(user)
+        if credentials:
+            calendars = list_calendars(credentials)
+            for cal in calendars:
+                cal['source_type'] = 'primary'
+                cal['account_email'] = user.email
+            all_calendars.extend(calendars)
     except CredentialsExpiredError as e:
         return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
-    except RuntimeError as e:
-        current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
-
-    if not credentials:
-        return error_response("No credentials found", 404, code="NOT_FOUND")
-
-    try:
-        calendars = list_calendars(credentials)
-        return jsonify(calendars)
     except Exception as e:
-        current_app.logger.error(f"Calendar list error: {e}")
-        return error_response("カレンダー一覧の取得に失敗しました。", 500, code="INTERNAL_ERROR")
+        current_app.logger.error(f"Primary calendar list error for user {user.id}: {e}")
+
+    # Linked account calendars
+    linked_accounts = LinkedCalendarAccount.query.filter_by(
+        user_id=user.id, is_active=True
+    ).all()
+    for linked in linked_accounts:
+        try:
+            linked_creds = get_credentials_for_linked_account(linked)
+            if linked_creds:
+                calendars = list_calendars(linked_creds)
+                for cal in calendars:
+                    cal['source_type'] = 'linked'
+                    cal['linked_account_id'] = linked.id
+                    cal['account_email'] = linked.google_email
+                all_calendars.extend(calendars)
+        except CredentialsExpiredError:
+            current_app.logger.warning(
+                "Linked calendar credentials expired: linked_id=%s user_id=%s",
+                linked.id, user.id,
+            )
+        except Exception as e:
+            current_app.logger.error(
+                "Linked calendar list error: linked_id=%s user_id=%s error=%s",
+                linked.id, user.id, e,
+            )
+
+    return jsonify(all_calendars)
 
 
 @api_worker_bp.route('/calendar/events', methods=['GET'])
@@ -148,6 +173,35 @@ def submit_availability(period_id):
     result = submission.to_dict()
     result['slots'] = [s.to_dict() for s in submission.slots.all()]
     return jsonify(result), 201
+
+
+# --- Linked Calendar Accounts ---
+
+@api_worker_bp.route('/calendar-links', methods=['GET'])
+@require_role('worker')
+def get_calendar_links():
+    """Return the current worker's linked calendar accounts."""
+    user = get_current_user()
+    links = LinkedCalendarAccount.query.filter_by(
+        user_id=user.id, is_active=True
+    ).all()
+    return jsonify([link.to_dict() for link in links])
+
+
+@api_worker_bp.route('/calendar-links/<int:link_id>', methods=['DELETE'])
+@require_role('worker')
+def delete_calendar_link(link_id):
+    """Unlink a secondary calendar account."""
+    user = get_current_user()
+    link = LinkedCalendarAccount.query.filter_by(
+        id=link_id, user_id=user.id
+    ).first()
+    if not link:
+        return error_response("Link not found", 404, code="NOT_FOUND")
+
+    db.session.delete(link)
+    db.session.commit()
+    return jsonify({'ok': True})
 
 
 # --- Confirmed Shifts ---

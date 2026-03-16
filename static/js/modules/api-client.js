@@ -63,11 +63,20 @@ export async function getCurrentUser() {
     return api.get('/auth/me');
 }
 
-export async function getCalendarEvents(startDate, endDate, calendarId = 'primary') {
+export async function getCalendarEvents(startDate, endDate, calendarId = 'primary', linkedAccountId = null) {
     const params = new URLSearchParams({ startDate, endDate, calendarId });
+    if (linkedAccountId) params.set('linkedAccountId', linkedAccountId);
     return api.get(`/api/calendar/events?${params}`);
 }
 
 export async function getCalendarList() {
     return api.get('/api/worker/calendars');
+}
+
+export async function getCalendarLinks() {
+    return api.get('/api/worker/calendar-links');
+}
+
+export async function deleteCalendarLink(linkId) {
+    return api.delete(`/api/worker/calendar-links/${linkId}`);
 }

@@ -3,8 +3,9 @@ from datetime import datetime
 
 from app.middleware.auth_middleware import require_auth, get_current_user
 from app.utils.errors import error_response
-from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
+from app.services.auth_service import get_credentials_for_user, get_credentials_for_linked_account, CredentialsExpiredError
 from app.services.calendar_service import fetch_events
+from app.models.user import LinkedCalendarAccount
 from googleapiclient.errors import HttpError
 
 api_calendar_bp = Blueprint('api_calendar', __name__, url_prefix='/api/calendar')
@@ -14,14 +15,27 @@ api_calendar_bp = Blueprint('api_calendar', __name__, url_prefix='/api/calendar'
 @require_auth
 def get_calendar_events():
     user = get_current_user()
+    linked_account_id = request.args.get('linkedAccountId', type=int)
 
-    try:
-        credentials = get_credentials_for_user(user)
-    except CredentialsExpiredError as e:
-        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
-    except RuntimeError as e:
-        current_app.logger.error(f"Credential error for user {user.id}: {e}")
-        return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
+    if linked_account_id:
+        # Fetch events from a linked calendar account
+        linked = LinkedCalendarAccount.query.filter_by(
+            id=linked_account_id, user_id=user.id, is_active=True
+        ).first()
+        if not linked:
+            return error_response("Linked account not found", 404, code="NOT_FOUND")
+        try:
+            credentials = get_credentials_for_linked_account(linked)
+        except CredentialsExpiredError as e:
+            return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
+    else:
+        try:
+            credentials = get_credentials_for_user(user)
+        except CredentialsExpiredError as e:
+            return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
+        except RuntimeError as e:
+            current_app.logger.error(f"Credential error for user {user.id}: {e}")
+            return error_response("認証情報の取得に失敗しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
 
     if not credentials:
         return error_response("Refresh token not found for user", 404, code="NOT_FOUND")

@@ -210,6 +210,25 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn-unlink-cal {
+    font-size: 0.85em;
+    color: var(--color-danger-600);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    padding: 0 4px;
+}
+
+.btn-unlink-cal:hover {
+    text-decoration: underline;
 }
 
 .cal-group-items {

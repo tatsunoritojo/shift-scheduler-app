@@ -281,6 +281,92 @@ def logout():
     return resp
 
 
+@auth_bp.route('/google/link-calendar')
+@limiter.limit("10 per minute")
+def link_calendar():
+    """Initiate OAuth flow to link a secondary Google account for calendar read-only access."""
+    from app.middleware.auth_middleware import get_current_user
+    user = get_current_user()
+    if not user:
+        return error_response("Not authenticated", 401, code="AUTH_REQUIRED")
+
+    # Build a read-only OAuth flow with a separate redirect URI
+    from app.services.auth_service import get_client_config
+    from google_auth_oauthlib.flow import Flow
+
+    scopes = current_app.config['GOOGLE_SCOPES_READONLY']
+    redirect_uri = current_app.config['GOOGLE_REDIRECT_URI'].replace(
+        '/callback', '/callback-link'
+    )
+    flow = Flow.from_client_config(
+        get_client_config(),
+        scopes=scopes,
+        redirect_uri=redirect_uri,
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        prompt='consent',
+        login_hint='',  # Empty to force account chooser
+    )
+    session['link_calendar_state'] = state
+    return redirect(authorization_url)
+
+
+@auth_bp.route('/google/callback-link')
+@limiter.limit("10 per minute")
+def callback_link():
+    """Handle OAuth callback for linking a secondary calendar account."""
+    from app.middleware.auth_middleware import get_current_user
+    from app.services.auth_service import get_client_config, extract_user_info, save_linked_calendar_token
+    from google_auth_oauthlib.flow import Flow
+
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+
+    state = session.pop('link_calendar_state', None)
+    request_state = request.args.get('state', '')
+    if not state or not hmac.compare_digest(str(state), str(request_state)):
+        auth_logger.warning("LINK_CALENDAR_FAILED: state mismatch user_id=%s", user.id)
+        return redirect('/worker?link_error=state_mismatch')
+
+    scopes = current_app.config['GOOGLE_SCOPES_READONLY']
+    redirect_uri = current_app.config['GOOGLE_REDIRECT_URI'].replace(
+        '/callback', '/callback-link'
+    )
+    flow = Flow.from_client_config(
+        get_client_config(),
+        scopes=scopes,
+        state=state,
+        redirect_uri=redirect_uri,
+    )
+
+    try:
+        flow.fetch_token(authorization_response=request.url)
+    except Exception as e:
+        auth_logger.warning("LINK_CALENDAR_FAILED: token fetch user_id=%s error=%s", user.id, e)
+        return redirect('/worker?link_error=token_failed')
+
+    credentials = flow.credentials
+    google_id, email, display_name = extract_user_info(credentials)
+
+    if not google_id or not email:
+        return redirect('/worker?link_error=user_info_failed')
+
+    if not credentials.refresh_token:
+        auth_logger.warning("LINK_CALENDAR_FAILED: no refresh_token user_id=%s linked_email=%s", user.id, email)
+        return redirect('/worker?link_error=no_refresh_token')
+
+    # Prevent linking the same account used for login
+    if google_id == user.google_id:
+        return redirect('/worker?link_error=same_account')
+
+    save_linked_calendar_token(user, google_id, email, credentials.refresh_token, credentials.scopes)
+
+    auth_logger.info("LINK_CALENDAR_SUCCESS: user_id=%s linked_email=%s", user.id, email)
+    return redirect('/worker?link_success=1')
+
+
 @auth_bp.route('/me')
 def me():
     from app.middleware.auth_middleware import get_current_user

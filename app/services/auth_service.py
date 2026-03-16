@@ -373,6 +373,85 @@ def get_credentials_for_user(user):
     return credentials
 
 
+def save_linked_calendar_token(user, google_sub, google_email, refresh_token, scopes=None):
+    """Save or update a linked calendar account's refresh token (encrypted)."""
+    from app.utils.crypto import encrypt_token
+    from app.models.user import LinkedCalendarAccount
+
+    encrypted = encrypt_token(refresh_token)
+    scopes_str = ','.join(scopes) if isinstance(scopes, (list, set)) else scopes
+
+    # Upsert: update if same google_sub already linked
+    existing = LinkedCalendarAccount.query.filter_by(
+        user_id=user.id, google_sub=google_sub
+    ).first()
+
+    if existing:
+        existing.refresh_token = encrypted
+        existing.google_email = google_email
+        existing.is_active = True
+        if scopes_str:
+            existing.scopes = scopes_str
+    else:
+        linked = LinkedCalendarAccount(
+            user_id=user.id,
+            google_sub=google_sub,
+            google_email=google_email,
+            refresh_token=encrypted,
+            scopes=scopes_str,
+        )
+        db.session.add(linked)
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def get_credentials_for_linked_account(linked_account):
+    """Build Google Credentials for a linked calendar account (read-only).
+
+    Unlike get_credentials_for_user(), this never uses the session cache
+    and always refreshes from the stored refresh token.
+    """
+    from app.utils.crypto import decrypt_token
+
+    refresh_token = decrypt_token(linked_account.refresh_token)
+    if not refresh_token:
+        return None
+
+    creds_data = {
+        'token': None,
+        'refresh_token': refresh_token,
+        'token_uri': 'https://oauth2.googleapis.com/token',
+        'client_id': current_app.config['GOOGLE_CLIENT_ID'],
+        'client_secret': current_app.config['GOOGLE_CLIENT_SECRET'],
+        'scopes': current_app.config['GOOGLE_SCOPES_READONLY'],
+    }
+
+    credentials = Credentials(**creds_data)
+
+    if not credentials.valid:
+        try:
+            credentials.refresh(Request())
+        except RefreshError as e:
+            auth_svc_logger.warning(
+                "LINKED_CREDENTIALS_EXPIRED: linked_id=%s user_id=%s error=%s",
+                linked_account.id, linked_account.user_id, e,
+            )
+            linked_account.is_active = False
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            raise CredentialsExpiredError(
+                "リンク済みカレンダーの認証が切れました。再連携してください。"
+            ) from e
+
+    return credentials
+
+
 class CredentialsExpiredError(Exception):
     """Raised when Google OAuth credentials are permanently invalid."""
     pass

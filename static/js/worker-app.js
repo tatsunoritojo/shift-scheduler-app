@@ -1,4 +1,4 @@
-import { api, getCurrentUser, getCalendarEvents, getCalendarList } from './modules/api-client.js';
+import { api, getCurrentUser, getCalendarEvents, getCalendarList, getCalendarLinks, deleteCalendarLink } from './modules/api-client.js';
 import { renderCalendar } from './modules/calendar-grid.js';
 import { calculateAvailableSlots, calculateDetailedSlots } from './modules/shift-calculator.js';
 import { timeToMinutes, minutesToTime } from './modules/time-utils.js';
@@ -128,6 +128,7 @@ function setupDelegatedHandlers() {
             case 'resetCustomTime': resetCustomTime(target.dataset.date); break;
             case 'applyCalcSettings': applyCalcSettings(); break;
             case 'resetCalcSettings': resetCalcSettings(); break;
+            case 'unlinkCalendar': unlinkCalendar(Number(target.dataset.linkId)); break;
         }
     });
 
@@ -151,9 +152,56 @@ function setupDelegatedHandlers() {
     });
 }
 
+async function unlinkCalendar(linkId) {
+    showConfirmDialog(
+        'カレンダー連携を解除しますか？',
+        'この参照用カレンダーの連携を解除します。再度連携することもできます。',
+        'btn-danger',
+        '解除する',
+        async () => {
+            try {
+                await deleteCalendarLink(linkId);
+                showToast('カレンダー連携を解除しました', 'success');
+                await loadCalendarList();
+                if (currentPeriod) {
+                    await fetchAndCacheEvents();
+                    recalculateSlots();
+                    renderAvailabilityCalendar();
+                    updateSlotSummary();
+                }
+            } catch (e) {
+                showToast(`解除に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+function handleLinkResultParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('link_success') === '1') {
+        showToast('参照用カレンダーを追加しました', 'success');
+    }
+    const linkError = params.get('link_error');
+    if (linkError) {
+        const messages = {
+            same_account: 'ログイン中のアカウントと同じです。別のアカウントを選択してください。',
+            no_refresh_token: '認証情報の取得に失敗しました。もう一度お試しください。',
+            token_failed: '認証に失敗しました。もう一度お試しください。',
+            state_mismatch: 'セッションが無効です。もう一度お試しください。',
+            user_info_failed: 'ユーザー情報の取得に失敗しました。',
+        };
+        showToast(messages[linkError] || '連携に失敗しました', 'error');
+    }
+    // Clean URL params
+    if (params.has('link_success') || params.has('link_error')) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+}
+
 async function init() {
     setupStaticHandlers();
     setupDelegatedHandlers();
+    handleLinkResultParams();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -241,7 +289,7 @@ async function loadCalendarList() {
     selectedCalendarIds = [];
     try {
         calendarList = await getCalendarList();
-        // Default: select only calendars the user owns (primary + self-created)
+        // Default: select owner calendars from primary account + all linked account owner calendars
         selectedCalendarIds = calendarList
             .filter(c => c.accessRole === 'owner')
             .map(c => c.id);
@@ -268,29 +316,53 @@ function renderCalendarSelector() {
 
     if (card) card.style.display = '';
 
-    // Group: owner calendars vs shared/other calendars
-    const ownCalendars = calendarList.filter(c => c.accessRole === 'owner');
-    const sharedCalendars = calendarList.filter(c => c.accessRole !== 'owner');
+    // Group by account email
+    const primaryCals = calendarList.filter(c => c.source_type !== 'linked');
+    const linkedGroups = {};
+    for (const cal of calendarList.filter(c => c.source_type === 'linked')) {
+        const key = cal.account_email || 'unknown';
+        if (!linkedGroups[key]) linkedGroups[key] = { cals: [], linkedAccountId: cal.linked_account_id };
+        linkedGroups[key].cals.push(cal);
+    }
 
     let html = '';
 
-    if (ownCalendars.length > 0) {
+    // Primary account
+    if (primaryCals.length > 0) {
+        const ownCalendars = primaryCals.filter(c => c.accessRole === 'owner');
+        const sharedCalendars = primaryCals.filter(c => c.accessRole !== 'owner');
+
+        if (ownCalendars.length > 0) {
+            html += '<div class="cal-group">';
+            html += '<div class="cal-group-label">自分のカレンダー</div>';
+            html += '<div class="cal-group-items">';
+            html += ownCalendars.map(cal => renderCalendarItem(cal)).join('');
+            html += '</div></div>';
+        }
+
+        if (sharedCalendars.length > 0) {
+            html += '<div class="cal-group">';
+            html += '<div class="cal-group-label">その他のカレンダー</div>';
+            html += '<div class="cal-group-items">';
+            html += sharedCalendars.map(cal => renderCalendarItem(cal)).join('');
+            html += '</div></div>';
+        }
+    }
+
+    // Linked accounts
+    for (const [email, group] of Object.entries(linkedGroups)) {
         html += '<div class="cal-group">';
-        html += '<div class="cal-group-label">自分のカレンダー</div>';
+        html += `<div class="cal-group-label"><span>${escapeHtml(email)}</span><button class="btn-unlink-cal" data-action="unlinkCalendar" data-link-id="${group.linkedAccountId}">解除</button></div>`;
         html += '<div class="cal-group-items">';
-        html += ownCalendars.map(cal => renderCalendarItem(cal)).join('');
+        html += group.cals.map(cal => renderCalendarItem(cal)).join('');
         html += '</div></div>';
     }
 
-    if (sharedCalendars.length > 0) {
-        html += '<div class="cal-group">';
-        html += '<div class="cal-group-label">その他のカレンダー</div>';
-        html += '<div class="cal-group-items">';
-        html += sharedCalendars.map(cal => renderCalendarItem(cal)).join('');
-        html += '</div></div>';
-    }
+    // Add link button
+    html += '<div style="margin-top:8px;"><a href="/auth/google/link-calendar" class="btn btn-outline btn-sm"><i data-lucide="plus" style="width:14px;height:14px;"></i> 参照用カレンダーを追加</a></div>';
 
     container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderCalendarItem(cal) {
@@ -327,14 +399,17 @@ async function fetchAndCacheEvents() {
     cachedCalendarEvents = [];
     if (selectedCalendarIds.length === 0 || !currentPeriod) return;
 
-    const fetches = selectedCalendarIds.map(calId =>
-        getCalendarEvents(currentPeriod.start_date, currentPeriod.end_date, calId)
+    const fetches = selectedCalendarIds.map(calId => {
+        // Find the calendar entry to check if it's from a linked account
+        const calEntry = calendarList.find(c => c.id === calId);
+        const linkedAccountId = calEntry?.linked_account_id || null;
+        return getCalendarEvents(currentPeriod.start_date, currentPeriod.end_date, calId, linkedAccountId)
             .then(events => events.map(e => ({ ...e, calendarId: calId })))
             .catch(err => {
                 console.warn(`Failed to fetch events from calendar ${calId}:`, err);
                 return [];
-            })
-    );
+            });
+    });
 
     const results = await Promise.all(fetches);
     cachedCalendarEvents = results.flat();
