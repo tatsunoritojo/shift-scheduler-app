@@ -1293,12 +1293,8 @@ async function loadBuilderData() {
         openingHoursData = openingHours || {};
         adminCalendarEvents = calEvents || [];
 
-        // Show confirm button if schedule is approved
-        if (schedule && schedule.status === 'approved') {
-            document.getElementById('confirm-btn').style.display = 'inline-block';
-        } else {
-            document.getElementById('confirm-btn').style.display = 'none';
-        }
+        renderScheduleProgress(schedule);
+        updateScheduleButtons(schedule);
 
         renderSubmissionsSummary(submissions);
         buildDayAggregatedData();
@@ -1814,6 +1810,79 @@ function renderSyncStatusSummary(schedule) {
         : `<p class="help-text" style="margin-top:8px;">${s.total - s.synced}件が未同期です。スタッフに再ログインを依頼してください。</p>`;
 
     container.innerHTML = rows.join('') + statusMsg;
+}
+
+const SCHEDULE_STEPS = [
+    { key: 'draft', label: '下書き', icon: '1' },
+    { key: 'pending_approval', label: '承認待ち', icon: '2' },
+    { key: 'approved', label: '承認済み', icon: '3' },
+    { key: 'confirmed', label: '確定', icon: '✓' },
+];
+
+function renderScheduleProgress(schedule) {
+    const container = document.getElementById('schedule-progress');
+    if (!container) return;
+
+    const status = schedule?.status || null;
+    const isRejected = status === 'rejected';
+
+    if (!status) {
+        container.innerHTML = '<div class="progress-hint" style="margin:0;width:100%;text-align:center;">シフトを作成して保存すると、進捗が表示されます</div>';
+        return;
+    }
+
+    const statusIndex = SCHEDULE_STEPS.findIndex(s => s.key === status);
+    const activeIndex = isRejected ? 0 : statusIndex;  // Rejected goes back to step 1
+
+    let html = '';
+    for (let i = 0; i < SCHEDULE_STEPS.length; i++) {
+        const step = SCHEDULE_STEPS[i];
+        let cls = '';
+        let icon = step.icon;
+
+        if (isRejected && i === 1) {
+            cls = 'rejected';
+            icon = '!';
+        } else if (i < activeIndex) {
+            cls = 'completed';
+            icon = '✓';
+        } else if (i === activeIndex) {
+            cls = isRejected ? 'rejected' : 'active';
+        }
+
+        html += `<div class="progress-step ${cls}">`;
+        html += `<span class="progress-dot">${icon}</span>`;
+        html += `<span class="progress-label">${isRejected && i === 0 ? '要修正' : step.label}</span>`;
+        html += '</div>';
+    }
+
+    // Action hint
+    const hints = {
+        draft: '「承認申請」で事業主に送信',
+        pending_approval: '事業主の承認を待っています',
+        approved: '「確定・カレンダー同期」で反映',
+        confirmed: 'カレンダーに同期済み',
+        rejected: '修正して再度「承認申請」してください',
+    };
+    html += `<span class="progress-hint">${hints[status] || ''}</span>`;
+
+    container.innerHTML = html;
+}
+
+function updateScheduleButtons(schedule) {
+    const status = schedule?.status || null;
+    const saveBtn = document.getElementById('btn-save-schedule');
+    const submitBtn = document.getElementById('btn-submit-approval');
+    const confirmBtn = document.getElementById('confirm-btn');
+
+    // Save: available for draft, rejected, or no schedule
+    saveBtn.style.display = (!status || status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
+
+    // Submit for approval: available for draft or rejected
+    submitBtn.style.display = (status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
+
+    // Confirm: only when approved
+    confirmBtn.style.display = (status === 'approved') ? 'inline-flex' : 'none';
 }
 
 async function saveSchedule() {
