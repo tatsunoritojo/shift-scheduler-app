@@ -8,6 +8,9 @@ import { setLoading, withLoading } from './modules/btn-loading.js';
 import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt } from './modules/event-utils.js';
 import { WEEKDAY_NAMES } from './modules/date-constants.js';
 
+/** Format a local Date to YYYY-MM-DD without UTC conversion. */
+const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
 let submissionsData = [];  // period submissions
@@ -156,7 +159,7 @@ function renderImportPreview(startDateStr, endDateStr) {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         for (let day = 1; day <= daysInMonth; day++) {
             const d = new Date(year, month, day);
-            const dateStr = d.toISOString().slice(0, 10);
+            const dateStr = toLocalDateStr(d);
             const inRange = dateStr >= startDateStr && dateStr <= endDateStr;
             const exc = excMap[dateStr];
 
@@ -249,7 +252,7 @@ function initSyncDateRange() {
     const now = new Date();
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-    const fmt = d => d.toISOString().slice(0, 10);
+    const fmt = toLocalDateStr;
     document.getElementById('sync-start-date').value = fmt(nextMonth);
     document.getElementById('sync-end-date').value = fmt(lastDay);
 }
@@ -1167,7 +1170,7 @@ function buildDayAggregatedData() {
     const end = new Date(currentPeriod.end_date);
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().slice(0, 10);
+        const dateStr = toLocalDateStr(d);
         const oh = openingHoursData[dateStr];
         const closed = !oh || oh.is_closed;
 
