@@ -157,7 +157,7 @@ async function init() {
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
-        await loadPeriods();
+        await Promise.all([loadPeriods(), loadConfirmedShifts()]);
     } catch (e) {
         console.error('Init error:', e);
     }
@@ -822,6 +822,92 @@ function resetCustomTime(dateStr) {
     closeDayPopup();
     const cell = document.querySelector(`[data-date="${dateStr}"]`);
     if (cell) showDayPopup(dateStr, data, cell);
+}
+
+// --- Confirmed Shifts ---
+
+const SYNC_STATUS_LABELS = {
+    synced: { text: '同期済み', cls: 'badge-success' },
+    reauth_required: { text: '要再認証', cls: 'badge-warning' },
+    failed: { text: '同期失敗', cls: 'badge-danger' },
+    pending: { text: '未同期', cls: 'badge-neutral' },
+};
+
+const WEEKDAY_SHORT = ['日', '月', '火', '水', '木', '金', '土'];
+
+async function loadConfirmedShifts() {
+    const section = document.getElementById('confirmed-shifts-section');
+    const container = document.getElementById('confirmed-shifts-list');
+    try {
+        const shifts = await api.get('/api/worker/confirmed-shifts');
+        if (!shifts || shifts.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = 'block';
+        renderConfirmedShifts(container, shifts);
+    } catch (e) {
+        console.error('Failed to load confirmed shifts:', e);
+        section.style.display = 'none';
+    }
+}
+
+function renderConfirmedShifts(container, shifts) {
+    const html = shifts.map(s => {
+        const d = new Date(s.shift_date + 'T00:00:00');
+        const dow = WEEKDAY_SHORT[d.getDay()];
+        const label = SYNC_STATUS_LABELS[s.sync_status] || SYNC_STATUS_LABELS.pending;
+        const actionBtn = s.can_sync
+            ? `<button class="btn btn-sm btn-primary btn-sync-shift" data-entry-id="${s.id}">カレンダーに追加</button>`
+            : '';
+        const reauthHint = s.sync_status === 'reauth_required'
+            ? '<span class="sync-hint">Googleで再ログインしてからお試しください</span>'
+            : '';
+        return `
+            <div class="confirmed-shift-row" data-entry-id="${s.id}">
+                <div class="shift-date-col">
+                    <span class="shift-date">${s.shift_date}</span>
+                    <span class="shift-dow">(${dow})</span>
+                </div>
+                <div class="shift-time-col">${escapeHtml(s.start_time)} - ${escapeHtml(s.end_time)}</div>
+                <div class="shift-status-col">
+                    <span class="sync-badge ${label.cls}">${label.text}</span>
+                    ${reauthHint}
+                </div>
+                <div class="shift-action-col">${actionBtn}</div>
+            </div>`;
+    }).join('');
+    container.innerHTML = `<div class="confirmed-shifts-table">${html}</div>`;
+
+    // Delegate click for sync buttons
+    container.querySelectorAll('.btn-sync-shift').forEach(btn => {
+        btn.addEventListener('click', () => syncSingleShift(btn));
+    });
+}
+
+async function syncSingleShift(btn) {
+    const entryId = btn.dataset.entryId;
+    btn.disabled = true;
+    btn.textContent = '同期中...';
+    try {
+        const result = await api.post(`/api/worker/confirmed-shifts/${entryId}/sync`);
+        if (result.skipped) {
+            showToast('既にカレンダーに登録済みです', 'info');
+        } else {
+            showToast('カレンダーに追加しました', 'success');
+        }
+        // Update the row in place
+        const row = document.querySelector(`.confirmed-shift-row[data-entry-id="${entryId}"]`);
+        if (row) {
+            const label = SYNC_STATUS_LABELS.synced;
+            row.querySelector('.shift-status-col').innerHTML = `<span class="sync-badge ${label.cls}">${label.text}</span>`;
+            row.querySelector('.shift-action-col').innerHTML = '';
+        }
+    } catch (e) {
+        showToast(`同期に失敗しました: ${e.message}`, 'error');
+        btn.disabled = false;
+        btn.textContent = 'カレンダーに追加';
+    }
 }
 
 // --- Summary ---

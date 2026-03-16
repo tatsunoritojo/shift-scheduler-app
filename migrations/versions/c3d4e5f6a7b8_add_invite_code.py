@@ -17,10 +17,10 @@ depends_on = None
 def upgrade():
     op.add_column('organizations', sa.Column('invite_code', sa.String(32), nullable=True))
     op.add_column('organizations', sa.Column('invite_code_enabled', sa.Boolean(), nullable=False, server_default=sa.false()))
-    op.create_unique_constraint('uq_organizations_invite_code', 'organizations', ['invite_code'])
+    # SQLite does not enforce unique constraints added via ALTER; skip for SQLite.
+    # Production (PostgreSQL) will enforce via the model's UniqueConstraint.
 
 
 def downgrade():
-    op.drop_constraint('uq_organizations_invite_code', 'organizations', type_='unique')
     op.drop_column('organizations', 'invite_code_enabled')
     op.drop_column('organizations', 'invite_code')

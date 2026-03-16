@@ -157,10 +157,32 @@ class ShiftScheduleEntry(db.Model):
     end_time = db.Column(db.String(5), nullable=False)    # HH:MM
     calendar_event_id = db.Column(db.String(255), nullable=True)
     synced_at = db.Column(db.DateTime, nullable=True)
+    sync_error = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', foreign_keys=[user_id])
+
+    @property
+    def is_synced(self):
+        return self.calendar_event_id is not None
+
+    @property
+    def can_sync(self):
+        return not self.is_synced
+
+    def get_sync_status(self):
+        """Derive sync status from persisted fields.
+
+        Returns one of: 'synced', 'reauth_required', 'failed', 'pending'.
+        """
+        if self.is_synced:
+            return 'synced'
+        if self.sync_error in ('CREDENTIALS_EXPIRED', 'NO_CREDENTIALS'):
+            return 'reauth_required'
+        if self.sync_error is not None:
+            return 'failed'
+        return 'pending'
 
     def to_dict(self):
         return {
@@ -173,6 +195,7 @@ class ShiftScheduleEntry(db.Model):
             'end_time': self.end_time,
             'calendar_event_id': self.calendar_event_id,
             'synced_at': self.synced_at.isoformat() if self.synced_at else None,
+            'sync_error': self.sync_error,
         }
 
     def __repr__(self):

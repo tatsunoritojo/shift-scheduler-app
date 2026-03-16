@@ -96,3 +96,15 @@ def delete_event(credentials, calendar_id, event_id):
     """Delete a Google Calendar event."""
     service = build('calendar', 'v3', credentials=credentials)
     service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+
+
+def classify_calendar_error(e):
+    """Google Calendar API エラーを分類コードに変換する。"""
+    error_str = str(e)
+    if 'invalid_grant' in error_str or 'Token has been expired' in error_str:
+        return 'CREDENTIALS_EXPIRED'
+    if 'requiredAccessLevel' in error_str or '403' in error_str:
+        return 'CALENDAR_PERMISSION_DENIED'
+    if '429' in error_str or '500' in error_str or '503' in error_str:
+        return 'CALENDAR_TEMPORARY_FAILURE'
+    return 'CALENDAR_API_ERROR'

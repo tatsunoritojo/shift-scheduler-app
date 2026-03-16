@@ -15,7 +15,7 @@ from app.services.shift_service import (
 )
 from app.services.approval_service import submit_for_approval, confirm_schedule
 from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
-from app.services.calendar_service import create_event
+from app.services.calendar_service import create_event, classify_calendar_error
 from app.services.opening_hours_sync_service import (
     export_opening_hours_to_calendar,
     import_opening_hours_from_calendar,
@@ -582,14 +582,16 @@ def confirm_period_schedule(period_id):
         return error_response(error, 400)
 
     # Sync to Google Calendar
-    try:
-        sync_results = _sync_schedule_to_calendar(result, user)
-    except CredentialsExpiredError as e:
-        # Schedule is already confirmed (committed above); calendar sync failed.
-        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
+    sync_results = _sync_schedule_to_calendar(result, user)
 
     data = result.to_dict()
     data['sync_results'] = sync_results
+    data['sync_summary'] = {
+        'total': len(sync_results),
+        'synced': sum(1 for r in sync_results if r.get('success')),
+        'needs_worker_action': sum(1 for r in sync_results if r.get('needs_worker_action')),
+        'failed': sum(1 for r in sync_results if r.get('error') and not r.get('needs_worker_action')),
+    }
     return jsonify(data)
 
 
@@ -597,7 +599,7 @@ def _sync_schedule_to_calendar(schedule, admin_user):
     """Sync confirmed schedule entries to workers' Google Calendars.
 
     Uses each worker's own OAuth credentials to write to their primary calendar.
-    Falls back to admin credentials if worker has no stored credentials.
+    If worker credentials are unavailable, records the failure as needs_worker_action.
     """
     results = []
     entries = schedule.entries.all()
@@ -606,9 +608,14 @@ def _sync_schedule_to_calendar(schedule, admin_user):
     credentials_cache = {}
 
     for entry in entries:
+        # 冪等性 guard: 既に同期済みの entry はスキップ
+        if entry.calendar_event_id:
+            results.append({"user_id": entry.user_id, "event_id": entry.calendar_event_id, "success": True, "skipped": True})
+            continue
+
         worker = db.session.get(User, entry.user_id)
         if not worker:
-            results.append({"user_id": entry.user_id, "error": "User not found"})
+            results.append({"user_id": entry.user_id, "error": "User not found", "errorCode": "USER_NOT_FOUND"})
             continue
 
         summary = f"シフト: {worker.display_name or worker.email}"
@@ -616,53 +623,58 @@ def _sync_schedule_to_calendar(schedule, admin_user):
         end_dt = f"{entry.shift_date.isoformat()}T{entry.end_time}:00"
 
         try:
-            # Try worker's own credentials first (writes to their own calendar)
+            # Worker credentials の取得
             if worker.id not in credentials_cache:
                 try:
                     credentials_cache[worker.id] = get_credentials_for_user(worker)
-                except (CredentialsExpiredError, Exception) as e:
-                    current_app.logger.warning(
-                        "Worker %s credentials unavailable: %s — falling back to admin",
-                        worker.id, e,
-                    )
-                    credentials_cache[worker.id] = None
-
-            worker_creds = credentials_cache[worker.id]
-
-            if worker_creds:
-                # Use worker's own credentials → write to their primary calendar
-                event_id = create_event(
-                    worker_creds, 'primary', summary, start_dt, end_dt,
-                    description="シフリーにより自動作成"
-                )
-            else:
-                # Fallback: use admin credentials → write to worker's calendar by email
-                try:
-                    admin_creds = credentials_cache.get('admin')
-                    if admin_creds is None:
-                        admin_creds = get_credentials_for_user(admin_user)
-                        credentials_cache['admin'] = admin_creds
                 except CredentialsExpiredError:
-                    raise
+                    credentials_cache[worker.id] = ('error', 'CREDENTIALS_EXPIRED', 'Google認証の有効期限切れ。再ログインが必要です')
                 except Exception as e:
-                    results.append({"user_id": entry.user_id, "error": f"認証情報なし: {e}"})
-                    continue
+                    credentials_cache[worker.id] = ('error', 'CREDENTIALS_UNAVAILABLE', str(e))
 
-                if not admin_creds:
-                    results.append({"user_id": entry.user_id, "error": "認証情報がありません"})
-                    continue
+            cached = credentials_cache[worker.id]
 
-                event_id = create_event(
-                    admin_creds, worker.email, summary, start_dt, end_dt,
-                    description="シフリーにより自動作成"
-                )
+            # credentials 取得失敗
+            if cached is None:
+                entry.sync_error = 'NO_CREDENTIALS'
+                results.append({
+                    "user_id": entry.user_id,
+                    "error": "Google連携未設定。本人によるカレンダー追加が必要です",
+                    "errorCode": "NO_CREDENTIALS",
+                    "needs_worker_action": True,
+                })
+                continue
+            if isinstance(cached, tuple):
+                _, code, msg = cached
+                entry.sync_error = code
+                results.append({
+                    "user_id": entry.user_id,
+                    "error": msg,
+                    "errorCode": code,
+                    "needs_worker_action": True,
+                })
+                continue
 
+            # Worker 本人の credentials で同期
+            event_id = create_event(
+                cached, 'primary', summary, start_dt, end_dt,
+                description="シフリーにより自動作成"
+            )
             entry.calendar_event_id = event_id
             entry.synced_at = datetime.utcnow()
+            entry.sync_error = None
             results.append({"user_id": entry.user_id, "event_id": event_id, "success": True})
+
         except Exception as e:
             current_app.logger.error("Calendar sync failed for user %s: %s", entry.user_id, e)
-            results.append({"user_id": entry.user_id, "error": str(e)})
+            error_code = classify_calendar_error(e)
+            entry.sync_error = error_code
+            results.append({
+                "user_id": entry.user_id,
+                "error": str(e),
+                "errorCode": error_code,
+                "needs_worker_action": error_code != "CALENDAR_TEMPORARY_FAILURE",
+            })
 
     try:
         db.session.commit()

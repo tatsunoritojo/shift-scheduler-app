@@ -1837,10 +1837,16 @@ async function confirmSchedule() {
         async () => {
             try {
                 const result = await api.post(`/api/admin/periods/${periodId}/schedule/confirm`);
+                const summary = result.sync_summary || {};
                 const syncResults = result.sync_results || [];
-                const success = syncResults.filter(r => r.success).length;
-                const failed = syncResults.filter(r => r.error).length;
-                showToast(`確定完了: ${success}件同期成功, ${failed}件失敗`, success > 0 ? 'success' : 'warning');
+                const success = summary.synced || syncResults.filter(r => r.success).length;
+                const needsAction = summary.needs_worker_action || 0;
+                const failed = summary.failed || 0;
+
+                let msg = `確定完了: ${success}件同期成功`;
+                if (needsAction > 0) msg += `, ${needsAction}件は本人によるカレンダー追加が必要`;
+                if (failed > 0) msg += `, ${failed}件失敗`;
+                showToast(msg, success > 0 ? 'success' : 'warning');
             } catch (e) {
                 showToast(`確定に失敗しました: ${e.message}`, 'error');
             }

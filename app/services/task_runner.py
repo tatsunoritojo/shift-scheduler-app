@@ -65,7 +65,7 @@ def _handle_sync_calendar_event(payload):
         logger.warning("ShiftScheduleEntry %s not found, skipping", entry_id)
         return  # nothing to do — task considered successful
 
-    result = create_event(
+    event_id = create_event(
         credentials=credentials,
         calendar_id=payload.get('calendar_id', 'primary'),
         summary=payload['summary'],
@@ -75,8 +75,8 @@ def _handle_sync_calendar_event(payload):
     )
 
     # Update entry with calendar event reference
-    if result and 'id' in result:
-        entry.calendar_event_id = result['id']
+    if event_id:
+        entry.calendar_event_id = event_id
         entry.synced_at = datetime.utcnow()
         db.session.commit()
 
