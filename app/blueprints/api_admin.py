@@ -1052,6 +1052,79 @@ def get_change_log():
     return jsonify([l.to_dict() for l in logs])
 
 
+# --- Sync Settings ---
+
+@api_admin_bp.route('/sync-settings', methods=['GET'])
+@require_role('admin')
+def get_sync_settings():
+    """Get calendar sync settings for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify({
+        'calendar_sync_keyword': org.get_setting('calendar_sync_keyword', '営業時間'),
+        'calendar_setup_dismissed': org.get_setting('calendar_setup_dismissed', False),
+    })
+
+
+@api_admin_bp.route('/sync-settings', methods=['PUT'])
+@require_role('admin')
+def update_sync_settings():
+    """Update calendar sync settings for the organization."""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not data:
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    if 'calendar_sync_keyword' in data:
+        keyword = data['calendar_sync_keyword']
+        if not keyword or not isinstance(keyword, str) or len(keyword.strip()) == 0:
+            return error_response("calendar_sync_keyword must be a non-empty string", 400, code="VALIDATION_ERROR")
+        if len(keyword) > 100:
+            return error_response("calendar_sync_keyword must be 100 characters or less", 400, code="VALIDATION_ERROR")
+        org.set_setting('calendar_sync_keyword', keyword.strip())
+
+    if 'calendar_setup_dismissed' in data:
+        org.set_setting('calendar_setup_dismissed', bool(data['calendar_setup_dismissed']))
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+
+    return jsonify({
+        'calendar_sync_keyword': org.get_setting('calendar_sync_keyword', '営業時間'),
+        'calendar_setup_dismissed': org.get_setting('calendar_setup_dismissed', False),
+    })
+
+
+@api_admin_bp.route('/calendars', methods=['GET'])
+@require_role('admin')
+def list_admin_calendars():
+    """List Google Calendars accessible by the admin user."""
+    user = get_current_user()
+    try:
+        credentials = get_credentials_for_user(user)
+    except CredentialsExpiredError as e:
+        return error_response(str(e), 401, code="CREDENTIALS_EXPIRED")
+    except Exception as e:
+        current_app.logger.error(f"Credential error: {e}")
+        return error_response("認証エラーが発生しました。再ログインしてください。", 500, code="INTERNAL_ERROR")
+
+    if not credentials:
+        return error_response("Google認証情報がありません。再ログインしてください。", 401, code="AUTH_REQUIRED")
+
+    from app.services.calendar_service import list_calendars
+    try:
+        calendars = list_calendars(credentials)
+    except Exception as e:
+        current_app.logger.error(f"Failed to list calendars: {e}")
+        return error_response("カレンダー一覧の取得に失敗しました", 500, code="INTERNAL_ERROR")
+
+    return jsonify(calendars)
+
+
 # --- Reminder Settings ---
 
 @api_admin_bp.route('/reminder-settings', methods=['GET'])

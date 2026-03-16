@@ -6,12 +6,21 @@ JST = ZoneInfo("Asia/Tokyo")
 
 from app.extensions import db
 from app.models.opening_hours import OpeningHoursException, OpeningHoursCalendarSync, SyncOperationLog
+from app.models.organization import Organization
 from app.services.shift_service import get_opening_hours_for_date
 from app.services.calendar_service import create_event, update_event, delete_event, fetch_events
 
 
+def _get_sync_keyword(org_id):
+    """Get the calendar sync keyword for the organization."""
+    org = db.session.get(Organization, org_id)
+    if org:
+        return org.get_setting('calendar_sync_keyword', '営業時間')
+    return '営業時間'
+
+
 def export_opening_hours_to_calendar(org_id, credentials, start_date, end_date):
-    """Export opening hours to Google Calendar as '開校時間' events.
+    """Export opening hours to Google Calendar as events matching the org's sync keyword.
 
     Priority (low → high):
       1. Weekly default (OpeningHours) — exported to calendar
@@ -57,7 +66,7 @@ def export_opening_hours_to_calendar(org_id, credentials, start_date, end_date):
                 st, et = hours['start_time'], hours['end_time']
                 start_dt = f"{current.isoformat()}T{st}:00"
                 end_dt = f"{current.isoformat()}T{et}:00"
-                summary = '開校時間'
+                summary = _get_sync_keyword(org_id)
                 description = f'{st}〜{et}'
 
                 if not sync_record:
@@ -117,13 +126,14 @@ def export_opening_hours_to_calendar(org_id, credentials, start_date, end_date):
 
 
 def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date):
-    """Import '開校時間' events from Google Calendar as opening hour exceptions."""
+    """Import events matching the org's sync keyword from Google Calendar as opening hour exceptions."""
     stats = {'imported': 0, 'updated': 0, 'skipped': 0, 'errors': []}
+    keyword = _get_sync_keyword(org_id)
 
     try:
         events = fetch_events(
             credentials, start_date.isoformat(), end_date.isoformat(),
-            calendar_id='primary', query='開校時間'
+            calendar_id='primary', query=keyword
         )
     except Exception as e:
         current_app.logger.error(f"Failed to fetch events: {e}")
@@ -142,13 +152,13 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             db.session.rollback()
         return stats
 
-    # Collect dates that have '開校時間' events
+    # Collect dates that have matching keyword events
     dates_with_events = set()
 
     for event in events:
         try:
             # Only exact title match & timed events (not all-day)
-            if event.get('summary') != '開校時間':
+            if event.get('summary') != keyword:
                 continue
             start_str = event.get('start', '')
             end_str = event.get('end', '')

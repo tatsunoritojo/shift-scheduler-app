@@ -20,6 +20,7 @@ let dayAggregatedData = {}; // dateStr -> aggregated day info
 let workersData = []; // workers list
 let builderLoadGeneration = 0; // Guard against stale async responses
 let adminCalendarEvents = []; // Google Calendar events for the admin
+let syncKeyword = '営業時間'; // Calendar sync keyword (loaded from settings)
 
 // Worker colors for timeline
 const WORKER_COLORS = [
@@ -171,7 +172,7 @@ function renderImportPreview(startDateStr, endDateStr) {
             } else if (exc) {
                 if (exc.is_closed) {
                     cellClass += ' preview-closed';
-                    timeLabel = '休校';
+                    timeLabel = '休業';
                 } else {
                     cellClass += exc.source === 'calendar' ? ' preview-calendar-source' : ' preview-manual-source';
                     timeLabel = `${exc.start_time}〜${exc.end_time}`;
@@ -196,7 +197,7 @@ function renderImportPreview(startDateStr, endDateStr) {
         <div class="preview-legend">
             <span class="preview-legend-item"><span class="preview-legend-dot preview-calendar-source"></span>カレンダー取込</span>
             <span class="preview-legend-item"><span class="preview-legend-dot preview-manual-source"></span>手動設定</span>
-            <span class="preview-legend-item"><span class="preview-legend-dot preview-closed"></span>休校</span>
+            <span class="preview-legend-item"><span class="preview-legend-dot preview-closed"></span>休業</span>
             <span class="preview-legend-item"><span class="preview-legend-dot preview-default"></span>曜日デフォルト</span>
         </div>
     `;
@@ -298,14 +299,14 @@ function showSettingsDayPopup(dateStr) {
             <span class="badge ${sourceBadge}">${sourceLabel}</span>
         </div>
         <div class="day-popup-section">
-            <div class="day-popup-label">開校時間</div>
+            <div class="day-popup-label">営業時間</div>
             <div class="day-popup-time-edit">
                 <input type="time" class="form-control popup-time-input" id="settings-popup-start" value="${startVal}">
                 <span class="time-separator">〜</span>
                 <input type="time" class="form-control popup-time-input" id="settings-popup-end" value="${endVal}">
             </div>
             <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;">
-                <input type="checkbox" id="settings-popup-closed" ${isClosed ? 'checked' : ''}> 休校
+                <input type="checkbox" id="settings-popup-closed" ${isClosed ? 'checked' : ''}> 休業
             </label>
         </div>
         <div class="day-popup-section">
@@ -434,6 +435,20 @@ function setupStaticHandlers() {
     // Reminder settings
     const btnSaveReminder = document.getElementById('btn-save-reminder-settings');
     if (btnSaveReminder) btnSaveReminder.addEventListener('click', () => saveReminderSettings());
+
+    // Sync keyword settings
+    const btnSaveSyncKeyword = document.getElementById('btn-save-sync-keyword');
+    if (btnSaveSyncKeyword) btnSaveSyncKeyword.addEventListener('click', () => saveSyncKeyword());
+
+    // Setup wizard
+    const btnWizardConnect = document.getElementById('btn-wizard-connect');
+    if (btnWizardConnect) btnWizardConnect.addEventListener('click', () => wizardConnect());
+    const btnWizardSkip = document.getElementById('btn-wizard-skip');
+    if (btnWizardSkip) btnWizardSkip.addEventListener('click', () => wizardSkip());
+    const btnWizardSave = document.getElementById('btn-wizard-save');
+    if (btnWizardSave) btnWizardSave.addEventListener('click', () => wizardSave());
+    const btnWizardBack = document.getElementById('btn-wizard-back');
+    if (btnWizardBack) btnWizardBack.addEventListener('click', () => wizardBack());
 }
 
 function setupDelegatedHandlers() {
@@ -771,6 +786,129 @@ async function removeMember(id, name) {
     );
 }
 
+// --- Sync Settings & Setup Wizard ---
+
+async function loadSyncSettings() {
+    try {
+        const data = await api.get('/api/admin/sync-settings');
+        syncKeyword = data.calendar_sync_keyword || '営業時間';
+        // Update keyword display in UI
+        const keywordLabel = document.getElementById('sync-keyword-label');
+        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        const keywordInput = document.getElementById('sync-keyword-input');
+        if (keywordInput) keywordInput.value = syncKeyword;
+        return data;
+    } catch (e) {
+        console.warn('Failed to load sync settings:', e);
+        return null;
+    }
+}
+
+async function saveSyncKeyword() {
+    const input = document.getElementById('sync-keyword-input');
+    if (!input) return;
+    const keyword = input.value.trim();
+    if (!keyword) {
+        showToast('キーワードを入力してください', 'warning');
+        return;
+    }
+    try {
+        await api.put('/api/admin/sync-settings', { calendar_sync_keyword: keyword });
+        syncKeyword = keyword;
+        const keywordLabel = document.getElementById('sync-keyword-label');
+        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        showToast('同期キーワードを保存しました', 'success');
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+function showSetupWizard() {
+    const wizard = document.getElementById('setup-wizard');
+    if (wizard) wizard.style.display = '';
+}
+
+function hideSetupWizard() {
+    const wizard = document.getElementById('setup-wizard');
+    if (wizard) wizard.style.display = 'none';
+}
+
+async function wizardConnect() {
+    const keyword = document.getElementById('wizard-keyword').value.trim();
+    if (!keyword) {
+        showToast('キーワードを入力してください', 'warning');
+        return;
+    }
+    const resultEl = document.getElementById('wizard-calendar-result');
+    resultEl.innerHTML = '<span style="color:var(--color-neutral-400);">接続テスト中...</span>';
+    document.getElementById('wizard-step-1').style.display = 'none';
+    document.getElementById('wizard-step-2').style.display = '';
+
+    try {
+        const calendars = await api.get('/api/admin/calendars');
+        const calNames = calendars.map(c => c.summary || c.id).slice(0, 5).join('、');
+        resultEl.innerHTML = `
+            <div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+                <strong>Googleカレンダーへの接続を確認しました</strong> — ${calendars.length}件のカレンダーにアクセスできます。<br>
+                <span style="font-size:0.85em;color:var(--color-neutral-500);">${calNames}</span>
+            </div>
+            <p class="mt-8" style="font-size:0.9em;">次のステップで、キーワード「<strong>${escapeHtml(keyword)}</strong>」に一致するイベントの取込を実行します。<br>
+            <span style="color:var(--color-neutral-400);font-size:0.9em;">※ 該当イベントが存在するかどうかは、インポート実行後に確認できます。</span></p>
+        `;
+    } catch (e) {
+        resultEl.innerHTML = `
+            <div style="padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
+                <strong>接続に失敗しました</strong><br>
+                <span style="font-size:0.85em;">${escapeHtml(e.message)}</span>
+            </div>
+            <p class="mt-8" style="font-size:0.9em;">再ログインが必要な場合があります。</p>
+        `;
+    }
+}
+
+function wizardBack() {
+    document.getElementById('wizard-step-1').style.display = '';
+    document.getElementById('wizard-step-2').style.display = 'none';
+}
+
+async function wizardSave() {
+    const keyword = document.getElementById('wizard-keyword').value.trim();
+    if (!keyword) return;
+
+    try {
+        await api.put('/api/admin/sync-settings', {
+            calendar_sync_keyword: keyword,
+            calendar_setup_dismissed: true,
+        });
+        syncKeyword = keyword;
+        const keywordLabel = document.getElementById('sync-keyword-label');
+        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        const keywordInput = document.getElementById('sync-keyword-input');
+        if (keywordInput) keywordInput.value = syncKeyword;
+        hideSetupWizard();
+        showSyncKeywordCard();
+        showToast('カレンダー連携を設定しました。インポートを開始します。', 'success');
+        // Auto-trigger import
+        document.getElementById('btn-import-hours').click();
+    } catch (e) {
+        showToast(`設定の保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function wizardSkip() {
+    try {
+        await api.put('/api/admin/sync-settings', { calendar_setup_dismissed: true });
+    } catch (e) { /* ignore */ }
+    hideSetupWizard();
+    showSyncKeywordCard();
+    showToast('カレンダー連携設定をスキップしました。後から設定できます。', 'info');
+}
+
+function showSyncKeywordCard() {
+    const card = document.getElementById('sync-keyword-card');
+    if (card) card.style.display = '';
+}
+
 async function init() {
     setupStaticHandlers();
     setupDelegatedHandlers();
@@ -784,8 +922,20 @@ async function init() {
             loadExceptions(),
             loadPeriods(),
             loadReminderSettings(),
+            loadSyncSettings(),
         ]);
         const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
+        const syncSettings = results[5].status === 'fulfilled' ? results[5].value : null;
+
+        // Show setup wizard or keyword card
+        const isConfigured = syncSettings && syncSettings.calendar_setup_dismissed;
+        const hasCalExceptions = statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0;
+        if (!isConfigured && !hasCalExceptions) {
+            showSetupWizard();
+        } else {
+            showSyncKeywordCard();
+        }
+
         // Show preview calendar based on calendar exceptions range
         if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
             renderImportPreview(
@@ -831,7 +981,7 @@ async function loadOpeningHours() {
                     value="${existing ? existing.end_time : '21:00'}" style="width:auto;">
                 <label style="display:flex;align-items:center;gap:4px;">
                     <input type="checkbox" class="oh-closed" data-dow="${dow}"
-                        ${existing && existing.is_closed ? 'checked' : ''}> 休校
+                        ${existing && existing.is_closed ? 'checked' : ''}> 休業
                 </label>
             </div>
         `);
@@ -851,7 +1001,7 @@ async function saveOpeningHours() {
     }
     try {
         await api.put('/api/admin/opening-hours', hours);
-        showToast('開校時間を保存しました', 'success');
+        showToast('営業時間を保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
@@ -884,7 +1034,7 @@ async function loadExceptions(highlightRange) {
                     return `
                     <tr${rowClass}>
                         <td>${e.exception_date}</td>
-                        <td>${e.is_closed ? '休校' : `${e.start_time}-${e.end_time}`}</td>
+                        <td>${e.is_closed ? '休業' : `${e.start_time}-${e.end_time}`}</td>
                         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                         <td>${escapeHtml(e.reason)}</td>
                         <td><button class="btn btn-danger" style="padding:4px 12px;font-size:0.85em;"
@@ -973,7 +1123,7 @@ async function exportOpeningHours() {
     }
     showConfirmDialog(
         'エクスポート確認',
-        `${startDate} 〜 ${endDate} の開校時間をGoogleカレンダーに書き出します。カレンダー上の既存「開校時間」イベントは更新されます。`,
+        `${startDate} 〜 ${endDate} の営業時間をGoogleカレンダーに書き出します。カレンダー上の既存「${syncKeyword}」イベントは更新されます。`,
         'btn-primary', 'エクスポート',
         async () => {
             try {
@@ -1001,7 +1151,7 @@ async function importOpeningHours() {
     }
     showConfirmDialog(
         'インポート確認',
-        `${startDate} 〜 ${endDate} の「開校時間」イベントをGoogleカレンダーから取込み、例外リストに<strong>保存</strong>します。手動設定済みの日は上書きされません。`,
+        `${startDate} 〜 ${endDate} の「${syncKeyword}」イベントをGoogleカレンダーから取込み、例外リストに<strong>保存</strong>します。手動設定済みの日は上書きされません。`,
         'btn-primary', 'インポート',
         async () => {
             try {
@@ -1268,7 +1418,7 @@ function renderBuilderCalendar() {
             if (data.closed) {
                 const closedLabel = document.createElement('div');
                 closedLabel.className = 'admin-day-hours';
-                closedLabel.textContent = '休校';
+                closedLabel.textContent = '休業';
                 closedLabel.style.color = '#999';
                 cell.appendChild(closedLabel);
             }
@@ -1353,7 +1503,7 @@ function showAdminDayPopup(dateStr, data) {
         const section = document.createElement('div');
         section.className = 'day-popup-section';
         section.innerHTML = `
-            <div class="day-popup-label">開校時間</div>
+            <div class="day-popup-label">営業時間</div>
             <div class="day-popup-opening-hours">${data.openingHours.start_time} 〜 ${data.openingHours.end_time}</div>
         `;
         popup.appendChild(section);
@@ -1479,7 +1629,7 @@ function closeAdminDayPopup() {
 function renderAdminCoverageTimeline(dateStr, data, container) {
     const oh = data.openingHours;
     if (!oh) {
-        container.innerHTML = '<span style="color:#999;font-size:0.85em;">開校時間未設定</span>';
+        container.innerHTML = '<span style="color:#999;font-size:0.85em;">営業時間未設定</span>';
         return;
     }
 

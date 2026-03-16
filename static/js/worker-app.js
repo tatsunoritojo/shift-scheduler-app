@@ -42,8 +42,8 @@ function renderCalcSettingsPanel() {
     const settings = getCalcSettings();
     container.innerHTML = `
         <div class="calc-settings-body" id="calc-settings-body" style="display:none;">
-            <p class="help-text" style="margin-bottom:4px;">開校時間からGoogleカレンダーの予定を差し引き、勤務可能な時間帯を自動計算しています。</p>
-            <p class="help-text" style="margin-bottom:12px;">計算ロジック: 開校時間 − 予定の時間 − 前後バッファ = 勤務可能時間。残った空き時間が最低勤務時間より短い場合は除外されます。</p>
+            <p class="help-text" style="margin-bottom:4px;">営業時間からGoogleカレンダーの予定を差し引き、勤務可能な時間帯を自動計算しています。</p>
+            <p class="help-text" style="margin-bottom:12px;">計算ロジック: 営業時間 − 予定の時間 − 前後バッファ = 勤務可能時間。残った空き時間が最低勤務時間より短い場合は除外されます。</p>
             <div class="calc-settings-row">
                 <label class="calc-settings-label">移動時間（前後バッファ）</label>
                 <div class="calc-settings-input-group">
@@ -607,7 +607,7 @@ function showDayPopup(dateStr, data, cellElement) {
         </div>
 
         <div class="day-popup-section">
-            <div class="day-popup-label">開校時間</div>
+            <div class="day-popup-label">営業時間</div>
             <div class="day-popup-opening-hours">
                 ${data.opening_start && data.opening_end
                     ? `${data.opening_start} 〜 ${data.opening_end}`
@@ -787,7 +787,7 @@ function applyCustomTime(dateStr) {
     if (data.opening_start && data.opening_end) {
         if (timeToMinutes(newStart) < timeToMinutes(data.opening_start) ||
             timeToMinutes(newEnd) > timeToMinutes(data.opening_end)) {
-            showToast('開校時間の範囲内で設定してください', 'warning');
+            showToast('営業時間の範囲内で設定してください', 'warning');
             return;
         }
     }

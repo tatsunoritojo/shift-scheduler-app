@@ -28,13 +28,52 @@
 
             <!-- Settings Tab -->
             <div id="tab-settings" class="tab-content active">
-                <div class="guide-box">
-                    <div class="guide-box-title">管理者画面の使い方</div>
+                <details class="guide-box" id="guide-box-details" open>
+                    <summary class="guide-box-title" style="cursor:pointer;display:flex;align-items:center;gap:6px;"><i data-lucide="help-circle" style="width:16px;height:16px;"></i> 管理者画面の使い方</summary>
                     <ol class="guide-steps">
-                        <li><strong>設定</strong>（このタブ）: 開校時間と休校日を設定します</li>
+                        <li><strong>設定</strong>（このタブ）: 営業時間と休業日を設定します</li>
                         <li><strong>シフト期間</strong>: シフトの募集期間を作成し、アルバイトに希望を提出してもらいます</li>
                         <li><strong>シフト構築</strong>: 提出された希望をもとにシフトを組み、事業主に承認申請します</li>
                     </ol>
+                </details>
+
+                <!-- Setup Wizard (shown on first access) -->
+                <div id="setup-wizard" class="card mb-24" style="display:none;border:2px solid var(--color-primary-300);background:var(--color-primary-50);">
+                    <h3><i data-lucide="wand-2" style="width:18px;height:18px;vertical-align:text-bottom;"></i> カレンダー連携セットアップ</h3>
+                    <div id="wizard-step-1">
+                        <p class="mb-16">Googleカレンダーに営業時間の予定を入力していますか？</p>
+                        <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.85em;">カレンダーに「営業時間」などの名前でイベントを登録している場合、自動的に取り込むことができます。</p>
+                        <div class="form-group mb-16">
+                            <label>カレンダーで使用しているイベント名（キーワード）</label>
+                            <input type="text" id="wizard-keyword" class="form-control" value="営業時間" placeholder="例: 営業時間、開校時間、オープン" style="max-width:300px;">
+                            <div class="field-hint">Googleカレンダー上のイベント名と完全一致するキーワードを入力してください</div>
+                            <div class="field-hint" style="margin-top:4px;">※ 既にカレンダー連携を使用中の場合は、現在のイベント名に合わせてください。キーワードを変更すると、旧イベント名では同期されなくなります。</div>
+                        </div>
+                        <div class="flex gap-8">
+                            <button class="btn btn-primary" id="btn-wizard-connect"><i data-lucide="plug" style="width:15px;height:15px;"></i> カレンダー接続テスト</button>
+                            <button class="btn btn-outline" id="btn-wizard-skip">スキップ（後で設定する）</button>
+                        </div>
+                    </div>
+                    <div id="wizard-step-2" style="display:none;">
+                        <div id="wizard-calendar-result" class="mb-16"></div>
+                        <div class="flex gap-8">
+                            <button class="btn btn-primary" id="btn-wizard-save"><i data-lucide="check" style="width:15px;height:15px;"></i> 保存してインポート開始</button>
+                            <button class="btn btn-outline" id="btn-wizard-back">戻る</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sync Keyword Setting -->
+                <div class="card mb-24" id="sync-keyword-card" style="display:none;">
+                    <h3><i data-lucide="key" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 同期キーワード設定</h3>
+                    <p class="help-text mb-16">Googleカレンダーから営業時間を取り込む際に検索するイベント名です。</p>
+                    <div class="flex gap-8" style="align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>キーワード</label>
+                            <input type="text" id="sync-keyword-input" class="form-control" placeholder="営業時間" style="width:200px;">
+                        </div>
+                        <button class="btn btn-primary" id="btn-save-sync-keyword"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                    </div>
                 </div>
 
                 <!-- Calendar Sync Card (primary action) -->
@@ -43,10 +82,10 @@
                     <div id="sync-status" class="sync-status mb-16">
                         <span style="color:var(--color-neutral-400);font-size:0.9em;">読み込み中...</span>
                     </div>
-                    <p class="mb-8" style="color:#666;font-size:0.9em;">Googleカレンダーと開校時間データを同期します。</p>
+                    <p class="mb-8" style="color:#666;font-size:0.9em;">Googleカレンダーと営業時間データを同期します。</p>
                     <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.82em;">
-                        <strong>インポート</strong>: カレンダーの「開校時間」イベントを読み取り、例外リストに<strong>保存</strong>します。<br>
-                        <strong>エクスポート</strong>: 設定済みの開校時間をカレンダーに書き出します。
+                        <strong>インポート</strong>: カレンダーの「<span id="sync-keyword-label">営業時間</span>」イベントを読み取り、例外リストに<strong>保存</strong>します。<br>
+                        <strong>エクスポート</strong>: 設定済みの営業時間をカレンダーに書き出します。
                     </p>
                     <div class="flex gap-8 mb-16" style="align-items:flex-end;flex-wrap:wrap;">
                         <div class="form-group" style="margin-bottom:0;">
@@ -65,7 +104,7 @@
 
                 <!-- Import Preview (visual calendar) -->
                 <div class="card mb-24" id="import-preview-card">
-                    <h3><i data-lucide="eye" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 開校時間プレビュー</h3>
+                    <h3><i data-lucide="eye" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 営業時間プレビュー</h3>
                     <div id="import-preview">
                         <div class="empty-state" style="padding:32px 24px;">
                             <p>カレンダーからインポートすると、取込み結果がカレンダー形式で表示されます</p>
@@ -108,11 +147,11 @@
 
                 <!-- Manual Settings (collapsed) -->
                 <details class="settings-collapse" id="manual-settings-details">
-                    <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の開校時間・例外の管理）</summary>
+                    <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の営業時間・例外の管理）</summary>
                     <div class="settings-collapse-body">
                         <div class="card mb-24" id="section-opening-hours">
-                            <h3>曜日別の開校時間</h3>
-                            <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの開校時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
+                            <h3>曜日別の営業時間</h3>
+                            <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
                             <div id="opening-hours-grid"></div>
                             <button class="btn btn-primary mt-16" id="btn-save-opening-hours"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                         </div>
@@ -125,7 +164,7 @@
                                 <input type="time" id="exc-start" class="form-control" style="width:auto;" value="09:00">
                                 <input type="time" id="exc-end" class="form-control" style="width:auto;" value="21:00">
                                 <label style="display:flex;align-items:center;gap:4px;">
-                                    <input type="checkbox" id="exc-closed"> 休校
+                                    <input type="checkbox" id="exc-closed"> 休業
                                 </label>
                                 <input type="text" id="exc-reason" class="form-control" style="width:auto;" placeholder="理由">
                                 <button class="btn btn-primary" id="btn-add-exception"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
@@ -134,7 +173,7 @@
 
                         <div class="card" id="section-exceptions-list">
                             <h3>例外一覧</h3>
-                            <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.82em;">優先順位: <strong>手動設定</strong> ＞ <strong>カレンダー取込</strong> ＞ <strong>曜日別の開校時間</strong></p>
+                            <p class="mb-16" style="color:var(--color-neutral-400);font-size:0.82em;">優先順位: <strong>手動設定</strong> ＞ <strong>カレンダー取込</strong> ＞ <strong>曜日別の営業時間</strong></p>
                             <div id="exceptions-list"></div>
                         </div>
                     </div>
@@ -279,7 +318,7 @@
                                     <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-full"></span>充足</span>
                                     <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-partial"></span>一部割当</span>
                                     <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-empty"></span>未割当</span>
-                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-closed"></span>休校</span>
+                                    <span class="admin-legend-item"><span class="admin-legend-dot admin-legend-closed"></span>休業</span>
                                 </div>
                                 <div id="calendar-container"></div>
                             </div>
