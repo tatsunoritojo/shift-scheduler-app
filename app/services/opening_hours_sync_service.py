@@ -139,6 +139,9 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             db.session.rollback()
         return stats
 
+    # Collect dates that have '開校時間' events
+    dates_with_events = set()
+
     for event in events:
         try:
             # Only exact title match & timed events (not all-day)
@@ -155,15 +158,18 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
             st = event_dt.strftime('%H:%M')
             et = event_end_dt.strftime('%H:%M')
 
+            dates_with_events.add(event_date)
+
             existing = OpeningHoursException.query.filter_by(
                 organization_id=org_id, exception_date=event_date
             ).first()
 
             if existing:
                 if existing.source == 'calendar':
-                    if existing.start_time != st or existing.end_time != et:
+                    if existing.start_time != st or existing.end_time != et or existing.is_closed:
                         existing.start_time = st
                         existing.end_time = et
+                        existing.is_closed = False
                         existing.updated_at = datetime.utcnow()
                         stats['updated'] += 1
                     else:
@@ -186,6 +192,41 @@ def import_opening_hours_from_calendar(org_id, credentials, start_date, end_date
         except Exception as e:
             current_app.logger.error(f"Sync import error for event {event.get('id', '?')}: {e}")
             stats['errors'].append({'event': event.get('id', '?'), 'error': '取込エラー'})
+
+    # Mark dates without events as closed (calendar is source of truth)
+    stats['closed'] = 0
+    current = start_date
+    while current <= end_date:
+        if current not in dates_with_events:
+            existing = OpeningHoursException.query.filter_by(
+                organization_id=org_id, exception_date=current
+            ).first()
+
+            if existing:
+                if existing.source == 'calendar':
+                    if not existing.is_closed:
+                        existing.is_closed = True
+                        existing.start_time = None
+                        existing.end_time = None
+                        existing.updated_at = datetime.utcnow()
+                        stats['closed'] += 1
+                    else:
+                        stats['skipped'] += 1
+                else:
+                    stats['skipped'] += 1  # Manual entry — don't overwrite
+            else:
+                exc = OpeningHoursException(
+                    organization_id=org_id,
+                    exception_date=current,
+                    start_time=None,
+                    end_time=None,
+                    is_closed=True,
+                    reason='Googleカレンダーに予定なし',
+                    source='calendar',
+                )
+                db.session.add(exc)
+                stats['closed'] += 1
+        current += timedelta(days=1)
 
     log = SyncOperationLog(
         organization_id=org_id,
