@@ -314,16 +314,28 @@ def _decrypt_refresh_token(token_record):
 
 
 def get_credentials_for_user(user):
-    """Build Google Credentials for a user, refreshing if needed."""
+    """Build Google Credentials for a user, refreshing if needed.
+
+    When called for the current session user, uses the cached access token
+    from the session for performance. For other users (e.g., worker credentials
+    during admin-initiated calendar sync), skips the session and refreshes
+    directly from the stored refresh token.
+    """
     token = UserToken.query.filter_by(user_id=user.id).first()
     if not token:
         return None
 
     refresh_token = _decrypt_refresh_token(token)
-    session_creds = session.get('credentials', {})
+    if not refresh_token:
+        return None
+
+    # Only use session access token if this is the current session user
+    session_user_id = session.get('user_id')
+    is_session_user = session_user_id is not None and session_user_id == user.id
+    cached_token = session.get('credentials', {}).get('token') if is_session_user else None
 
     creds_data = {
-        'token': session_creds.get('token'),
+        'token': cached_token,
         'refresh_token': refresh_token,
         'token_uri': 'https://oauth2.googleapis.com/token',
         'client_id': current_app.config['GOOGLE_CLIENT_ID'],
@@ -336,13 +348,13 @@ def get_credentials_for_user(user):
     if not credentials.valid:
         try:
             credentials.refresh(Request())
-            session['credentials'] = {
-                'token': credentials.token,
-                'refresh_token': credentials.refresh_token,
-            }
+            # Only cache in session for the current user
+            if is_session_user:
+                session['credentials'] = {
+                    'token': credentials.token,
+                    'refresh_token': credentials.refresh_token,
+                }
         except RefreshError as e:
-            # Token is permanently invalid (expired, revoked, or consent withdrawn).
-            # Mark the stored token as stale so we don't retry next time.
             auth_svc_logger.warning(
                 "CREDENTIALS_EXPIRED: user_id=%s error=%s — clearing stale token",
                 user.id, e,
