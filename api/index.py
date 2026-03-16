@@ -12,5 +12,6 @@ try:
     from flask_migrate import upgrade
     with app.app_context():
         upgrade()
+        logging.getLogger(__name__).info("Auto-migration completed successfully")
 except Exception as e:
-    logging.getLogger(__name__).warning("Auto-migration skipped: %s", e)
+    logging.getLogger(__name__).error("Auto-migration failed: %s", e, exc_info=True)
