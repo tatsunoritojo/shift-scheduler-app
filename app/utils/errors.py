@@ -34,11 +34,17 @@ def error_response(message, status_code=400, code=None, details=None):
 
 
 def wants_json():
-    """Return True if the request is for an API path or explicitly accepts JSON."""
+    """Return True if the request is for an API path or explicitly prefers JSON.
+
+    For non-API paths, HTML is the default so that bare ``Accept: */*`` requests
+    (curl, bots, misconfigured clients) receive a readable error page instead
+    of a raw JSON blob. JSON is only returned when the client gives it strictly
+    higher quality than HTML.
+    """
     if request.path.startswith('/api/'):
         return True
     accept = request.accept_mimetypes
-    return accept.best_match(['application/json', 'text/html']) == 'application/json'
+    return accept.quality('application/json') > accept.quality('text/html')
 
 
 def render_error_page(title, message, back_url='/login', back_label='ログイン画面に戻る',
