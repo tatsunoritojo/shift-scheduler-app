@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, session, current_app, redirect, request, m
 from app.extensions import db, limiter
 from app.middleware.auth_middleware import get_current_user, _check_active_membership
 from app.utils.errors import error_response
+from app.utils.useragent import webview_redirect_if_needed
 
 api_common_bp = Blueprint('api_common', __name__)
 page_logger = logging.getLogger('pages')
@@ -54,6 +55,9 @@ def sitemap():
 
 @api_common_bp.route('/login')
 def login_page():
+    guard = webview_redirect_if_needed()
+    if guard is not None:
+        return guard
     return current_app.send_static_file('pages/login.html')
 
 
@@ -141,6 +145,9 @@ def terms_page():
 @api_common_bp.route('/invite')
 def invite_page():
     """Serve the invitation landing page."""
+    guard = webview_redirect_if_needed()
+    if guard is not None:
+        return guard
     return current_app.send_static_file('pages/invite.html')
 
 

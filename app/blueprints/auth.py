@@ -7,6 +7,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.extensions import db, limiter
 from app.utils.errors import error_response
+from app.utils.useragent import webview_redirect_if_needed
 from app.services.auth_service import (
     create_oauth_flow, extract_user_info, upsert_user, save_refresh_token,
 )
@@ -59,6 +60,10 @@ def accept_invite(token):
     """Validate invitation token, set cookie, and redirect to OAuth login."""
     from app.models.membership import InvitationToken
 
+    guard = webview_redirect_if_needed()
+    if guard is not None:
+        return guard
+
     invite = InvitationToken.query.filter_by(token=token).first()
     if not invite or not invite.is_valid:
         return error_response("Invalid or expired invitation", 400, code="BAD_REQUEST")
@@ -74,6 +79,10 @@ def accept_invite_code(code):
     """Validate invite_code, set cookie, and redirect to OAuth login."""
     from app.models.organization import Organization
 
+    guard = webview_redirect_if_needed()
+    if guard is not None:
+        return guard
+
     org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
     if not org or not org.is_active:
         return error_response("Invalid or disabled invite code", 400, code="BAD_REQUEST")
@@ -87,6 +96,10 @@ def accept_invite_code(code):
 @auth_bp.route('/google/login')
 @limiter.limit("10 per minute")
 def login():
+    guard = webview_redirect_if_needed()
+    if guard is not None:
+        return guard
+
     flow = create_oauth_flow()
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -239,6 +252,17 @@ def _resolve_invite_code():
         return None
 
     return org
+
+
+@auth_bp.route('/open-in-browser')
+def open_in_browser():
+    """Static landing page that offers to reopen the current URL in Safari / Chrome.
+
+    Served when an in-app WebView (LINE, Instagram, etc.) is detected upstream.
+    Client-side JS reads the `next` query param and builds a scheme URL
+    (`x-safari-https://` on iOS, `intent://...` on Android) to escape the WebView.
+    """
+    return current_app.send_static_file('pages/open-in-browser.html')
 
 
 @auth_bp.route('/logout')

@@ -1,0 +1,76 @@
+(function () {
+    'use strict';
+
+    function getNextPath() {
+        var params = new URLSearchParams(window.location.search);
+        var next = params.get('next') || '/';
+        // Security: only accept same-origin relative paths.
+        if (next.indexOf('//') === 0 || next.indexOf('://') !== -1) {
+            next = '/';
+        }
+        if (next.charAt(0) !== '/') {
+            next = '/' + next;
+        }
+        return next;
+    }
+
+    function detectPlatform() {
+        var ua = navigator.userAgent || '';
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+        if (/Android/i.test(ua)) return 'android';
+        return 'other';
+    }
+
+    var nextPath = getNextPath();
+    var platform = detectPlatform();
+    var host = window.location.host;
+    var fullUrl = window.location.origin + nextPath;
+
+    var openBtn = document.getElementById('open-btn');
+    var openLabel = document.getElementById('open-label');
+    var copyBtn = document.getElementById('copy-btn');
+    var toast = document.getElementById('toast');
+    var urlBox = document.getElementById('url-box');
+
+    if (platform === 'ios') {
+        openBtn.href = 'x-safari-https://' + host + nextPath;
+        openLabel.textContent = 'Safariで開く';
+    } else if (platform === 'android') {
+        openBtn.href =
+            'intent://' + host + nextPath +
+            '#Intent;scheme=https;package=com.android.chrome;end';
+        openLabel.textContent = 'Chromeで開く';
+    } else {
+        openBtn.href = fullUrl;
+        openBtn.target = '_blank';
+        openLabel.textContent = 'ブラウザで開く';
+    }
+
+    function showToast() {
+        toast.classList.add('show');
+        setTimeout(function () {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    function showUrlFallback() {
+        urlBox.textContent = fullUrl;
+        urlBox.classList.add('show');
+    }
+
+    copyBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullUrl).then(
+                function () {
+                    showToast();
+                    showUrlFallback();
+                },
+                function () {
+                    showUrlFallback();
+                }
+            );
+        } else {
+            showUrlFallback();
+        }
+    });
+})();
