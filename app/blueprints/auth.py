@@ -6,7 +6,7 @@ from flask import Blueprint, redirect, request, url_for, session, jsonify, curre
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.extensions import db, limiter
-from app.utils.errors import error_response
+from app.utils.errors import error_response, render_error_page
 from app.utils.useragent import webview_redirect_if_needed
 from app.services.auth_service import (
     create_oauth_flow, extract_user_info, upsert_user, save_refresh_token,
@@ -66,7 +66,14 @@ def accept_invite(token):
 
     invite = InvitationToken.query.filter_by(token=token).first()
     if not invite or not invite.is_valid:
-        return error_response("Invalid or expired invitation", 400, code="BAD_REQUEST")
+        return render_error_page(
+            title="招待リンクが無効です",
+            message="この招待リンクは期限切れまたは既に使用済みです。",
+            back_url="/login",
+            back_label="ログイン画面へ",
+            status=400,
+            detail="招待者に新しいリンクを発行してもらってください。",
+        )
 
     # Pass token as query param so login() stores it in session with state
     resp = make_response(redirect(url_for('auth.login', invite_token=token)))
@@ -85,7 +92,14 @@ def accept_invite_code(code):
 
     org = Organization.query.filter_by(invite_code=code, invite_code_enabled=True).first()
     if not org or not org.is_active:
-        return error_response("Invalid or disabled invite code", 400, code="BAD_REQUEST")
+        return render_error_page(
+            title="招待コードが無効です",
+            message="この招待コードは現在ご利用いただけません。",
+            back_url="/login",
+            back_label="ログイン画面へ",
+            status=400,
+            detail="管理者に新しいコードを確認してもらってください。",
+        )
 
     # Pass code as query param so login() stores it in session with state
     resp = make_response(redirect(url_for('auth.login', invite_code=code)))
@@ -122,12 +136,47 @@ def login():
 @auth_bp.route('/google/callback')
 @limiter.limit("10 per minute")
 def callback():
+    # If Google itself rejected the request (WebView bypass, user cancellation,
+    # scope denial), handle it before touching the flow state.
+    google_error = request.args.get('error')
+    if google_error:
+        auth_logger.warning(
+            "LOGIN_FAILED_BY_GOOGLE: error=%s from %s", google_error, request.remote_addr
+        )
+        session.pop('state', None)
+
+        if google_error == 'disallowed_useragent':
+            # UA detection missed this client — re-route through the fallback page.
+            return redirect('/auth/open-in-browser?next=%2Fauth%2Fgoogle%2Flogin')
+        if google_error == 'access_denied':
+            return render_error_page(
+                title="ログインがキャンセルされました",
+                message="Googleアカウントでのログインを許可してください。",
+                back_url="/login",
+                back_label="もう一度ログイン",
+                status=400,
+            )
+        return render_error_page(
+            title="Googleログインでエラーが発生しました",
+            message="もう一度お試しください。解消しない場合は管理者にご連絡ください。",
+            back_url="/login",
+            back_label="ログイン画面へ",
+            status=400,
+            detail=f"エラーコード: {google_error}",
+        )
+
     # Pop state to ensure one-time use
     state = session.pop('state', None)
     request_state = request.args.get('state', '')
     if not state or not hmac.compare_digest(str(state), str(request_state)):
         auth_logger.warning("LOGIN_FAILED: OAuth state mismatch from %s", request.remote_addr)
-        return error_response("State mismatch", 400, code="BAD_REQUEST")
+        return render_error_page(
+            title="セッションの有効期限が切れました",
+            message="お手数ですが、最初からログインをやり直してください。",
+            back_url="/login",
+            back_label="ログインに戻る",
+            status=400,
+        )
 
     flow = create_oauth_flow(state=state)
 
@@ -135,14 +184,26 @@ def callback():
         flow.fetch_token(authorization_response=request.url)
     except Exception as e:
         auth_logger.warning("LOGIN_FAILED: Token fetch failed from %s: %s", request.remote_addr, e)
-        return error_response("認証に失敗しました。もう一度お試しください。", 500, code="INTERNAL_ERROR")
+        return render_error_page(
+            title="認証に失敗しました",
+            message="Googleとの通信に問題が発生しました。もう一度お試しください。",
+            back_url="/login",
+            back_label="ログインに戻る",
+            status=500,
+        )
 
     credentials = flow.credentials
     google_id, email, display_name = extract_user_info(credentials)
 
     if not google_id:
         auth_logger.warning("LOGIN_FAILED: Could not extract user info from %s", request.remote_addr)
-        return error_response("Failed to extract user info", 500, code="INTERNAL_ERROR")
+        return render_error_page(
+            title="アカウント情報の取得に失敗しました",
+            message="お手数ですが、もう一度ログインをお試しください。",
+            back_url="/login",
+            back_label="ログインに戻る",
+            status=500,
+        )
 
     # Check for invitation token (cookie → session fallback)
     invitation = _resolve_invitation(email)

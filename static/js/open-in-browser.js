@@ -31,6 +31,7 @@
     var copyBtn = document.getElementById('copy-btn');
     var toast = document.getElementById('toast');
     var urlBox = document.getElementById('url-box');
+    var fallbackBanner = document.getElementById('fallback-banner');
 
     if (platform === 'ios') {
         openBtn.href = 'x-safari-https://' + host + nextPath;
@@ -72,5 +73,29 @@
         } else {
             showUrlFallback();
         }
+    });
+
+    // Scheme-failure detection: if the page remains visible 2s after the user
+    // taps the open button, the scheme (x-safari-https:// / intent://) was
+    // silently blocked (typical on Instagram / Facebook iOS). Auto-reveal the
+    // copy-URL fallback so the user isn't left staring at a dead button.
+    openBtn.addEventListener('click', function () {
+        var tapTime = Date.now();
+        var wentHidden = false;
+
+        function onVisibilityChange() {
+            if (document.hidden) {
+                wentHidden = true;
+            }
+        }
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        setTimeout(function () {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            if (!wentHidden && Date.now() - tapTime >= 1900) {
+                if (fallbackBanner) fallbackBanner.classList.add('show');
+                showUrlFallback();
+            }
+        }, 2000);
     });
 })();

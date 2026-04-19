@@ -133,6 +133,21 @@
         .url-box.show {
             display: block;
         }
+        .fallback-banner {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 14px;
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            color: #92400e;
+            font-size: 0.85rem;
+            line-height: 1.55;
+            text-align: left;
+        }
+        .fallback-banner.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -147,6 +162,10 @@
             <span id="open-label">ブラウザで開く</span>
         </a>
         <button id="copy-btn" class="copy-btn" type="button">URLをコピー</button>
+        <div id="fallback-banner" class="fallback-banner">
+            <strong>このアプリはボタンからの起動をブロックしているようです。</strong><br>
+            下の「URLをコピー」を押して、<br>Safari / Chrome に貼り付けて開いてください。
+        </div>
         <div id="url-box" class="url-box"></div>
         <p class="hint">
             ボタンで開けない場合は、右上の「⋯」や「︙」メニューから<br>

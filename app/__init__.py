@@ -161,8 +161,19 @@ def _register_teardown(app):
 
 
 def _register_error_handlers(app):
-    """Register global error handlers that return JSON responses."""
-    from app.utils.errors import APIError, error_response
+    """Register global error handlers.
+
+    API paths (/api/*) get JSON responses; page routes get HTML error pages
+    so users aren't stranded on a raw JSON blob.
+    """
+    from app.utils.errors import APIError, error_response, render_error_page, wants_json
+
+    def _respond(status, title, message, code, detail=None):
+        if wants_json():
+            return error_response(message, status, code=code)
+        return render_error_page(
+            title=title, message=message, status=status, detail=detail,
+        )
 
     @app.errorhandler(APIError)
     def handle_api_error(e):
@@ -170,15 +181,18 @@ def _register_error_handlers(app):
 
     @app.errorhandler(400)
     def bad_request(e):
-        return error_response("Bad request", 400, code="BAD_REQUEST")
+        return _respond(400, "リクエストが不正です",
+                        "入力内容を確認してもう一度お試しください。", "BAD_REQUEST")
 
     @app.errorhandler(404)
     def not_found(e):
-        return error_response("Not found", 404, code="NOT_FOUND")
+        return _respond(404, "ページが見つかりません",
+                        "URLが間違っているか、削除されている可能性があります。", "NOT_FOUND")
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        return error_response("Method not allowed", 405, code="METHOD_NOT_ALLOWED")
+        return _respond(405, "操作が許可されていません",
+                        "この画面からの操作はできません。", "METHOD_NOT_ALLOWED")
 
     @app.errorhandler(415)
     def unsupported_media_type(e):
@@ -186,15 +200,19 @@ def _register_error_handlers(app):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        return error_response("Too many requests", 429, code="RATE_LIMIT_EXCEEDED")
+        return _respond(429, "リクエストが多すぎます",
+                        "しばらく時間をおいてからもう一度お試しください。",
+                        "RATE_LIMIT_EXCEEDED")
 
     @app.errorhandler(500)
     def internal_server_error(e):
-        return error_response("Internal server error", 500, code="INTERNAL_ERROR")
+        return _respond(500, "サーバーエラーが発生しました",
+                        "時間をおいてから再度お試しください。", "INTERNAL_ERROR")
 
     @app.errorhandler(Exception)
     def unhandled_exception(e):
         app.logger.exception("Unhandled exception: %s", e)
-        if app.debug:
-            return error_response(str(e), 500, code="INTERNAL_ERROR")
-        return error_response("Internal server error", 500, code="INTERNAL_ERROR")
+        detail = str(e) if app.debug else None
+        return _respond(500, "サーバーエラーが発生しました",
+                        "時間をおいてから再度お試しください。",
+                        "INTERNAL_ERROR", detail=detail)
