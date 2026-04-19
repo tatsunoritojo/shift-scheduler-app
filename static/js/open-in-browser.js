@@ -37,9 +37,13 @@
         openBtn.href = 'x-safari-https://' + host + nextPath;
         openLabel.textContent = 'Safariで開く';
     } else if (platform === 'android') {
+        // S.browser_fallback_url lets Android open the URL in the default
+        // browser if Chrome isn't installed, instead of silently doing nothing.
+        var fallbackParam = 'S.browser_fallback_url=' + encodeURIComponent(fullUrl);
         openBtn.href =
             'intent://' + host + nextPath +
-            '#Intent;scheme=https;package=com.android.chrome;end';
+            '#Intent;scheme=https;package=com.android.chrome;' +
+            fallbackParam + ';end';
         openLabel.textContent = 'Chromeで開く';
     } else {
         openBtn.href = fullUrl;
