@@ -145,6 +145,92 @@
                     <button class="btn btn-primary" id="btn-save-reminder-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
                 </div>
 
+                <!-- Level System Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="layers" style="width:18px;height:18px;vertical-align:text-bottom;"></i> レベル設定</h3>
+                    <p class="help-text mb-16">従業員のスキルレベルを分類し、シフト割当時のバランス判断に使います。</p>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
+                        <input type="checkbox" id="level-system-enabled">
+                        <span>レベル機能を有効にする</span>
+                    </label>
+                    <div id="level-tiers-section" style="display:none;">
+                        <p class="help-text mb-8">レベル一覧（上から高レベル順）</p>
+                        <div id="level-tiers-list" class="mb-16"></div>
+                        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:flex-end;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>キー（半角英字小文字）</label>
+                                <input type="text" id="level-new-key" class="form-control" placeholder="senior" style="width:140px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>表示名</label>
+                                <input type="text" id="level-new-label" class="form-control" placeholder="シニア" style="width:140px;">
+                            </div>
+                            <button class="btn btn-outline" id="btn-add-level-tier"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-save-level-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> レベル設定を保存</button>
+                </div>
+
+                <!-- Overlap Check Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="users" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 同レベル重複チェック</h3>
+                    <p class="help-text mb-16">同じレベルの従業員が同じ時間帯にシフトに入ると警告します（レベル機能が有効なときのみ）。</p>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
+                        <input type="checkbox" id="overlap-check-enabled">
+                        <span>同レベル重複を警告する</span>
+                    </label>
+                    <button class="btn btn-primary" id="btn-save-overlap-check"><i data-lucide="save" style="width:15px;height:15px;"></i> 重複チェック設定を保存</button>
+                </div>
+
+                <!-- Min Attendance Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="calendar-check-2" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 最低出勤設定</h3>
+                    <p class="help-text mb-16">週あたりの最低出勤回数・時間を設定します（雇用契約に基づく）。</p>
+                    <div class="form-group">
+                        <label>適用モード</label>
+                        <select id="min-attendance-mode" class="form-control" style="width:auto;">
+                            <option value="disabled">無効</option>
+                            <option value="org_wide">組織共通</option>
+                            <option value="per_member">メンバーごと</option>
+                        </select>
+                    </div>
+                    <div id="min-attendance-config" style="display:none;">
+                        <div class="form-group">
+                            <label>評価単位</label>
+                            <select id="min-attendance-unit" class="form-control" style="width:auto;">
+                                <option value="count">回数のみ</option>
+                                <option value="hours">時間のみ</option>
+                                <option value="both">両方（回数 AND 時間）</option>
+                            </select>
+                        </div>
+                        <div class="grid-2 mb-16" id="min-attendance-org-wide" style="display:none;">
+                            <div class="form-group" id="min-attendance-count-field">
+                                <label>週あたり最低回数</label>
+                                <input type="number" id="min-attendance-count" class="form-control" value="1" min="0" style="width:100px;">
+                            </div>
+                            <div class="form-group" id="min-attendance-hours-field">
+                                <label>週あたり最低時間</label>
+                                <input type="number" id="min-attendance-hours" class="form-control" value="8" min="0" step="0.5" style="width:100px;">
+                            </div>
+                        </div>
+                        <div class="grid-2 mb-16">
+                            <div class="form-group">
+                                <label>下書きシフトもカウントする</label>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="min-attendance-count-drafts" checked>
+                                    <span>含める（確定前も評価に使う）</span>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>遡る期間数（0〜4）</label>
+                                <input type="number" id="min-attendance-lookback" class="form-control" value="1" min="0" max="4" style="width:100px;">
+                                <div class="field-hint">最終出勤日を判定するとき、前の期間まで遡ります</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-save-min-attendance"><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
+                </div>
+
                 <!-- Manual Settings (collapsed) -->
                 <details class="settings-collapse" id="manual-settings-details">
                     <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の営業時間・例外の管理）</summary>
@@ -361,7 +447,35 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.575.0/dist/umd/lucide.min.js" integrity="sha384-GzE8qT1LzDfRNjtvLN/dXDLPlJOB3BBom3Twb9/RwHkXCgNl6OU1pBxM9397HWGU" crossorigin="anonymous"></script>
+    <!-- Share modal: download period recruitment calendar as PNG/PDF -->
+    <div id="period-share-modal" class="share-modal" hidden>
+        <div class="share-modal-backdrop" data-action="closeShareModal"></div>
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h2>募集案内のダウンロード</h2>
+                <button class="share-modal-close" type="button" data-action="closeShareModal" aria-label="閉じる">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <p class="share-modal-hint">
+                    下のカードを画像/PDFで保存し、テンプレート文章と一緒に連絡ツールに貼り付けてください。
+                </p>
+                <div id="share-export-target" class="share-card"></div>
+                <div class="share-modal-actions">
+                    <button class="btn btn-primary" type="button" data-action="shareDownloadPng"><i data-lucide="image" style="width:15px;height:15px;"></i> PNGで保存</button>
+                    <button class="btn btn-primary" type="button" data-action="shareDownloadPdf"><i data-lucide="file-text" style="width:15px;height:15px;"></i> PDFで保存</button>
+                    <button class="btn btn-outline" type="button" data-action="shareCopyMessage"><i data-lucide="clipboard" style="width:15px;height:15px;"></i> メッセージをコピー</button>
+                </div>
+                <div class="share-template-section">
+                    <h4>貼り付け用メッセージ</h4>
+                    <pre class="share-template-text" id="share-template-text"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"></script>
     <script type="module" src="/static/js/admin-app.js"></script>
     <script src="/static/js/init.js"></script>
 </body>

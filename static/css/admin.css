@@ -381,3 +381,307 @@
         width: 100% !important;
     }
 }
+
+/* ==========================================================================
+   Period Share Modal — download recruitment calendar as PNG/PDF
+   ========================================================================== */
+
+.share-modal[hidden] { display: none !important; }
+
+.share-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px;
+    overflow-y: auto;
+}
+.share-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+}
+.share-modal-content {
+    position: relative;
+    background: #f8fafc;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 780px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+}
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+}
+.share-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #1e293b;
+}
+.share-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+.share-modal-close:hover { background: #f1f5f9; color: #1e293b; }
+.share-modal-body { padding: 24px; }
+.share-modal-hint {
+    margin: 0 0 16px;
+    font-size: 0.88rem;
+    color: #64748b;
+}
+
+.share-modal-actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.share-template-section {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px 18px;
+    border: 1px solid #e2e8f0;
+}
+.share-template-section h4 {
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+    color: #334155;
+}
+.share-template-text {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    white-space: pre-wrap;
+    font-family: inherit;
+    font-size: 0.85rem;
+    line-height: 1.75;
+    color: #334155;
+    margin: 0;
+}
+
+/* ---- Share card (the download target) ------------------------------- */
+
+.share-card {
+    background: #fff;
+    padding: 28px 24px 22px;
+    border-radius: 14px;
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.06);
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+}
+.shcard-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+.shcard-brand-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+.shcard-brand-text {
+    font-size: 0.88rem;
+    color: #3b82f6;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.shcard-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 6px;
+    letter-spacing: 0.01em;
+    color: #1e293b;
+}
+.shcard-org {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.88rem;
+    margin: 0 0 16px;
+}
+.shcard-info-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.shcard-pill {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+.shcard-pill.deadline {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+}
+
+.shcard-calendar-container {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.shcard-month { flex: 1 1 300px; min-width: 280px; }
+.shcard-month-title {
+    text-align: center;
+    font-weight: 700;
+    color: #334155;
+    font-size: 0.98rem;
+    margin-bottom: 8px;
+}
+.shcard-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.shcard-header {
+    background: #f8fafc;
+    padding: 6px 0;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.76rem;
+    color: #64748b;
+}
+.shcard-header.sun { color: #dc2626; }
+.shcard-header.sat { color: #2563eb; }
+
+.shcard-day {
+    background: #fff;
+    min-height: 60px;
+    padding: 5px 6px 6px;
+    font-size: 0.76rem;
+    color: #475569;
+    position: relative;
+}
+.shcard-day.empty {
+    background: repeating-linear-gradient(45deg,
+        #f8fafc 0, #f8fafc 6px,
+        #eef2f7 6px, #eef2f7 7px);
+}
+.shcard-day.out-of-range {
+    background: repeating-linear-gradient(45deg,
+        #f8fafc 0, #f8fafc 6px,
+        #e2e8f0 6px, #e2e8f0 7px);
+    color: #94a3b8;
+}
+.shcard-day.in-range {
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 0 #3b82f6;
+}
+.shcard-day.in-range.sun {
+    background: #fee2e2;
+    color: #991b1b;
+    box-shadow: inset 3px 0 0 0 #ef4444;
+}
+.shcard-day.in-range.sat {
+    background: #dbeafe;
+    color: #1e40af;
+    box-shadow: inset 3px 0 0 0 #2563eb;
+}
+.shcard-day.closed {
+    background: #f1f5f9;
+    color: #94a3b8;
+    box-shadow: inset 3px 0 0 0 #cbd5e1;
+}
+.shcard-day-num { display: block; font-weight: 700; font-size: 0.86rem; line-height: 1.2; }
+.shcard-day-time {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    letter-spacing: 0.02em;
+}
+.shcard-day.in-range.sun .shcard-day-time { color: #b91c1c; }
+.shcard-day-time.closed-label { color: #94a3b8; }
+
+.shcard-legend {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.shcard-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.shcard-legend-swatch {
+    width: 18px; height: 18px; border-radius: 3px;
+    border: 1px solid #cbd5e1;
+}
+.shcard-legend-swatch.in-range {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    box-shadow: inset 3px 0 0 0 #3b82f6;
+}
+.shcard-legend-swatch.out-of-range {
+    background: repeating-linear-gradient(45deg,
+        #f8fafc 0, #f8fafc 4px,
+        #e2e8f0 4px, #e2e8f0 5px);
+}
+.shcard-legend-swatch.closed { background: #f1f5f9; }
+
+.shcard-footer {
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 14px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: #475569;
+}
+.shcard-footer p { margin: 0 0 5px; }
+.shcard-url {
+    font-family: 'SF Mono', Consolas, monospace;
+    background: #f1f5f9;
+    padding: 3px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    font-size: 0.78rem;
+    color: #1e40af;
+}
+
+@media (max-width: 600px) {
+    .share-modal { padding: 8px; }
+    .share-modal-body { padding: 16px; }
+    .shcard-calendar-container { gap: 12px; }
+    .shcard-day { min-height: 52px; }
+}

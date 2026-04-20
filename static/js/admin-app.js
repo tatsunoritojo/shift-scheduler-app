@@ -436,6 +436,35 @@ function setupStaticHandlers() {
     const btnSaveReminder = document.getElementById('btn-save-reminder-settings');
     if (btnSaveReminder) btnSaveReminder.addEventListener('click', () => saveReminderSettings());
 
+    // Level settings
+    const levelEnabled = document.getElementById('level-system-enabled');
+    if (levelEnabled) levelEnabled.addEventListener('change', (e) => {
+        levelSystemState.enabled = e.target.checked;
+        renderLevelSettings();
+    });
+    const btnAddLevelTier = document.getElementById('btn-add-level-tier');
+    if (btnAddLevelTier) btnAddLevelTier.addEventListener('click', () => addLevelTier());
+    const btnSaveLevel = document.getElementById('btn-save-level-settings');
+    if (btnSaveLevel) btnSaveLevel.addEventListener('click', () => saveLevelSettings());
+
+    // Overlap check settings
+    const btnSaveOverlap = document.getElementById('btn-save-overlap-check');
+    if (btnSaveOverlap) btnSaveOverlap.addEventListener('click', () => saveOverlapCheckSettings());
+
+    // Min attendance settings
+    const minMode = document.getElementById('min-attendance-mode');
+    if (minMode) minMode.addEventListener('change', (e) => {
+        minAttendanceState.mode = e.target.value;
+        renderMinAttendanceSettings();
+    });
+    const minUnit = document.getElementById('min-attendance-unit');
+    if (minUnit) minUnit.addEventListener('change', (e) => {
+        minAttendanceState.unit = e.target.value;
+        renderMinAttendanceSettings();
+    });
+    const btnSaveMinAtt = document.getElementById('btn-save-min-attendance');
+    if (btnSaveMinAtt) btnSaveMinAtt.addEventListener('click', () => saveMinAttendanceSettings());
+
     // Sync keyword settings
     const btnSaveSyncKeyword = document.getElementById('btn-save-sync-keyword');
     if (btnSaveSyncKeyword) btnSaveSyncKeyword.addEventListener('click', () => saveSyncKeyword());
@@ -469,9 +498,17 @@ function setupDelegatedHandlers() {
             case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
             case 'revokeInvitation': revokeInvitation(Number(target.dataset.id)); break;
             case 'removeMember': removeMember(Number(target.dataset.id), target.dataset.name); break;
+            case 'removeLevelTier': removeLevelTier(target.dataset.key, target.dataset.label, Number(target.dataset.count)); break;
+            case 'moveLevelTierUp': moveLevelTier(target.dataset.key, -1); break;
+            case 'moveLevelTierDown': moveLevelTier(target.dataset.key, 1); break;
             case 'openVacancyDialog': openVacancyDialog(Number(target.dataset.entryId)); break;
             case 'cancelVacancy': cancelVacancy(Number(target.dataset.id)); break;
             case 'sendPeriodReminder': sendPeriodReminder(Number(target.dataset.periodId)); break;
+            case 'openShareModal': openShareModal(Number(target.dataset.periodId)); break;
+            case 'closeShareModal': closeShareModal(); break;
+            case 'shareDownloadPng': shareDownloadPng(); break;
+            case 'shareDownloadPdf': shareDownloadPdf(); break;
+            case 'shareCopyMessage': shareCopyMessage(); break;
         }
     });
 
@@ -484,6 +521,23 @@ function setupDelegatedHandlers() {
         }
         if (target.dataset.action === 'changeMemberRole') {
             changeMemberRole(Number(target.dataset.memberId), target.value);
+        }
+        if (target.dataset.action === 'changeMemberLevel') {
+            const memberId = Number(target.dataset.memberId);
+            const value = target.value || null;
+            updateMemberAttributes(memberId, { level_key: value })
+                .then(() => showToast('レベルを更新しました', 'success'))
+                .catch(() => loadMembers());
+        }
+        if (target.dataset.action === 'changeMemberMinCount' || target.dataset.action === 'changeMemberMinHours') {
+            const memberId = Number(target.dataset.memberId);
+            const raw = target.value;
+            const parsed = raw === '' ? null : Number(raw);
+            const key = target.dataset.action === 'changeMemberMinCount'
+                ? 'min_attendance_count_per_week' : 'min_attendance_hours_per_week';
+            updateMemberAttributes(memberId, { [key]: parsed })
+                .then(() => showToast('最低出勤設定を更新しました', 'success'))
+                .catch(() => loadMembers());
         }
     });
 }
@@ -716,9 +770,25 @@ async function loadMembers() {
             return;
         }
         const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
+        const showLevel = levelSystemState.enabled && levelSystemState.tiers.length > 0;
+        const showPerMemberAttendance = minAttendanceState.mode === 'per_member';
+        const showCount = showPerMemberAttendance && (minAttendanceState.unit === 'count' || minAttendanceState.unit === 'both');
+        const showHours = showPerMemberAttendance && (minAttendanceState.unit === 'hours' || minAttendanceState.unit === 'both');
         const rows = data.map(m => {
             const isSelf = currentUser && m.user_id === currentUser.id;
             const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('ja-JP') : '-';
+            const levelCell = showLevel ? `<td>
+                <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberLevel" data-member-id="${m.id}">
+                    <option value="">—</option>
+                    ${levelSystemState.tiers.map(t => `<option value="${escapeHtml(t.key)}" ${m.level_key === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
+                </select>
+            </td>` : '';
+            const countCell = showCount ? `<td>
+                <input type="number" min="0" class="form-control" style="width:72px;padding:4px 8px;font-size:0.85em;" data-action="changeMemberMinCount" data-member-id="${m.id}" value="${m.min_attendance_count_per_week ?? ''}" placeholder="—">
+            </td>` : '';
+            const hoursCell = showHours ? `<td>
+                <input type="number" min="0" step="0.5" class="form-control" style="width:80px;padding:4px 8px;font-size:0.85em;" data-action="changeMemberMinHours" data-member-id="${m.id}" value="${m.min_attendance_hours_per_week ?? ''}" placeholder="—">
+            </td>` : '';
             return `<tr>
                 <td>${escapeHtml(m.user_name || '-')}</td>
                 <td style="font-size:0.85em;">${escapeHtml(m.user_email || '-')}</td>
@@ -727,12 +797,20 @@ async function loadMembers() {
                         ${['admin', 'owner', 'worker'].map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
                     </select>
                 </td>
+                ${levelCell}
+                ${countCell}
+                ${hoursCell}
                 <td style="font-size:0.85em;">${joined}</td>
                 <td>${!isSelf ? `<button class="btn btn-outline btn-sm" data-action="removeMember" data-id="${m.id}" data-name="${escapeHtml(m.user_name || m.user_email || '')}" title="除外"><i data-lucide="user-x" style="width:13px;height:13px;"></i></button>` : ''}</td>
             </tr>`;
         }).join('');
+        const headerCells = ['<th>名前</th>', '<th>メール</th>', '<th>ロール</th>'];
+        if (showLevel) headerCells.push('<th>レベル</th>');
+        if (showCount) headerCells.push('<th>週最低回</th>');
+        if (showHours) headerCells.push('<th>週最低h</th>');
+        headerCells.push('<th>参加日</th>', '<th></th>');
         container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
-            <thead><tr><th>名前</th><th>メール</th><th>ロール</th><th>参加日</th><th></th></tr></thead>
+            <thead><tr>${headerCells.join('')}</tr></thead>
             <tbody>${rows}</tbody>
         </table>`;
     } catch (e) {
@@ -923,6 +1001,9 @@ async function init() {
             loadPeriods(),
             loadReminderSettings(),
             loadSyncSettings(),
+            loadLevelSettings(),
+            loadOverlapCheckSettings(),
+            loadMinAttendanceSettings(),
         ]);
         const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
         const syncSettings = results[5].status === 'fulfilled' ? results[5].value : null;
@@ -1199,6 +1280,7 @@ async function loadPeriods() {
                             ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
                             ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
                             ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
+                            <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
                         </td>
                     </tr>
                 `).join('')}
@@ -1220,12 +1302,293 @@ async function createPeriod() {
         return;
     }
     try {
-        await api.post('/api/admin/periods', data);
+        const created = await api.post('/api/admin/periods', data);
         showToast('シフト期間を作成しました', 'success');
         await loadPeriods();
+        // Auto-open share modal so the admin can download the recruitment
+        // calendar immediately after creation.
+        if (created && created.id) {
+            openShareModal(created.id);
+        }
     } catch (e) {
         showToast(`作成に失敗しました: ${e.message}`, 'error');
     }
+}
+
+// ======================================================================
+// Period share modal: download recruitment calendar as PNG / PDF
+// ======================================================================
+
+const SHARE_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+let shareModalData = null; // { period, openingHours, exceptions }
+
+async function openShareModal(periodId) {
+    try {
+        // Ensure org name is available for the card header
+        const orgPromise = currentOrgName
+            ? Promise.resolve({ organization_name: currentOrgName })
+            : api.get('/api/admin/invite-code').catch(() => ({}));
+        const [periods, openingHours, exceptions, orgData] = await Promise.all([
+            api.get('/api/admin/periods'),
+            api.get('/api/admin/opening-hours'),
+            api.get('/api/admin/opening-hours/exceptions'),
+            orgPromise,
+        ]);
+        if (orgData && orgData.organization_name) {
+            currentOrgName = orgData.organization_name;
+        }
+        const period = periods.find(p => p.id === periodId);
+        if (!period) {
+            showToast('期間が見つかりません', 'error');
+            return;
+        }
+        shareModalData = { period, openingHours, exceptions };
+        renderShareModal();
+        const modal = document.getElementById('period-share-modal');
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        showToast(`読み込みに失敗しました: ${e.message}`, 'error');
+    }
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('period-share-modal');
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    shareModalData = null;
+}
+
+function renderShareModal() {
+    const { period, openingHours, exceptions } = shareModalData;
+    const target = document.getElementById('share-export-target');
+    target.innerHTML = buildShareCardHtml(period, openingHours, exceptions);
+    document.getElementById('share-template-text').textContent = buildShareTemplate(period);
+}
+
+function buildShareCardHtml(period, openingHours, exceptions) {
+    const hoursByDow = {};
+    for (const h of (openingHours || [])) hoursByDow[h.day_of_week] = h;
+    const excByDate = {};
+    for (const e of (exceptions || [])) {
+        if (e.exception_date) excByDate[e.exception_date] = e;
+    }
+
+    const start = parseLocalDate(period.start_date);
+    const end = parseLocalDate(period.end_date);
+    const months = shareGetMonthsInRange(start, end);
+    const monthsHtml = months.map(m => buildShareMonthHtml(m, start, end, hoursByDow, excByDate)).join('');
+
+    const titleHtml = escapeHtml(period.name) + ' シフト希望提出のご案内';
+    const orgHtml = currentOrgName ? `<p class="shcard-org">${escapeHtml(currentOrgName)}</p>` : '';
+    const rangeLabel = `対象期間: ${formatJpDate(start)} 〜 ${formatJpDate(end)}`;
+    let deadlineLabel = '';
+    if (period.submission_deadline) {
+        const deadline = new Date(period.submission_deadline);
+        deadlineLabel = `<span class="shcard-pill deadline">提出期限: ${formatJpDateTime(deadline)}まで</span>`;
+    }
+    const loginUrl = `${window.location.origin}/login`;
+
+    return `
+        <div class="shcard-brand">
+            <div class="shcard-brand-icon">シ</div>
+            <div class="shcard-brand-text">SHIFREE</div>
+        </div>
+        <h1 class="shcard-title">${titleHtml}</h1>
+        ${orgHtml}
+        <div class="shcard-info-row">
+            <span class="shcard-pill">${escapeHtml(rangeLabel)}</span>
+            ${deadlineLabel}
+        </div>
+        <div class="shcard-calendar-container">${monthsHtml}</div>
+        <div class="shcard-legend">
+            <div class="shcard-legend-item"><span class="shcard-legend-swatch in-range"></span>希望提出対象日</div>
+            <div class="shcard-legend-item"><span class="shcard-legend-swatch out-of-range"></span>期間外</div>
+            <div class="shcard-legend-item"><span class="shcard-legend-swatch closed"></span>休業日</div>
+        </div>
+        <div class="shcard-footer">
+            <p>下記URLからログインして希望シフトをご提出ください</p>
+            <p><span class="shcard-url">${escapeHtml(loginUrl)}</span></p>
+        </div>
+    `;
+}
+
+function buildShareMonthHtml(month, periodStart, periodEnd, hoursByDow, excByDate) {
+    const year = month.getFullYear();
+    const mo = month.getMonth();
+    const firstDow = new Date(year, mo, 1).getDay();
+    const daysInMonth = new Date(year, mo + 1, 0).getDate();
+
+    const headers = SHARE_WEEKDAYS.map((d, i) => {
+        const cls = i === 0 ? 'sun' : i === 6 ? 'sat' : '';
+        return `<div class="shcard-header ${cls}">${d}</div>`;
+    }).join('');
+
+    let cells = '';
+    for (let i = 0; i < firstDow; i++) {
+        cells += '<div class="shcard-day empty"></div>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, mo, d);
+        const dateStr = `${year}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const inRange = date >= periodStart && date <= periodEnd;
+        const dow = date.getDay();
+
+        // Resolve time: exception > regular opening hours
+        const exc = excByDate[dateStr];
+        const regular = hoursByDow[dow];
+        let timeLabel = null;
+        let isClosed = false;
+        if (exc) {
+            if (exc.is_closed) isClosed = true;
+            else if (exc.start_time && exc.end_time) timeLabel = `${formatShortTime(exc.start_time)}〜${formatShortTime(exc.end_time)}`;
+        } else if (regular) {
+            if (regular.is_closed) isClosed = true;
+            else if (regular.start_time && regular.end_time) timeLabel = `${formatShortTime(regular.start_time)}〜${formatShortTime(regular.end_time)}`;
+        }
+
+        const classes = ['shcard-day'];
+        if (!inRange) classes.push('out-of-range');
+        else if (isClosed) classes.push('closed');
+        else classes.push('in-range');
+        if (dow === 0) classes.push('sun');
+        if (dow === 6) classes.push('sat');
+
+        const timeHtml = inRange
+            ? (isClosed
+                ? '<span class="shcard-day-time closed-label">休</span>'
+                : (timeLabel ? `<span class="shcard-day-time">${escapeHtml(timeLabel)}</span>` : ''))
+            : '';
+
+        cells += `
+            <div class="${classes.join(' ')}">
+                <span class="shcard-day-num">${d}</span>
+                ${timeHtml}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="shcard-month">
+            <div class="shcard-month-title">${year}年${mo + 1}月</div>
+            <div class="shcard-grid">${headers}${cells}</div>
+        </div>
+    `;
+}
+
+function buildShareTemplate(period) {
+    const start = parseLocalDate(period.start_date);
+    const end = parseLocalDate(period.end_date);
+    const startStr = formatJpDate(start);
+    const endStr = formatJpDate(end);
+    let deadlineLine = '';
+    if (period.submission_deadline) {
+        deadlineLine = `\n提出期限: ${formatJpDateTime(new Date(period.submission_deadline))}まで`;
+    }
+    const loginUrl = `${window.location.origin}/login`;
+    return `【シフト希望提出のお願い】
+
+期間: ${startStr} 〜 ${endStr}${deadlineLine}
+
+下記リンクからシフリーにログインして、
+希望シフトをご提出ください。
+
+${loginUrl}
+
+添付のカレンダー画像もご参照ください。
+よろしくお願いします。`;
+}
+
+async function shareDownloadPng() {
+    if (!shareModalData || !window.html2canvas) {
+        showToast('ダウンロードライブラリの読み込み中です', 'warning');
+        return;
+    }
+    try {
+        const target = document.getElementById('share-export-target');
+        const canvas = await window.html2canvas(target, { scale: 2, backgroundColor: '#ffffff' });
+        const link = document.createElement('a');
+        link.download = sharedFileName(shareModalData.period.name, 'png');
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('PNGを保存しました', 'success');
+    } catch (e) {
+        showToast(`PNG保存に失敗: ${e.message || e}`, 'error');
+    }
+}
+
+async function shareDownloadPdf() {
+    if (!shareModalData || !window.html2canvas || !window.jspdf) {
+        showToast('ダウンロードライブラリの読み込み中です', 'warning');
+        return;
+    }
+    try {
+        const target = document.getElementById('share-export-target');
+        const canvas = await window.html2canvas(target, { scale: 2, backgroundColor: '#ffffff' });
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const imgWidth = pageWidth - 20;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, Math.min(imgHeight, pageHeight - 20));
+        pdf.save(sharedFileName(shareModalData.period.name, 'pdf'));
+        showToast('PDFを保存しました', 'success');
+    } catch (e) {
+        showToast(`PDF保存に失敗: ${e.message || e}`, 'error');
+    }
+}
+
+async function shareCopyMessage() {
+    const text = document.getElementById('share-template-text').textContent;
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('メッセージをコピーしました', 'success');
+    } catch (e) {
+        showToast('コピーに失敗しました', 'error');
+    }
+}
+
+// --- Share helpers ---
+
+function sharedFileName(periodName, ext) {
+    const safe = (periodName || '募集案内').replace(/[\\/:*?"<>|]/g, '_');
+    return `shifree-${safe}-募集案内.${ext}`;
+}
+
+function parseLocalDate(str) {
+    // 'YYYY-MM-DD' → local Date at midnight (avoid UTC shift from `new Date(str)`)
+    if (!str) return null;
+    const parts = str.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function shareGetMonthsInRange(start, end) {
+    const months = [];
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    const last = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (current <= last) {
+        months.push(new Date(current));
+        current.setMonth(current.getMonth() + 1);
+    }
+    return months;
+}
+
+function formatJpDate(d) {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function formatJpDateTime(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatShortTime(timeStr) {
+    // '17:00:00' or '17:00' → '17:00'
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
 }
 
 async function updatePeriodStatus(id, status) {
@@ -1980,6 +2343,231 @@ async function saveReminderSettings() {
         showToast('リマインド設定を保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+// --- Level / Overlap / Min-Attendance Settings (Phase A) ---
+
+let levelSystemState = { enabled: false, tiers: [] };
+let overlapCheckState = { enabled: false, scope: 'same_tier' };
+let minAttendanceState = {
+    mode: 'disabled', unit: 'count',
+    org_wide_count_per_week: 1, org_wide_hours_per_week: 8.0,
+    count_drafts: true, lookback_periods: 1,
+};
+
+async function loadLevelSettings() {
+    try {
+        const data = await api.get('/api/admin/settings/levels');
+        levelSystemState = {
+            enabled: !!data.enabled,
+            tiers: (data.tiers || []).map(t => ({
+                key: t.key, label: t.label, order: t.order,
+                member_count: t.member_count || 0,
+            })),
+        };
+        renderLevelSettings();
+    } catch (e) {
+        console.warn('Failed to load level settings:', e);
+    }
+}
+
+function renderLevelSettings() {
+    const enabledToggle = document.getElementById('level-system-enabled');
+    const tiersSection = document.getElementById('level-tiers-section');
+    const list = document.getElementById('level-tiers-list');
+    if (!enabledToggle || !tiersSection || !list) return;
+
+    enabledToggle.checked = levelSystemState.enabled;
+    tiersSection.style.display = levelSystemState.enabled ? '' : 'none';
+
+    if (!levelSystemState.tiers.length) {
+        list.innerHTML = '<p class="help-text" style="color:var(--color-neutral-400);">レベルがまだ設定されていません</p>';
+    } else {
+        list.innerHTML = levelSystemState.tiers.map((t, i) => `
+            <div class="flex gap-8 mb-8" style="align-items:center;padding:8px;border:1px solid var(--color-neutral-200);border-radius:6px;">
+                <span style="flex:1;"><strong>${escapeHtml(t.label)}</strong> <span style="color:var(--color-neutral-400);font-size:0.85em;">(${escapeHtml(t.key)})</span></span>
+                <span style="font-size:0.82em;color:var(--color-neutral-400);">${t.member_count}名</span>
+                <button class="btn btn-outline btn-sm" data-action="moveLevelTierUp" data-key="${escapeHtml(t.key)}" ${i === 0 ? 'disabled' : ''} title="上へ"><i data-lucide="chevron-up" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-outline btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-outline btn-sm" data-action="removeLevelTier" data-key="${escapeHtml(t.key)}" data-label="${escapeHtml(t.label)}" data-count="${t.member_count}" title="削除"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
+            </div>
+        `).join('');
+    }
+    if (window.lucide) lucide.createIcons();
+}
+
+function addLevelTier() {
+    const keyInput = document.getElementById('level-new-key');
+    const labelInput = document.getElementById('level-new-label');
+    const key = (keyInput.value || '').trim();
+    const label = (labelInput.value || '').trim();
+    if (!key || !label) {
+        showToast('キーと表示名の両方を入力してください', 'warning');
+        return;
+    }
+    if (!/^[a-z][a-z0-9_]{0,31}$/.test(key)) {
+        showToast('キーは半角英小文字・数字・アンダースコアのみ（先頭は英字）', 'warning');
+        return;
+    }
+    if (levelSystemState.tiers.some(t => t.key === key)) {
+        showToast('同じキーが既に存在します', 'warning');
+        return;
+    }
+    levelSystemState.tiers.push({
+        key, label, order: levelSystemState.tiers.length + 1, member_count: 0,
+    });
+    keyInput.value = '';
+    labelInput.value = '';
+    renderLevelSettings();
+}
+
+function removeLevelTier(key, label, memberCount) {
+    const proceed = () => {
+        levelSystemState.tiers = levelSystemState.tiers.filter(t => t.key !== key);
+        renderLevelSettings();
+    };
+    if (memberCount > 0) {
+        showConfirmDialog(
+            `「${label}」を削除しますか？`,
+            `現在 ${memberCount}名のメンバーがこのレベルに割り当てられています。削除するとそのメンバーのレベルは未設定になります。`,
+            'btn-danger', '削除する', proceed,
+        );
+    } else {
+        proceed();
+    }
+}
+
+function moveLevelTier(key, direction) {
+    const idx = levelSystemState.tiers.findIndex(t => t.key === key);
+    if (idx < 0) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= levelSystemState.tiers.length) return;
+    const tiers = levelSystemState.tiers;
+    [tiers[idx], tiers[newIdx]] = [tiers[newIdx], tiers[idx]];
+    tiers.forEach((t, i) => { t.order = i + 1; });
+    renderLevelSettings();
+}
+
+async function saveLevelSettings() {
+    const enabled = document.getElementById('level-system-enabled').checked;
+    const currentKeys = new Set(levelSystemState.tiers.map(t => t.key));
+
+    try {
+        const serverCfg = await api.get('/api/admin/settings/levels');
+        const serverKeys = new Set((serverCfg.tiers || []).map(t => t.key));
+        const removedTierKeys = [...serverKeys].filter(k => !currentKeys.has(k));
+
+        await api.put('/api/admin/settings/levels', {
+            enabled,
+            tiers: levelSystemState.tiers.map(t => ({ key: t.key, label: t.label, order: t.order })),
+            removed_tier_keys: removedTierKeys,
+        });
+        levelSystemState.enabled = enabled;
+        showToast('レベル設定を保存しました', 'success');
+        await loadLevelSettings();
+        membersTabLoaded = false;
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function loadOverlapCheckSettings() {
+    try {
+        const data = await api.get('/api/admin/settings/overlap-check');
+        overlapCheckState = {
+            enabled: !!data.enabled,
+            scope: data.scope || 'same_tier',
+        };
+        const el = document.getElementById('overlap-check-enabled');
+        if (el) el.checked = overlapCheckState.enabled;
+    } catch (e) {
+        console.warn('Failed to load overlap check settings:', e);
+    }
+}
+
+async function saveOverlapCheckSettings() {
+    const enabled = document.getElementById('overlap-check-enabled').checked;
+    try {
+        await api.put('/api/admin/settings/overlap-check', { enabled, scope: 'same_tier' });
+        overlapCheckState.enabled = enabled;
+        showToast('重複チェック設定を保存しました', 'success');
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function loadMinAttendanceSettings() {
+    try {
+        const data = await api.get('/api/admin/settings/min-attendance');
+        minAttendanceState = {
+            mode: data.mode || 'disabled',
+            unit: data.unit || 'count',
+            org_wide_count_per_week: data.org_wide_count_per_week ?? 1,
+            org_wide_hours_per_week: data.org_wide_hours_per_week ?? 8.0,
+            count_drafts: data.count_drafts !== false,
+            lookback_periods: data.lookback_periods ?? 1,
+        };
+        renderMinAttendanceSettings();
+    } catch (e) {
+        console.warn('Failed to load min attendance settings:', e);
+    }
+}
+
+function renderMinAttendanceSettings() {
+    const modeEl = document.getElementById('min-attendance-mode');
+    const configEl = document.getElementById('min-attendance-config');
+    const unitEl = document.getElementById('min-attendance-unit');
+    const orgWideEl = document.getElementById('min-attendance-org-wide');
+    const countFieldEl = document.getElementById('min-attendance-count-field');
+    const hoursFieldEl = document.getElementById('min-attendance-hours-field');
+    const countEl = document.getElementById('min-attendance-count');
+    const hoursEl = document.getElementById('min-attendance-hours');
+    const countDraftsEl = document.getElementById('min-attendance-count-drafts');
+    const lookbackEl = document.getElementById('min-attendance-lookback');
+
+    if (!modeEl) return;
+    modeEl.value = minAttendanceState.mode;
+    unitEl.value = minAttendanceState.unit;
+    countEl.value = minAttendanceState.org_wide_count_per_week;
+    hoursEl.value = minAttendanceState.org_wide_hours_per_week;
+    countDraftsEl.checked = minAttendanceState.count_drafts;
+    lookbackEl.value = minAttendanceState.lookback_periods;
+
+    configEl.style.display = minAttendanceState.mode === 'disabled' ? 'none' : '';
+    orgWideEl.style.display = minAttendanceState.mode === 'org_wide' ? '' : 'none';
+
+    const showCount = minAttendanceState.unit === 'count' || minAttendanceState.unit === 'both';
+    const showHours = minAttendanceState.unit === 'hours' || minAttendanceState.unit === 'both';
+    countFieldEl.style.display = showCount ? '' : 'none';
+    hoursFieldEl.style.display = showHours ? '' : 'none';
+}
+
+async function saveMinAttendanceSettings() {
+    const payload = {
+        mode: document.getElementById('min-attendance-mode').value,
+        unit: document.getElementById('min-attendance-unit').value,
+        org_wide_count_per_week: Number(document.getElementById('min-attendance-count').value),
+        org_wide_hours_per_week: Number(document.getElementById('min-attendance-hours').value),
+        count_drafts: document.getElementById('min-attendance-count-drafts').checked,
+        lookback_periods: Number(document.getElementById('min-attendance-lookback').value),
+    };
+    try {
+        await api.put('/api/admin/settings/min-attendance', payload);
+        minAttendanceState = payload;
+        showToast('最低出勤設定を保存しました', 'success');
+        membersTabLoaded = false;
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function updateMemberAttributes(memberId, updates) {
+    try {
+        await api.put(`/api/admin/members/${memberId}/attributes`, updates);
+    } catch (e) {
+        showToast(`メンバー属性の更新に失敗しました: ${e.message}`, 'error');
+        throw e;
     }
 }
 
