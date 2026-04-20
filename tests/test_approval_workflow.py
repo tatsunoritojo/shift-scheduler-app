@@ -13,9 +13,13 @@ from app.models.shift import ShiftSchedule, ShiftScheduleEntry
 
 
 class TestSubmitForApproval:
-    """Admin submits schedule: draft → pending_approval."""
+    """Admin submits schedule: draft → pending_approval.
 
-    def test_submit_draft_schedule(self, client, auth, admin_user, schedule, db_session):
+    Requires approval_required=true, which is auto-detected from owner presence.
+    Including owner_user fixture triggers detection on first get_workflow() call.
+    """
+
+    def test_submit_draft_schedule(self, client, auth, admin_user, owner_user, schedule, db_session):
         db_session.commit()
         auth.login_as(admin_user)
         resp = client.post(f"/api/admin/periods/{schedule.shift_period_id}/schedule/submit")
@@ -28,7 +32,7 @@ class TestSubmitForApproval:
         assert len(history) == 1
         assert history[0].action == "submitted"
 
-    def test_submit_non_draft_fails(self, client, auth, admin_user, schedule, db_session):
+    def test_submit_non_draft_fails(self, client, auth, admin_user, owner_user, schedule, db_session):
         schedule.status = "pending_approval"
         db_session.commit()
         auth.login_as(admin_user)

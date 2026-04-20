@@ -13,6 +13,7 @@ const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
+let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
 let submissionsData = [];  // period submissions
 let openingHoursData = {}; // dateStr -> { start_time, end_time } | null
 let currentPeriod = null;  // Selected period object
@@ -465,6 +466,16 @@ function setupStaticHandlers() {
     const btnSaveMinAtt = document.getElementById('btn-save-min-attendance');
     if (btnSaveMinAtt) btnSaveMinAtt.addEventListener('click', () => saveMinAttendanceSettings());
 
+    // Workflow (approval process) settings
+    const workflowToggle = document.getElementById('workflow-approval-required');
+    if (workflowToggle) workflowToggle.addEventListener('change', () => renderWorkflowSettings());
+    const btnSaveWorkflow = document.getElementById('btn-save-workflow');
+    if (btnSaveWorkflow) btnSaveWorkflow.addEventListener('click', () => saveWorkflowSettings());
+    const btnGotoOwnerInvite = document.getElementById('btn-goto-owner-invite');
+    if (btnGotoOwnerInvite) btnGotoOwnerInvite.addEventListener('click', () => gotoOwnerInvite());
+    const btnInviteOwner = document.getElementById('btn-invite-owner');
+    if (btnInviteOwner) btnInviteOwner.addEventListener('click', () => inviteOwner());
+
     // Sync keyword settings
     const btnSaveSyncKeyword = document.getElementById('btn-save-sync-keyword');
     if (btnSaveSyncKeyword) btnSaveSyncKeyword.addEventListener('click', () => saveSyncKeyword());
@@ -827,15 +838,31 @@ async function changeMemberRole(memberId, newRole) {
     const select = document.querySelector(`[data-action="changeMemberRole"][data-member-id="${memberId}"]`);
     const previousValue = select ? select.dataset.previousRole : null;
 
+    // Pre-flight: check impact (last owner, pending approvals, etc.)
+    let impactNote = '';
+    try {
+        const impact = await api.get(`/api/admin/members/${memberId}/role-change-impact?new_role=${encodeURIComponent(newRole)}`);
+        if (impact.is_last_owner_while_approval_required) {
+            impactNote += '\n⚠️ この事業主を降格すると、承認プロセスが停止します。';
+        }
+        if (impact.pending_schedules_count > 0) {
+            impactNote += `\n⚠️ 進行中の承認申請が ${impact.pending_schedules_count} 件あります。`;
+        }
+    } catch (_) {
+        // If preflight fails, fall through to normal confirmation
+    }
+
     showConfirmDialog(
         'ロールを変更しますか？',
-        `このメンバーのロールを「${ROLE_LABELS[newRole] || newRole}」に変更します。`,
+        `このメンバーのロールを「${ROLE_LABELS[newRole] || newRole}」に変更します。${impactNote}`,
         'btn-primary',
         '変更する',
         async () => {
             try {
                 await api.put(`/api/admin/members/${memberId}/role`, { role: newRole });
                 showToast('ロールを変更しました', 'success');
+                // Refresh workflow state (owner count may have changed)
+                await loadWorkflowSettings();
             } catch (e) {
                 showToast(`ロール変更に失敗しました: ${e.message}`, 'error');
                 await loadMembers();
@@ -850,9 +877,24 @@ async function changeMemberRole(memberId, newRole) {
 }
 
 async function removeMember(id, name) {
+    // Pre-flight: check impact
+    let impactNote = '';
+    try {
+        const impact = await api.get(`/api/admin/members/${id}/role-change-impact`);
+        if (impact.is_last_admin) {
+            impactNote += '\n⚠️ 最後の管理者は除外できません。';
+        }
+        if (impact.is_last_owner_while_approval_required) {
+            impactNote += '\n⚠️ この事業主を除外すると、承認プロセスが停止します。';
+        }
+        if (impact.pending_schedules_count > 0) {
+            impactNote += `\n⚠️ 進行中の承認申請が ${impact.pending_schedules_count} 件あります。`;
+        }
+    } catch (_) {}
+
     showConfirmDialog(
         `${name || 'このメンバー'} を除外しますか？`,
-        '除外すると、このユーザーは組織にアクセスできなくなります。',
+        `除外すると、このユーザーは組織にアクセスできなくなります。${impactNote}`,
         'btn-danger',
         '除外する',
         async () => {
@@ -860,6 +902,7 @@ async function removeMember(id, name) {
                 await api.delete(`/api/admin/members/${id}`);
                 showToast('メンバーを除外しました', 'success');
                 await loadMembers();
+                await loadWorkflowSettings();
                 if (window.lucide) lucide.createIcons();
             } catch (e) {
                 showToast(`除外に失敗しました: ${e.message}`, 'error');
@@ -1008,6 +1051,7 @@ async function init() {
             loadLevelSettings(),
             loadOverlapCheckSettings(),
             loadMinAttendanceSettings(),
+            loadWorkflowSettings(),
         ]);
         const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
         const syncSettings = results[5].status === 'fulfilled' ? results[5].value : null;
@@ -1657,6 +1701,7 @@ async function loadBuilderData() {
         submissionsData = submissions || [];
         workersData = workers || [];
         scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
+        scheduleVersion = schedule && schedule.schedule_version ? schedule.schedule_version : null;
         openingHoursData = openingHours || {};
         adminCalendarEvents = calEvents || [];
 
@@ -2179,10 +2224,15 @@ function renderSyncStatusSummary(schedule) {
     container.innerHTML = rows.join('') + statusMsg;
 }
 
-const SCHEDULE_STEPS = [
+const SCHEDULE_STEPS_FULL = [
     { key: 'draft', label: '下書き', icon: '1' },
     { key: 'pending_approval', label: '承認待ち', icon: '2' },
     { key: 'approved', label: '承認済み', icon: '3' },
+    { key: 'confirmed', label: '確定', icon: '✓' },
+];
+
+const SCHEDULE_STEPS_SIMPLE = [
+    { key: 'draft', label: '下書き', icon: '1' },
     { key: 'confirmed', label: '確定', icon: '✓' },
 ];
 
@@ -2192,22 +2242,23 @@ function renderScheduleProgress(schedule) {
 
     const status = schedule?.status || null;
     const isRejected = status === 'rejected';
+    const steps = workflowState.approval_required ? SCHEDULE_STEPS_FULL : SCHEDULE_STEPS_SIMPLE;
 
     if (!status) {
         container.innerHTML = '<div class="progress-hint" style="margin:0;width:100%;text-align:center;">シフトを作成して保存すると、進捗が表示されます</div>';
         return;
     }
 
-    const statusIndex = SCHEDULE_STEPS.findIndex(s => s.key === status);
+    const statusIndex = steps.findIndex(s => s.key === status);
     const activeIndex = isRejected ? 0 : statusIndex;  // Rejected goes back to step 1
 
     let html = '';
-    for (let i = 0; i < SCHEDULE_STEPS.length; i++) {
-        const step = SCHEDULE_STEPS[i];
+    for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
         let cls = '';
         let icon = step.icon;
 
-        if (isRejected && i === 1) {
+        if (isRejected && i === 1 && workflowState.approval_required) {
             cls = 'rejected';
             icon = '!';
         } else if (i < activeIndex) {
@@ -2224,13 +2275,18 @@ function renderScheduleProgress(schedule) {
     }
 
     // Action hint
-    const hints = {
+    const hintsFull = {
         draft: '「承認申請」で事業主に送信',
         pending_approval: '事業主の承認を待っています',
         approved: '「確定・カレンダー同期」で反映',
         confirmed: 'カレンダーに同期済み',
         rejected: '修正して再度「承認申請」してください',
     };
+    const hintsSimple = {
+        draft: '「シフトを確定」でカレンダーに反映',
+        confirmed: 'カレンダーに同期済み',
+    };
+    const hints = workflowState.approval_required ? hintsFull : hintsSimple;
     html += `<span class="progress-hint">${hints[status] || ''}</span>`;
 
     container.innerHTML = html;
@@ -2245,20 +2301,51 @@ function updateScheduleButtons(schedule) {
     // Save: available for draft, rejected, or no schedule
     saveBtn.style.display = (!status || status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
 
-    // Submit for approval: available for draft or rejected
-    submitBtn.style.display = (status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
-
-    // Confirm: only when approved
-    confirmBtn.style.display = (status === 'approved') ? 'inline-flex' : 'none';
+    if (workflowState.approval_required) {
+        // Full flow: submit for approval, confirm only when approved
+        submitBtn.style.display = (status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
+        confirmBtn.style.display = (status === 'approved') ? 'inline-flex' : 'none';
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期';
+        }
+    } else {
+        // Simple flow: hide submit, confirm from draft directly
+        submitBtn.style.display = 'none';
+        confirmBtn.style.display = (status === 'draft') ? 'inline-flex' : 'none';
+        if (confirmBtn) {
+            confirmBtn.innerHTML = '<i data-lucide="calendar-check" style="width:15px;height:15px;"></i> シフトを確定・カレンダー同期';
+        }
+    }
+    if (window.lucide) lucide.createIcons();
 }
 
 async function saveSchedule() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
     try {
-        await api.post(`/api/admin/periods/${periodId}/schedule`, { entries: scheduleEntries });
+        const result = await api.post(`/api/admin/periods/${periodId}/schedule`, {
+            entries: scheduleEntries,
+            expected_version: scheduleVersion,
+        });
+        // Update version so subsequent saves stay in sync
+        if (result && result.schedule_version) {
+            scheduleVersion = result.schedule_version;
+        }
         showToast('スケジュールを保存しました', 'success');
     } catch (e) {
+        // Detect optimistic locking conflict (409 from server)
+        if (e.code === 'SCHEDULE_VERSION_MISMATCH' || /SCHEDULE_VERSION_MISMATCH/.test(e.message || '')) {
+            showConfirmDialog(
+                '他の管理者が編集しています',
+                'このシフトは他の管理者によって更新されました。最新の状態を再読込しますか？（未保存の変更は失われます）',
+                'btn-primary',
+                '再読込',
+                () => {
+                    if (currentPeriod) loadScheduleForPeriod(currentPeriod.id);
+                },
+            );
+            return;
+        }
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
 }
@@ -2573,6 +2660,110 @@ async function updateMemberAttributes(memberId, updates) {
         showToast(`メンバー属性の更新に失敗しました: ${e.message}`, 'error');
         throw e;
     }
+}
+
+// --- Workflow Settings (approval process) — Phase A' ---
+
+let workflowState = {
+    approval_required: false,
+    owner_count: 0,
+    pending_schedules_count: 0,
+};
+
+async function loadWorkflowSettings() {
+    try {
+        const data = await api.get('/api/admin/settings/workflow');
+        workflowState = {
+            approval_required: !!data.approval_required,
+            owner_count: data.owner_count ?? 0,
+            pending_schedules_count: data.pending_schedules_count ?? 0,
+        };
+        renderWorkflowSettings();
+        renderOwnerInviteCard();
+    } catch (e) {
+        console.warn('Failed to load workflow settings:', e);
+    }
+}
+
+function renderWorkflowSettings() {
+    const toggle = document.getElementById('workflow-approval-required');
+    const warning = document.getElementById('workflow-owner-warning');
+    if (!toggle) return;
+    toggle.checked = workflowState.approval_required;
+    if (warning) {
+        const needWarn = workflowState.approval_required && workflowState.owner_count < 1;
+        warning.style.display = needWarn ? '' : 'none';
+    }
+}
+
+function renderOwnerInviteCard() {
+    const card = document.getElementById('owner-invite-card');
+    if (!card) return;
+    const show = workflowState.approval_required && workflowState.owner_count < 1;
+    card.style.display = show ? '' : 'none';
+}
+
+async function saveWorkflowSettings() {
+    const enabled = document.getElementById('workflow-approval-required').checked;
+    try {
+        const result = await api.put('/api/admin/settings/workflow', {
+            approval_required: enabled,
+        });
+        workflowState = {
+            approval_required: !!result.approval_required,
+            owner_count: result.owner_count ?? 0,
+            pending_schedules_count: result.pending_schedules_count ?? 0,
+        };
+        renderWorkflowSettings();
+        renderOwnerInviteCard();
+        showToast('承認プロセス設定を保存しました', 'success');
+        // Refresh schedule UI if a period is currently loaded
+        if (currentPeriod) {
+            loadScheduleForPeriod(currentPeriod.id);
+        }
+    } catch (e) {
+        const msg = e.message || '保存に失敗しました';
+        // Revert toggle state on failure
+        const toggle = document.getElementById('workflow-approval-required');
+        if (toggle) toggle.checked = workflowState.approval_required;
+        showToast(msg, 'error');
+    }
+}
+
+async function inviteOwner() {
+    const emailInput = document.getElementById('owner-invite-email');
+    const expiresInput = document.getElementById('owner-invite-expires');
+    const email = (emailInput?.value || '').trim();
+    if (!email) {
+        showToast('メールアドレスを入力してください', 'warning');
+        return;
+    }
+    try {
+        await api.post('/api/admin/invitations', {
+            email,
+            role: 'owner',
+            expires_in_hours: Number(expiresInput?.value || 168),
+        });
+        showToast('事業主への招待を作成しました', 'success');
+        emailInput.value = '';
+        await loadInvitations();
+        await loadWorkflowSettings();  // refresh owner_count if already joined via link
+    } catch (e) {
+        showToast(`招待の作成に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+function gotoOwnerInvite() {
+    // Switch to Members tab and focus owner invite card
+    const membersBtn = document.querySelector('.tab-btn[data-tab="members"]');
+    if (membersBtn) membersBtn.click();
+    setTimeout(() => {
+        const card = document.getElementById('owner-invite-card');
+        if (card && card.style.display !== 'none') {
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('owner-invite-email')?.focus();
+        }
+    }, 200);
 }
 
 async function sendPeriodReminder(periodId) {

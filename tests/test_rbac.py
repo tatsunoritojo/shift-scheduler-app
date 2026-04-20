@@ -51,12 +51,19 @@ class TestRoleChange:
         assert resp.status_code == 400
 
     def test_cannot_remove_last_admin(self, client, auth, admin_user, db_session):
+        """Admin cannot demote themselves. This blocks self-demotion of the sole admin.
+
+        Phase A' added a SELF_ROLE_CHANGE guard that fires before the last-admin check,
+        so the error message changed. Both guards protect against the same outcome.
+        """
         db_session.commit()
         member = OrganizationMember.query.filter_by(user_id=admin_user.id).first()
         auth.login_as(admin_user)
         resp = client.put(f"/api/admin/members/{member.id}/role", json={"role": "worker"})
         assert resp.status_code == 400
-        assert "last admin" in resp.get_json()["error"]
+        # Either guard is acceptable; both prevent losing the last admin.
+        err = resp.get_json()["error"].lower()
+        assert "own role" in err or "last admin" in err
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 KEY_LEVEL_SYSTEM = 'level_system'
 KEY_OVERLAP_CHECK = 'overlap_check'
 KEY_MIN_ATTENDANCE = 'min_attendance'
+KEY_WORKFLOW = 'workflow'
 
 # ---------- Defaults ----------
 
@@ -45,6 +46,10 @@ DEFAULT_MIN_ATTENDANCE = {
     'org_wide_hours_per_week': 8.0,
     'count_drafts': True,
     'lookback_periods': 1,
+}
+
+DEFAULT_WORKFLOW = {
+    'approval_required': False,
 }
 
 # Allowed values (for validation)
@@ -144,6 +149,53 @@ def set_min_attendance(org, data: dict) -> dict:
     normalized = _validate_min_attendance(data)
     org.set_setting(KEY_MIN_ATTENDANCE, normalized)
     return normalized
+
+
+# ---------- Workflow (approval process) ----------
+
+def get_workflow(org) -> dict:
+    """Return workflow config, initializing from owner presence if missing.
+
+    For existing orgs without workflow settings, auto-determine approval_required
+    based on whether any active owner exists.
+    """
+    raw = org.get_setting(KEY_WORKFLOW)
+    if raw is None:
+        # First-time access: compute default from org state
+        initial = {
+            'approval_required': _has_active_owner(org),
+        }
+        org.set_setting(KEY_WORKFLOW, initial)
+        return initial
+    return _merge_with_defaults(raw, DEFAULT_WORKFLOW)
+
+
+def set_workflow(org, data: dict) -> dict:
+    normalized = _validate_workflow(data)
+    org.set_setting(KEY_WORKFLOW, normalized)
+    return normalized
+
+
+def _has_active_owner(org) -> bool:
+    return OrganizationMember.query.filter_by(
+        organization_id=org.id, role='owner', is_active=True,
+    ).count() > 0
+
+
+def count_active_owners(org) -> int:
+    return OrganizationMember.query.filter_by(
+        organization_id=org.id, role='owner', is_active=True,
+    ).count()
+
+
+def count_pending_schedules(org) -> int:
+    """Count ShiftSchedule rows in pending_approval state for this org."""
+    # Import here to avoid circular imports
+    from app.models.shift import ShiftSchedule, ShiftPeriod
+    return ShiftSchedule.query.join(ShiftPeriod).filter(
+        ShiftPeriod.organization_id == org.id,
+        ShiftSchedule.status == 'pending_approval',
+    ).count()
 
 
 # ---------- Validation ----------
@@ -253,6 +305,17 @@ def _validate_min_attendance(data) -> dict:
         'count_drafts': count_drafts,
         'lookback_periods': lookback,
     }
+
+
+def _validate_workflow(data) -> dict:
+    if not isinstance(data, dict):
+        raise ValueError('workflow must be an object')
+
+    approval_required = data.get('approval_required', False)
+    if not isinstance(approval_required, bool):
+        raise ValueError('workflow.approval_required must be a boolean')
+
+    return {'approval_required': approval_required}
 
 
 # ---------- Internal helpers ----------

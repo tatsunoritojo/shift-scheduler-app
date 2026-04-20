@@ -269,6 +269,34 @@
                     <button class="btn btn-primary" id="btn-save-min-attendance"><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
                 </div>
 
+                <!-- Workflow (Approval Process) Settings Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="shield-check" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 管理者の承認プロセスを設定する</h3>
+                    <p class="help-text mb-16">ONにすると、管理者のシフト確定前に事業主の承認が必要になります。</p>
+                    <details class="help-accordion mb-16">
+                        <summary><i data-lucide="help-circle" style="width:14px;height:14px;vertical-align:text-bottom;"></i> 使い方</summary>
+                        <div class="help-accordion-body">
+                            <p class="mb-8"><strong>承認プロセスの2パターン:</strong></p>
+                            <ul style="padding-left:20px;">
+                                <li><strong>OFF（デフォルト）:</strong> 管理者だけでシフトを確定できます。個人事業主・小規模店向け</li>
+                                <li><strong>ON:</strong> 管理者が承認申請 → 事業主が承認 → 確定、の流れ。チェーン店・監査要件ありの組織向け</li>
+                            </ul>
+                            <p class="mb-8" style="margin-top:8px;"><strong>ONにする前に:</strong> 事業主（owner ロール）を1名以上招待してください。メンバー管理タブから招待できます。</p>
+                            <p class="mb-0"><strong>ONからOFFへの切替:</strong> 進行中の承認申請がある場合、先に承認または差戻しを完了する必要があります。</p>
+                        </div>
+                    </details>
+                    <div id="workflow-owner-warning" class="mb-16" style="display:none;background:var(--color-danger-50);border-left:3px solid var(--color-danger-500);padding:12px;border-radius:6px;">
+                        <strong style="color:var(--color-danger-700);">⚠️ 事業主が未設定です</strong>
+                        <p class="mb-8" style="margin-top:4px;font-size:0.9em;">承認プロセスを有効にするには、事業主を1名以上招待する必要があります。</p>
+                        <button class="btn btn-outline btn-sm" id="btn-goto-owner-invite">メンバー管理タブへ</button>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
+                        <input type="checkbox" id="workflow-approval-required">
+                        <span>承認プロセスを有効にする</span>
+                    </label>
+                    <button class="btn btn-primary" id="btn-save-workflow"><i data-lucide="save" style="width:15px;height:15px;"></i> 承認プロセス設定を保存</button>
+                </div>
+
                 <!-- Manual Settings (collapsed) -->
                 <details class="settings-collapse" id="manual-settings-details">
                     <summary><i data-lucide="settings" style="width:16px;height:16px;vertical-align:text-bottom;"></i> 手動設定（曜日別の営業時間・例外の管理）</summary>
@@ -348,6 +376,23 @@
 
             <!-- Members Tab -->
             <div id="tab-members" class="tab-content">
+                <!-- Dedicated Owner Invite Card (shown only when approval required + no owner) -->
+                <div class="card mb-24" id="owner-invite-card" style="display:none;background:var(--color-primary-50);border:2px solid var(--color-primary-300);">
+                    <h3><i data-lucide="briefcase" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 事業主を招待</h3>
+                    <p class="help-text mb-16">承認プロセスが有効ですが、事業主（承認者）がまだ設定されていません。承認フローを完成させるには事業主を1名以上招待してください。</p>
+                    <div class="flex gap-8 mb-8" style="align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="margin-bottom:0;flex:1;min-width:200px;">
+                            <label>事業主のメールアドレス</label>
+                            <input type="email" id="owner-invite-email" class="form-control" placeholder="owner@example.com">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>有効期限（時間）</label>
+                            <input type="number" id="owner-invite-expires" class="form-control" value="168" min="1" max="720" style="width:100px;">
+                        </div>
+                        <button class="btn btn-primary" id="btn-invite-owner"><i data-lucide="send" style="width:15px;height:15px;"></i> 事業主を招待する</button>
+                    </div>
+                </div>
+
                 <!-- Invite Link Card -->
                 <div class="card mb-24">
                     <h3><i data-lucide="link" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 招待リンク</h3>

@@ -13,7 +13,7 @@ from app.services.shift_service import (
     get_submissions_for_period, save_schedule, get_worker_hours_summary,
     get_opening_hours_for_period,
 )
-from app.services.approval_service import submit_for_approval, confirm_schedule
+from app.services.approval_service import submit_for_approval, confirm_schedule, confirm_schedule_direct
 from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
 from app.services.calendar_service import create_event, classify_calendar_error
 from app.services.opening_hours_sync_service import (
@@ -508,6 +508,7 @@ def get_schedule(period_id):
     data['history'] = [h.to_dict() for h in schedule.history.order_by(
         db.text('performed_at desc')
     ).all()]
+    data['schedule_version'] = schedule.updated_at.isoformat() if schedule.updated_at else None
 
     # Sync summary for confirmed schedules
     if schedule.status == 'confirmed' and entries:
@@ -537,6 +538,21 @@ def save_period_schedule(period_id):
         return error_response("Request body is required", 400, code="BAD_REQUEST")
     entries = data.get('entries', [])
 
+    # Optimistic locking: if client sent expected_version, verify it matches current.
+    expected_version = data.get('expected_version')
+    if expected_version is not None:
+        current_schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
+            ShiftSchedule.created_at.desc()
+        ).first()
+        if current_schedule:
+            current_version = current_schedule.updated_at.isoformat() if current_schedule.updated_at else None
+            if current_version != expected_version:
+                return jsonify({
+                    'error': '他の管理者がこのシフトを編集しました。最新の状態を再読込してください。',
+                    'code': 'SCHEDULE_VERSION_MISMATCH',
+                    'current_version': current_version,
+                }), 409
+
     try:
         schedule = save_schedule(period_id, user.id, entries, organization_id=org.id)
     except ValueError as e:
@@ -553,6 +569,7 @@ def save_period_schedule(period_id):
         return error_response("スケジュールの保存に失敗しました", 500, code="INTERNAL_ERROR")
     result = schedule.to_dict()
     result['entries'] = [e.to_dict() for e in schedule.entries.all()]
+    result['schedule_version'] = schedule.updated_at.isoformat() if schedule.updated_at else None
     return jsonify(result)
 
 
@@ -565,6 +582,15 @@ def submit_schedule_for_approval(period_id):
     period = db.session.get(ShiftPeriod, period_id)
     if not period or period.organization_id != org.id:
         return error_response("Not found", 404, code="NOT_FOUND")
+
+    # Block if approval process is disabled
+    if not org_settings.get_workflow(org).get('approval_required'):
+        return error_response(
+            "Approval process is disabled for this organization. "
+            "Use confirm instead of submit.",
+            400, code="APPROVAL_DISABLED",
+        )
+
     schedule = ShiftSchedule.query.filter_by(shift_period_id=period_id).order_by(
         ShiftSchedule.created_at.desc()
     ).first()
@@ -591,7 +617,16 @@ def confirm_period_schedule(period_id):
     if not schedule:
         return error_response("No schedule found", 404, code="NOT_FOUND")
 
-    result, error = confirm_schedule(schedule.id, user)
+    # Branch on workflow setting: when approval is disabled, allow draft → confirmed directly.
+    approval_required = org_settings.get_workflow(org).get('approval_required')
+    if approval_required:
+        result, error = confirm_schedule(schedule.id, user)
+    else:
+        # If admin already went through approval flow on a schedule, still honor its state.
+        if schedule.status == 'approved':
+            result, error = confirm_schedule(schedule.id, user)
+        else:
+            result, error = confirm_schedule_direct(schedule.id, user)
     if error:
         return error_response(error, 400)
 
@@ -758,6 +793,13 @@ def update_member_role(member_id):
     if new_role not in ('admin', 'owner', 'worker'):
         return error_response("Invalid role. Allowed: admin, owner, worker", 400)
 
+    # Prevent self role change (must ask another admin)
+    if member.user_id == user.id and new_role != member.role:
+        return error_response(
+            "Cannot change your own role. Ask another admin.",
+            400, code="SELF_ROLE_CHANGE",
+        )
+
     # Prevent removing last admin
     if member.role == 'admin' and new_role != 'admin':
         admin_count = OrganizationMember.query.filter_by(
@@ -765,6 +807,17 @@ def update_member_role(member_id):
         ).count()
         if admin_count <= 1:
             return error_response("Cannot remove the last admin", 400)
+
+    # Prevent removing last owner when approval process is required
+    if member.role == 'owner' and new_role != 'owner':
+        approval_required = org_settings.get_workflow(org).get('approval_required')
+        if approval_required:
+            owner_count = org_settings.count_active_owners(org)
+            if owner_count <= 1:
+                return error_response(
+                    "最後の事業主を解除できません。承認プロセスをOFFにするか、別の事業主を招待してください。",
+                    400, code="LAST_OWNER",
+                )
 
     old_role = member.role
     member.role = new_role
@@ -807,6 +860,17 @@ def remove_member(member_id):
         ).count()
         if admin_count <= 1:
             return error_response("Cannot remove the last admin", 400)
+
+    # Prevent removing last owner when approval process is required
+    if member.role == 'owner':
+        approval_required = org_settings.get_workflow(org).get('approval_required')
+        if approval_required:
+            owner_count = org_settings.count_active_owners(org)
+            if owner_count <= 1:
+                return error_response(
+                    "最後の事業主を除外できません。承認プロセスをOFFにするか、別の事業主を招待してください。",
+                    400, code="LAST_OWNER",
+                )
 
     member.is_active = False
     log_audit(
@@ -1441,6 +1505,136 @@ def update_min_attendance_settings():
         db.session.rollback()
         return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(normalized)
+
+
+# --- Workflow Settings (approval process ON/OFF) ---
+
+@api_admin_bp.route('/settings/workflow', methods=['GET'])
+@require_role('admin')
+def get_workflow_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    cfg = org_settings.get_workflow(org)
+    owner_count = org_settings.count_active_owners(org)
+    pending_count = org_settings.count_pending_schedules(org)
+    # Commit in case get_workflow() initialized settings_json
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return jsonify({
+        'approval_required': cfg['approval_required'],
+        'owner_count': owner_count,
+        'pending_schedules_count': pending_count,
+    })
+
+
+@api_admin_bp.route('/settings/workflow', methods=['PUT'])
+@require_role('admin')
+def update_workflow_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    old_cfg = org_settings.get_workflow(org)
+    try:
+        # Validate payload shape
+        new_cfg = org_settings._validate_workflow(data)
+    except ValueError as e:
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
+
+    # Cross-state validation
+    if new_cfg['approval_required'] and not old_cfg['approval_required']:
+        # Turning ON: require at least one active owner
+        if org_settings.count_active_owners(org) < 1:
+            return error_response(
+                "承認プロセスを有効にするには、事業主を1名以上招待する必要があります。",
+                400, code="NO_OWNER",
+            )
+    if not new_cfg['approval_required'] and old_cfg['approval_required']:
+        # Turning OFF: block if pending_approval schedules exist
+        pending = org_settings.count_pending_schedules(org)
+        if pending > 0:
+            return jsonify({
+                'error': (
+                    "進行中の承認申請があるため、承認プロセスを無効にできません。"
+                    "承認または差戻しを完了してから再度お試しください。"
+                ),
+                'code': 'PENDING_APPROVALS_EXIST',
+                'pending_schedules_count': pending,
+            }), 409
+
+    normalized = org_settings.set_workflow(org, new_cfg)
+    log_audit(
+        action='WORKFLOW_SETTINGS_UPDATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values=old_cfg,
+        new_values=normalized,
+    )
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify({
+        'approval_required': normalized['approval_required'],
+        'owner_count': org_settings.count_active_owners(org),
+        'pending_schedules_count': org_settings.count_pending_schedules(org),
+    })
+
+
+# --- Member role change impact (pre-flight check) ---
+
+@api_admin_bp.route('/members/<int:member_id>/role-change-impact', methods=['GET'])
+@require_role('admin')
+def member_role_change_impact(member_id):
+    """Preview the impact of changing a member's role or removing them.
+
+    Frontend uses this to show a confirmation dialog with concrete information
+    (e.g. "this is the last owner, pending approvals will block, etc.")
+    before calling the actual PUT/DELETE endpoint.
+    """
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    member = db.session.get(OrganizationMember, member_id)
+    if not member or member.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    new_role = request.args.get('new_role')  # omitted means "remove"
+    workflow = org_settings.get_workflow(org)
+    approval_required = workflow.get('approval_required', False)
+
+    impact = {
+        'is_self': member.user_id == user.id,
+        'is_last_admin': False,
+        'is_last_owner_while_approval_required': False,
+        'pending_schedules_count': 0,
+    }
+
+    # Last admin check (role change OR removal)
+    if member.role == 'admin' and (new_role is None or new_role != 'admin'):
+        admin_count = OrganizationMember.query.filter_by(
+            organization_id=org.id, role='admin', is_active=True
+        ).count()
+        impact['is_last_admin'] = admin_count <= 1
+
+    # Last owner check (role change OR removal)
+    if member.role == 'owner' and (new_role is None or new_role != 'owner'):
+        if approval_required:
+            owner_count = org_settings.count_active_owners(org)
+            impact['is_last_owner_while_approval_required'] = owner_count <= 1
+        impact['pending_schedules_count'] = org_settings.count_pending_schedules(org)
+
+    impact['requires_confirmation'] = (
+        impact['pending_schedules_count'] > 0
+    )
+
+    return jsonify(impact)
 
 
 # --- Member Attributes (level + per-member min attendance) ---

@@ -191,3 +191,28 @@ def confirm_schedule(schedule_id, admin_user):
         return None, error
 
     return schedule, None
+
+
+def confirm_schedule_direct(schedule_id, admin_user):
+    """Confirm a draft schedule directly (when approval process is disabled).
+
+    Used when Organization.settings_json.workflow.approval_required is False.
+    Skips the pending_approval and approved stages: draft → confirmed.
+    """
+    schedule, error = _transition_schedule(
+        schedule_id,
+        admin_user,
+        expected_status='draft',
+        new_status='confirmed',
+        action_name='not in draft status',
+        audit_action='SCHEDULE_CONFIRMED_DIRECT',
+        schedule_updates={
+            'confirmed_at': datetime.utcnow(),
+            'approved_by': admin_user.id,
+            'approved_at': datetime.utcnow(),
+        },
+    )
+    if error:
+        return None, error
+
+    return schedule, None

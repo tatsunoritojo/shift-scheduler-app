@@ -115,8 +115,9 @@ class TestAuditOnInvitations:
 class TestAuditOnApproval:
 
     def test_submit_for_approval_creates_audit_entry(
-        self, client, auth, admin_user, schedule, period, org, db_session
+        self, client, auth, admin_user, owner_user, schedule, period, org, db_session
     ):
+        # owner_user fixture triggers approval_required=true auto-detection
         db_session.commit()
         auth.login_as(admin_user)
         resp = client.post(f"/api/admin/periods/{period.id}/schedule/submit")
