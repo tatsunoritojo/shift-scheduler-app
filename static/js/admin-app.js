@@ -526,7 +526,11 @@ function setupDelegatedHandlers() {
             const memberId = Number(target.dataset.memberId);
             const value = target.value || null;
             updateMemberAttributes(memberId, { level_key: value })
-                .then(() => showToast('レベルを更新しました', 'success'))
+                .then(() => {
+                    showToast('レベルを更新しました', 'success');
+                    // Refresh tier member counts on settings tab
+                    loadLevelSettings();
+                })
                 .catch(() => loadMembers());
         }
         if (target.dataset.action === 'changeMemberMinCount' || target.dataset.action === 'changeMemberMinHours') {
@@ -778,22 +782,22 @@ async function loadMembers() {
             const isSelf = currentUser && m.user_id === currentUser.id;
             const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('ja-JP') : '-';
             const levelCell = showLevel ? `<td>
-                <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberLevel" data-member-id="${m.id}">
+                <select class="form-control form-control-sm" data-action="changeMemberLevel" data-member-id="${m.id}">
                     <option value="">—</option>
                     ${levelSystemState.tiers.map(t => `<option value="${escapeHtml(t.key)}" ${m.level_key === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
                 </select>
             </td>` : '';
             const countCell = showCount ? `<td>
-                <input type="number" min="0" class="form-control" style="width:72px;padding:4px 8px;font-size:0.85em;" data-action="changeMemberMinCount" data-member-id="${m.id}" value="${m.min_attendance_count_per_week ?? ''}" placeholder="—">
+                <input type="number" min="0" class="form-control form-control-sm" style="width:72px;" data-action="changeMemberMinCount" data-member-id="${m.id}" value="${m.min_attendance_count_per_week ?? ''}" placeholder="—">
             </td>` : '';
             const hoursCell = showHours ? `<td>
-                <input type="number" min="0" step="0.5" class="form-control" style="width:80px;padding:4px 8px;font-size:0.85em;" data-action="changeMemberMinHours" data-member-id="${m.id}" value="${m.min_attendance_hours_per_week ?? ''}" placeholder="—">
+                <input type="number" min="0" step="0.5" class="form-control form-control-sm" style="width:80px;" data-action="changeMemberMinHours" data-member-id="${m.id}" value="${m.min_attendance_hours_per_week ?? ''}" placeholder="—">
             </td>` : '';
             return `<tr>
                 <td>${escapeHtml(m.user_name || '-')}</td>
                 <td style="font-size:0.85em;">${escapeHtml(m.user_email || '-')}</td>
                 <td>
-                    <select class="form-control" style="width:auto;padding:4px 8px;font-size:0.85em;" data-action="changeMemberRole" data-member-id="${m.id}" data-previous-role="${m.role}" ${isSelf ? 'disabled' : ''}>
+                    <select class="form-control form-control-sm" data-action="changeMemberRole" data-member-id="${m.id}" data-previous-role="${m.role}" ${isSelf ? 'disabled' : ''}>
                         ${['admin', 'owner', 'worker'].map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${ROLE_LABELS[r]}</option>`).join('')}
                     </select>
                 </td>
@@ -2385,9 +2389,9 @@ function renderLevelSettings() {
         list.innerHTML = '<p class="help-text" style="color:var(--color-neutral-400);">レベルがまだ設定されていません</p>';
     } else {
         list.innerHTML = levelSystemState.tiers.map((t, i) => `
-            <div class="flex gap-8 mb-8" style="align-items:center;padding:8px;border:1px solid var(--color-neutral-200);border-radius:6px;">
-                <span style="flex:1;"><strong>${escapeHtml(t.label)}</strong> <span style="color:var(--color-neutral-400);font-size:0.85em;">(${escapeHtml(t.key)})</span></span>
-                <span style="font-size:0.82em;color:var(--color-neutral-400);">${t.member_count}名</span>
+            <div class="level-tier-row">
+                <span class="tier-label"><strong>${escapeHtml(t.label)}</strong> <span style="color:var(--color-neutral-400);font-size:0.85em;">(${escapeHtml(t.key)})</span></span>
+                <span class="tier-count">${t.member_count}名</span>
                 <button class="btn btn-outline btn-sm" data-action="moveLevelTierUp" data-key="${escapeHtml(t.key)}" ${i === 0 ? 'disabled' : ''} title="上へ"><i data-lucide="chevron-up" style="width:12px;height:12px;"></i></button>
                 <button class="btn btn-outline btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
                 <button class="btn btn-outline btn-sm" data-action="removeLevelTier" data-key="${escapeHtml(t.key)}" data-label="${escapeHtml(t.label)}" data-count="${t.member_count}" title="削除"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>

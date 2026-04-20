@@ -149,6 +149,20 @@
                 <div class="card mb-24">
                     <h3><i data-lucide="layers" style="width:18px;height:18px;vertical-align:text-bottom;"></i> レベル設定</h3>
                     <p class="help-text mb-16">従業員のスキルレベルを分類し、シフト割当時のバランス判断に使います。</p>
+                    <details class="help-accordion mb-16">
+                        <summary><i data-lucide="help-circle" style="width:14px;height:14px;vertical-align:text-bottom;"></i> 使い方</summary>
+                        <div class="help-accordion-body">
+                            <p class="mb-8"><strong>何のため？</strong> 例えば「ベテランと新人」のような区分を作ると、片方の時間帯にベテランが固まって新人不足になる偏りを防げます。</p>
+                            <p class="mb-8"><strong>設定手順:</strong></p>
+                            <ol style="padding-left:20px;">
+                                <li>下のチェックボックスで機能を有効化</li>
+                                <li>レベルを追加（キーは半角英字、表示名は日本語OK。例: <code>senior</code> / シニア）</li>
+                                <li>上から高レベル順に並び替え</li>
+                                <li>保存 → メンバー管理タブで各従業員にレベルを割当</li>
+                            </ol>
+                            <p class="mb-0" style="margin-top:8px;"><strong>使わない場合:</strong> 無効のまま放置してOK。既存の動作に影響しません。</p>
+                        </div>
+                    </details>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
                         <input type="checkbox" id="level-system-enabled">
                         <span>レベル機能を有効にする</span>
@@ -160,10 +174,12 @@
                             <div class="form-group" style="margin-bottom:0;">
                                 <label>キー（半角英字小文字）</label>
                                 <input type="text" id="level-new-key" class="form-control" placeholder="senior" style="width:140px;">
+                                <div class="field-hint">システム内部用ID（保存後は変更不可）</div>
                             </div>
                             <div class="form-group" style="margin-bottom:0;">
                                 <label>表示名</label>
                                 <input type="text" id="level-new-label" class="form-control" placeholder="シニア" style="width:140px;">
+                                <div class="field-hint">画面に表示される名前</div>
                             </div>
                             <button class="btn btn-outline" id="btn-add-level-tier"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
                         </div>
@@ -175,6 +191,14 @@
                 <div class="card mb-24">
                     <h3><i data-lucide="users" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 同レベル重複チェック</h3>
                     <p class="help-text mb-16">同じレベルの従業員が同じ時間帯にシフトに入ると警告します（レベル機能が有効なときのみ）。</p>
+                    <details class="help-accordion mb-16">
+                        <summary><i data-lucide="help-circle" style="width:14px;height:14px;vertical-align:text-bottom;"></i> 使い方</summary>
+                        <div class="help-accordion-body">
+                            <p class="mb-8"><strong>何のため？</strong> 例えば「ベテランだけで固まる」のを避けたいとき、この機能をONにするとシフト構築画面で同レベル重複が赤くハイライトされます（Phase B で実装予定）。</p>
+                            <p class="mb-8"><strong>前提:</strong> レベル設定で機能を有効化し、各メンバーにレベルを割り当てていること。</p>
+                            <p class="mb-0"><strong>警告のみ:</strong> 重複を禁止するわけではありません。管理者の判断で配置できます。</p>
+                        </div>
+                    </details>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
                         <input type="checkbox" id="overlap-check-enabled">
                         <span>同レベル重複を警告する</span>
@@ -186,9 +210,23 @@
                 <div class="card mb-24">
                     <h3><i data-lucide="calendar-check-2" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 最低出勤設定</h3>
                     <p class="help-text mb-16">週あたりの最低出勤回数・時間を設定します（雇用契約に基づく）。</p>
+                    <details class="help-accordion mb-16">
+                        <summary><i data-lucide="help-circle" style="width:14px;height:14px;vertical-align:text-bottom;"></i> 使い方</summary>
+                        <div class="help-accordion-body">
+                            <p class="mb-8"><strong>何のため？</strong> 「週1回以上は勤務させる」のような雇用上の約束を守るため、未達メンバーを自動で検出します（Phase B で可視化予定）。</p>
+                            <p class="mb-8"><strong>モードの選び方:</strong></p>
+                            <ul style="padding-left:20px;">
+                                <li><strong>無効:</strong> 使わない（デフォルト）</li>
+                                <li><strong>組織共通:</strong> 全員に同じ閾値を適用（例: 全員週1回）</li>
+                                <li><strong>メンバーごと:</strong> メンバー管理タブで個別に設定（契約が人によって異なる場合）</li>
+                            </ul>
+                            <p class="mb-8" style="margin-top:8px;"><strong>評価単位:</strong> 「回数」「時間」「両方」から選択。「両方」は両条件を満たす必要あり。</p>
+                            <p class="mb-0"><strong>遡る期間数:</strong> 最終出勤日を計算する際、過去のシフト期間を何期間前まで見るか。通常は1で十分。</p>
+                        </div>
+                    </details>
                     <div class="form-group">
                         <label>適用モード</label>
-                        <select id="min-attendance-mode" class="form-control" style="width:auto;">
+                        <select id="min-attendance-mode" class="form-control form-control-sm">
                             <option value="disabled">無効</option>
                             <option value="org_wide">組織共通</option>
                             <option value="per_member">メンバーごと</option>
@@ -197,7 +235,7 @@
                     <div id="min-attendance-config" style="display:none;">
                         <div class="form-group">
                             <label>評価単位</label>
-                            <select id="min-attendance-unit" class="form-control" style="width:auto;">
+                            <select id="min-attendance-unit" class="form-control form-control-sm">
                                 <option value="count">回数のみ</option>
                                 <option value="hours">時間のみ</option>
                                 <option value="both">両方（回数 AND 時間）</option>
@@ -215,11 +253,11 @@
                         </div>
                         <div class="grid-2 mb-16">
                             <div class="form-group">
-                                <label>下書きシフトもカウントする</label>
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
                                     <input type="checkbox" id="min-attendance-count-drafts" checked>
-                                    <span>含める（確定前も評価に使う）</span>
+                                    <span>下書きシフトもカウントする</span>
                                 </label>
+                                <div class="field-hint">確定前の下書きも最終出勤日・週回数の評価に含める</div>
                             </div>
                             <div class="form-group">
                                 <label>遡る期間数（0〜4）</label>
