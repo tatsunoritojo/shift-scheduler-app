@@ -72,7 +72,7 @@
                             <label>キーワード</label>
                             <input type="text" id="sync-keyword-input" class="form-control" placeholder="営業時間" style="width:200px;">
                         </div>
-                        <button class="btn btn-primary" id="btn-save-sync-keyword"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                        <button class="btn btn-outline" id="btn-save-sync-keyword" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                     </div>
                 </div>
 
@@ -142,7 +142,7 @@
                             <input type="time" id="reminder-time-shift" class="form-control" value="21:00" style="width:auto;">
                         </div>
                     </div>
-                    <button class="btn btn-primary" id="btn-save-reminder-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
+                    <button class="btn btn-outline" id="btn-save-reminder-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
                 </div>
 
                 <!-- Level System Card -->
@@ -184,7 +184,7 @@
                             <button class="btn btn-outline" id="btn-add-level-tier"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary" id="btn-save-level-settings"><i data-lucide="save" style="width:15px;height:15px;"></i> レベル設定を保存</button>
+                    <button class="btn btn-outline" id="btn-save-level-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> レベル設定を保存</button>
                 </div>
 
                 <!-- Overlap Check Card -->
@@ -203,7 +203,7 @@
                         <input type="checkbox" id="overlap-check-enabled">
                         <span>同レベル重複を警告する</span>
                     </label>
-                    <button class="btn btn-primary" id="btn-save-overlap-check"><i data-lucide="save" style="width:15px;height:15px;"></i> 重複チェック設定を保存</button>
+                    <button class="btn btn-outline" id="btn-save-overlap-check" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 重複チェック設定を保存</button>
                 </div>
 
                 <!-- Min Attendance Card -->
@@ -266,7 +266,7 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" id="btn-save-min-attendance"><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
+                    <button class="btn btn-outline" id="btn-save-min-attendance" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
                 </div>
 
                 <!-- Workflow (Approval Process) Settings Card -->
@@ -294,7 +294,7 @@
                         <input type="checkbox" id="workflow-approval-required">
                         <span>承認プロセスを有効にする</span>
                     </label>
-                    <button class="btn btn-primary" id="btn-save-workflow"><i data-lucide="save" style="width:15px;height:15px;"></i> 承認プロセス設定を保存</button>
+                    <button class="btn btn-outline" id="btn-save-workflow" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 承認プロセス設定を保存</button>
                 </div>
 
                 <!-- Manual Settings (collapsed) -->
@@ -305,7 +305,7 @@
                             <h3>曜日別の営業時間</h3>
                             <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
                             <div id="opening-hours-grid"></div>
-                            <button class="btn btn-primary mt-16" id="btn-save-opening-hours"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                            <button class="btn btn-outline mt-16" id="btn-save-opening-hours" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                         </div>
 
                         <div class="card mb-24" id="section-add-exception">
@@ -477,7 +477,7 @@
                                 <div class="flex-between mb-16">
                                     <h3>スケジュール</h3>
                                     <div class="flex gap-8">
-                                        <button class="btn btn-primary" id="btn-save-schedule"><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                                        <button class="btn btn-outline" id="btn-save-schedule" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                                         <button class="btn btn-warning" id="btn-submit-approval"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
                                         <button class="btn btn-success" id="confirm-btn" style="display:none;"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
                                     </div>

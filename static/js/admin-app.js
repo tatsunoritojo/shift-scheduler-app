@@ -14,6 +14,59 @@ const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
 let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
+
+// --- Dirty tracking for save buttons ---
+// A save button starts as btn-outline (white with blue border). When the user
+// edits any tracked form, the button switches to btn-primary (solid blue) to
+// signal "click to persist changes". After a successful save or fresh load,
+// it returns to btn-outline.
+const dirtyTrackers = {};
+
+function registerDirtyTracker(name, scope, saveBtn) {
+    if (!scope || !saveBtn) return;
+    dirtyTrackers[name] = { scope, saveBtn };
+    setClean(name);
+    // Listen for form interactions within the scope.
+    scope.addEventListener('input', () => setDirty(name));
+    scope.addEventListener('change', () => setDirty(name));
+}
+
+function setDirty(name) {
+    const t = dirtyTrackers[name];
+    if (!t) return;
+    t.saveBtn.classList.remove('btn-outline');
+    t.saveBtn.classList.add('btn-primary');
+    t.saveBtn.dataset.dirty = 'true';
+}
+
+function setClean(name) {
+    const t = dirtyTrackers[name];
+    if (!t) return;
+    t.saveBtn.classList.remove('btn-primary');
+    t.saveBtn.classList.add('btn-outline');
+    t.saveBtn.dataset.dirty = 'false';
+}
+
+function initDirtyTrackers() {
+    // Each tracker pairs a scope element (usually a .card) with a save button.
+    const map = [
+        ['sync-keyword',      'sync-keyword-card',       'btn-save-sync-keyword'],
+        ['reminder',          null,                      'btn-save-reminder-settings'],
+        ['levels',            null,                      'btn-save-level-settings'],
+        ['overlap-check',     null,                      'btn-save-overlap-check'],
+        ['min-attendance',    null,                      'btn-save-min-attendance'],
+        ['workflow',          null,                      'btn-save-workflow'],
+        ['opening-hours',     'section-opening-hours',   'btn-save-opening-hours'],
+        ['schedule',          'builder-content',         'btn-save-schedule'],
+    ];
+    for (const [name, scopeId, btnId] of map) {
+        const btn = document.getElementById(btnId);
+        if (!btn) continue;
+        // Fall back to the closest .card of the save button if no explicit scope id.
+        const scope = scopeId ? document.getElementById(scopeId) : btn.closest('.card');
+        registerDirtyTracker(name, scope, btn);
+    }
+}
 let submissionsData = [];  // period submissions
 let openingHoursData = {}; // dateStr -> { start_time, end_time } | null
 let currentPeriod = null;  // Selected period object
@@ -922,6 +975,7 @@ async function loadSyncSettings() {
         if (keywordLabel) keywordLabel.textContent = syncKeyword;
         const keywordInput = document.getElementById('sync-keyword-input');
         if (keywordInput) keywordInput.value = syncKeyword;
+        setClean('sync-keyword');
         return data;
     } catch (e) {
         console.warn('Failed to load sync settings:', e);
@@ -942,6 +996,7 @@ async function saveSyncKeyword() {
         syncKeyword = keyword;
         const keywordLabel = document.getElementById('sync-keyword-label');
         if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        setClean('sync-keyword');
         showToast('同期キーワードを保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
@@ -1037,6 +1092,7 @@ function showSyncKeywordCard() {
 async function init() {
     setupStaticHandlers();
     setupDelegatedHandlers();
+    initDirtyTrackers();
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -1116,6 +1172,7 @@ async function loadOpeningHours() {
         `);
     }
     grid.innerHTML = rows.join('');
+    setClean('opening-hours');
 }
 
 async function saveOpeningHours() {
@@ -1130,6 +1187,7 @@ async function saveOpeningHours() {
     }
     try {
         await api.put('/api/admin/opening-hours', hours);
+        setClean('opening-hours');
         showToast('営業時間を保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
@@ -1713,6 +1771,7 @@ async function loadBuilderData() {
         renderBuilderCalendar();
         renderHoursSummary();
         renderSyncStatusSummary(schedule);
+        setClean('schedule');
     } catch (e) {
         if (thisGeneration !== builderLoadGeneration) return;
         showToast('データの読み込みに失敗しました', 'error');
@@ -2111,6 +2170,7 @@ function toggleWorkerAssignment(userId, dateStr) {
     buildDayAggregatedData();
     renderBuilderCalendar();
     renderHoursSummary();
+    setDirty('schedule');
 
     // Re-open popup for this date
     const newData = dayAggregatedData[dateStr];
@@ -2134,6 +2194,7 @@ function applyWorkerTime(userId, dateStr) {
     buildDayAggregatedData();
     renderBuilderCalendar();
     renderHoursSummary();
+    setDirty('schedule');
 
     // Refresh timeline in popup without full re-open
     const tlContainer = document.getElementById('admin-coverage-timeline');
@@ -2331,6 +2392,7 @@ async function saveSchedule() {
         if (result && result.schedule_version) {
             scheduleVersion = result.schedule_version;
         }
+        setClean('schedule');
         showToast('スケジュールを保存しました', 'success');
     } catch (e) {
         // Detect optimistic locking conflict (409 from server)
@@ -2418,6 +2480,7 @@ async function loadReminderSettings() {
         if (timeDeadline) timeDeadline.value = data.reminder_time_deadline || '09:00';
         if (daysShift) daysShift.value = data.reminder_days_before_shift ?? 1;
         if (timeShift) timeShift.value = data.reminder_time_shift || '21:00';
+        setClean('reminder');
     } catch (e) {
         console.warn('Failed to load reminder settings:', e);
     }
@@ -2431,6 +2494,7 @@ async function saveReminderSettings() {
             reminder_days_before_shift: Number(document.getElementById('reminder-days-shift').value),
             reminder_time_shift: document.getElementById('reminder-time-shift').value,
         });
+        setClean('reminder');
         showToast('リマインド設定を保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
@@ -2458,6 +2522,7 @@ async function loadLevelSettings() {
             })),
         };
         renderLevelSettings();
+        setClean('levels');
     } catch (e) {
         console.warn('Failed to load level settings:', e);
     }
@@ -2511,12 +2576,14 @@ function addLevelTier() {
     keyInput.value = '';
     labelInput.value = '';
     renderLevelSettings();
+    setDirty('levels');
 }
 
 function removeLevelTier(key, label, memberCount) {
     const proceed = () => {
         levelSystemState.tiers = levelSystemState.tiers.filter(t => t.key !== key);
         renderLevelSettings();
+        setDirty('levels');
     };
     if (memberCount > 0) {
         showConfirmDialog(
@@ -2538,6 +2605,7 @@ function moveLevelTier(key, direction) {
     [tiers[idx], tiers[newIdx]] = [tiers[newIdx], tiers[idx]];
     tiers.forEach((t, i) => { t.order = i + 1; });
     renderLevelSettings();
+    setDirty('levels');
 }
 
 async function saveLevelSettings() {
@@ -2556,7 +2624,7 @@ async function saveLevelSettings() {
         });
         levelSystemState.enabled = enabled;
         showToast('レベル設定を保存しました', 'success');
-        await loadLevelSettings();
+        await loadLevelSettings();  // resets setClean('levels')
         membersTabLoaded = false;
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
@@ -2572,6 +2640,7 @@ async function loadOverlapCheckSettings() {
         };
         const el = document.getElementById('overlap-check-enabled');
         if (el) el.checked = overlapCheckState.enabled;
+        setClean('overlap-check');
     } catch (e) {
         console.warn('Failed to load overlap check settings:', e);
     }
@@ -2582,6 +2651,7 @@ async function saveOverlapCheckSettings() {
     try {
         await api.put('/api/admin/settings/overlap-check', { enabled, scope: 'same_tier' });
         overlapCheckState.enabled = enabled;
+        setClean('overlap-check');
         showToast('重複チェック設定を保存しました', 'success');
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
@@ -2600,6 +2670,7 @@ async function loadMinAttendanceSettings() {
             lookback_periods: data.lookback_periods ?? 1,
         };
         renderMinAttendanceSettings();
+        setClean('min-attendance');
     } catch (e) {
         console.warn('Failed to load min attendance settings:', e);
     }
@@ -2646,6 +2717,7 @@ async function saveMinAttendanceSettings() {
     try {
         await api.put('/api/admin/settings/min-attendance', payload);
         minAttendanceState = payload;
+        setClean('min-attendance');
         showToast('最低出勤設定を保存しました', 'success');
         membersTabLoaded = false;
     } catch (e) {
@@ -2680,6 +2752,7 @@ async function loadWorkflowSettings() {
         };
         renderWorkflowSettings();
         renderOwnerInviteCard();
+        setClean('workflow');
     } catch (e) {
         console.warn('Failed to load workflow settings:', e);
     }
@@ -2724,6 +2797,7 @@ async function saveWorkflowSettings() {
         };
         renderWorkflowSettings();
         renderOwnerInviteCard();
+        setClean('workflow');
         showToast('承認プロセス設定を保存しました', 'success');
         // Refresh schedule UI if a period is currently loaded
         if (currentPeriod) {
