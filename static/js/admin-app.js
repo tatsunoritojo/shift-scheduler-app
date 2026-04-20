@@ -468,7 +468,7 @@ function setupStaticHandlers() {
 
     // Workflow (approval process) settings
     const workflowToggle = document.getElementById('workflow-approval-required');
-    if (workflowToggle) workflowToggle.addEventListener('change', () => renderWorkflowSettings());
+    if (workflowToggle) workflowToggle.addEventListener('change', () => updateWorkflowWarning());
     const btnSaveWorkflow = document.getElementById('btn-save-workflow');
     if (btnSaveWorkflow) btnSaveWorkflow.addEventListener('click', () => saveWorkflowSettings());
     const btnGotoOwnerInvite = document.getElementById('btn-goto-owner-invite');
@@ -2686,14 +2686,22 @@ async function loadWorkflowSettings() {
 }
 
 function renderWorkflowSettings() {
+    // Sync checkbox to server-known state. Only called on load/save, not on user click.
     const toggle = document.getElementById('workflow-approval-required');
-    const warning = document.getElementById('workflow-owner-warning');
     if (!toggle) return;
     toggle.checked = workflowState.approval_required;
-    if (warning) {
-        const needWarn = workflowState.approval_required && workflowState.owner_count < 1;
-        warning.style.display = needWarn ? '' : 'none';
-    }
+    updateWorkflowWarning();
+}
+
+function updateWorkflowWarning() {
+    // Reflect warning banner based on CURRENT checkbox state (not server state),
+    // so users see the warning while still toggling ON before saving.
+    const toggle = document.getElementById('workflow-approval-required');
+    const warning = document.getElementById('workflow-owner-warning');
+    if (!toggle || !warning) return;
+    const wantsApproval = toggle.checked;
+    const needWarn = wantsApproval && workflowState.owner_count < 1;
+    warning.style.display = needWarn ? '' : 'none';
 }
 
 function renderOwnerInviteCard() {
