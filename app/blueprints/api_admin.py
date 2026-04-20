@@ -24,6 +24,7 @@ from app.utils.validators import validate_time_str, validate_text_length
 from app.utils.errors import error_response
 from app.models.membership import OrganizationMember, InvitationToken
 from app.services.audit_service import log_audit
+from app.services import organization_settings as org_settings
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -1276,3 +1277,253 @@ def get_period_reminder_stats(period_id):
     if stats is None:
         return error_response("Not found", 404, code="NOT_FOUND")
     return jsonify(stats)
+
+
+# --- Level / Overlap / Min Attendance Settings (Phase A) ---
+
+def _tiers_with_member_counts(org, tiers):
+    """Attach member_count to each tier for UI display."""
+    result = []
+    for tier in tiers:
+        count = org_settings.count_members_using_tier(org, tier['key'])
+        result.append({**tier, 'member_count': count})
+    return result
+
+
+@api_admin_bp.route('/settings/levels', methods=['GET'])
+@require_role('admin')
+def get_level_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    cfg = org_settings.get_level_system(org)
+    return jsonify({
+        'enabled': cfg['enabled'],
+        'tiers': _tiers_with_member_counts(org, cfg['tiers']),
+    })
+
+
+@api_admin_bp.route('/settings/levels', methods=['PUT'])
+@require_role('admin')
+def update_level_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    old_cfg = org_settings.get_level_system(org)
+    removed_keys = data.get('removed_tier_keys', [])
+    if not isinstance(removed_keys, list):
+        return error_response("removed_tier_keys must be a list", 400, code="VALIDATION_ERROR")
+
+    try:
+        normalized = org_settings.set_level_system(org, {
+            'enabled': data.get('enabled', False),
+            'tiers': data.get('tiers', []),
+        }, removed_tier_keys=removed_keys)
+    except ValueError as e:
+        # Detect "tier used by N members" case and surface counts for UI.
+        msg = str(e)
+        if 'is used by' in msg:
+            current_keys = {t['key'] for t in old_cfg.get('tiers', [])}
+            new_keys = {t['key'] for t in data.get('tiers', []) if isinstance(t, dict) and 'key' in t}
+            disappeared = current_keys - new_keys - set(removed_keys)
+            in_use = {
+                key: org_settings.count_members_using_tier(org, key)
+                for key in disappeared
+            }
+            return jsonify({
+                'error': msg,
+                'code': 'TIER_IN_USE',
+                'tiers_in_use': in_use,
+            }), 409
+        return error_response(msg, 400, code="VALIDATION_ERROR")
+
+    log_audit(
+        action='LEVEL_SETTINGS_UPDATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values=old_cfg,
+        new_values=normalized,
+    )
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+
+    return jsonify({
+        'enabled': normalized['enabled'],
+        'tiers': _tiers_with_member_counts(org, normalized['tiers']),
+    })
+
+
+@api_admin_bp.route('/settings/overlap-check', methods=['GET'])
+@require_role('admin')
+def get_overlap_check_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify(org_settings.get_overlap_check(org))
+
+
+@api_admin_bp.route('/settings/overlap-check', methods=['PUT'])
+@require_role('admin')
+def update_overlap_check_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    old_cfg = org_settings.get_overlap_check(org)
+    try:
+        normalized = org_settings.set_overlap_check(org, data)
+    except ValueError as e:
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
+
+    log_audit(
+        action='OVERLAP_CHECK_UPDATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values=old_cfg,
+        new_values=normalized,
+    )
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(normalized)
+
+
+@api_admin_bp.route('/settings/min-attendance', methods=['GET'])
+@require_role('admin')
+def get_min_attendance_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify(org_settings.get_min_attendance(org))
+
+
+@api_admin_bp.route('/settings/min-attendance', methods=['PUT'])
+@require_role('admin')
+def update_min_attendance_settings():
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    old_cfg = org_settings.get_min_attendance(org)
+    try:
+        normalized = org_settings.set_min_attendance(org, data)
+    except ValueError as e:
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
+
+    log_audit(
+        action='MIN_ATTENDANCE_UPDATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values=old_cfg,
+        new_values=normalized,
+    )
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(normalized)
+
+
+# --- Member Attributes (level + per-member min attendance) ---
+
+@api_admin_bp.route('/members/<int:member_id>/attributes', methods=['PUT'])
+@require_role('admin')
+def update_member_attributes(member_id):
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    member = db.session.get(OrganizationMember, member_id)
+    if not member or member.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    old_values = {
+        'level_key': member.level_key,
+        'min_attendance_count_per_week': member.min_attendance_count_per_week,
+        'min_attendance_hours_per_week': member.min_attendance_hours_per_week,
+    }
+
+    # level_key: must be null or match an existing tier
+    if 'level_key' in data:
+        value = data['level_key']
+        if value is None or value == '':
+            member.level_key = None
+        elif not isinstance(value, str):
+            return error_response("level_key must be a string or null", 400, code="VALIDATION_ERROR")
+        else:
+            level_cfg = org_settings.get_level_system(org)
+            valid_keys = {t['key'] for t in level_cfg.get('tiers', [])}
+            if value not in valid_keys:
+                return error_response(
+                    f"level_key '{value}' is not a configured tier",
+                    400, code="VALIDATION_ERROR",
+                )
+            member.level_key = value
+
+    if 'min_attendance_count_per_week' in data:
+        value = data['min_attendance_count_per_week']
+        if value is None:
+            member.min_attendance_count_per_week = None
+        elif isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            return error_response(
+                "min_attendance_count_per_week must be a non-negative integer or null",
+                400, code="VALIDATION_ERROR",
+            )
+        else:
+            member.min_attendance_count_per_week = value
+
+    if 'min_attendance_hours_per_week' in data:
+        value = data['min_attendance_hours_per_week']
+        if value is None:
+            member.min_attendance_hours_per_week = None
+        elif isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            return error_response(
+                "min_attendance_hours_per_week must be a non-negative number or null",
+                400, code="VALIDATION_ERROR",
+            )
+        else:
+            member.min_attendance_hours_per_week = float(value)
+
+    new_values = {
+        'level_key': member.level_key,
+        'min_attendance_count_per_week': member.min_attendance_count_per_week,
+        'min_attendance_hours_per_week': member.min_attendance_hours_per_week,
+    }
+
+    log_audit(
+        action='MEMBER_ATTRIBUTES_UPDATED',
+        resource_type='OrganizationMember',
+        resource_id=member.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values=old_values,
+        new_values=new_values,
+    )
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(member.to_dict())

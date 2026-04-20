@@ -22,6 +22,9 @@ class OrganizationMember(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    level_key = db.Column(db.String(32), nullable=True)
+    min_attendance_count_per_week = db.Column(db.Integer, nullable=True)
+    min_attendance_hours_per_week = db.Column(db.Float, nullable=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('memberships', lazy='dynamic'))
     organization = db.relationship('Organization', backref=db.backref('members', lazy='dynamic'))
@@ -42,6 +45,9 @@ class OrganizationMember(db.Model):
             'is_active': self.is_active,
             'invited_by': self.invited_by,
             'joined_at': self.joined_at.isoformat() if self.joined_at else None,
+            'level_key': self.level_key,
+            'min_attendance_count_per_week': self.min_attendance_count_per_week,
+            'min_attendance_hours_per_week': self.min_attendance_hours_per_week,
         }
 
     def sync_to_user(self):
