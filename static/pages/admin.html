@@ -20,14 +20,31 @@
         </header>
         <main class="main-content">
             <div class="tab-bar">
-                <button class="tab-btn active" data-tab="settings">設定</button>
-                <button class="tab-btn" data-tab="periods">シフト期間</button>
-                <button class="tab-btn" data-tab="builder">シフト構築</button>
-                <button class="tab-btn" data-tab="members">メンバー管理</button>
+                <button class="tab-btn tab-primary active" data-tab="builder">
+                    <i data-lucide="layout-grid" class="tab-icon"></i>
+                    <span>シフト構築</span>
+                    <span class="tab-badge" id="badge-builder" hidden></span>
+                </button>
+                <button class="tab-btn tab-primary" data-tab="members">
+                    <i data-lucide="users" class="tab-icon"></i>
+                    <span>メンバー管理</span>
+                    <span class="tab-badge" id="badge-members" hidden></span>
+                </button>
+                <span class="tab-separator" aria-hidden="true"></span>
+                <button class="tab-btn tab-secondary" data-tab="periods">
+                    <i data-lucide="calendar-days" class="tab-icon"></i>
+                    <span>シフト期間</span>
+                    <span class="tab-badge" id="badge-periods" hidden></span>
+                </button>
+                <button class="tab-btn tab-secondary" data-tab="settings">
+                    <i data-lucide="settings" class="tab-icon"></i>
+                    <span>設定</span>
+                    <span class="tab-badge tab-badge-dot" id="badge-settings" hidden></span>
+                </button>
             </div>
 
             <!-- Settings Tab -->
-            <div id="tab-settings" class="tab-content active">
+            <div id="tab-settings" class="tab-content">
                 <details class="guide-box" id="guide-box-details" open>
                     <summary class="guide-box-title" style="cursor:pointer;display:flex;align-items:center;gap:6px;"><i data-lucide="help-circle" style="width:16px;height:16px;"></i> 管理者画面の使い方</summary>
                     <ol class="guide-steps">
@@ -456,7 +473,7 @@
             </div>
 
             <!-- Builder Tab -->
-            <div id="tab-builder" class="tab-content">
+            <div id="tab-builder" class="tab-content active">
                 <div class="card mb-16">
                     <h3>シフト構築</h3>
                     <p class="help-text mb-16">アルバイトが提出したシフト希望をもとに、実際のシフトスケジュールを組み立てます。カレンダーの日付をクリックして、スタッフの割当を行ってください。</p>

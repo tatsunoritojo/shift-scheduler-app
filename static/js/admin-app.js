@@ -754,6 +754,8 @@ async function loadInvitations() {
     try {
         const data = await api.get('/api/admin/invitations');
         const container = document.getElementById('invitations-table');
+        const pendingCount = (data || []).filter(t => t.is_valid && !t.used_at).length;
+        setTabBadge('members', pendingCount);
         if (!data || data.length === 0) {
             container.innerHTML = '<p style="color:var(--color-neutral-400);font-size:0.9em;">招待はありません</p>';
             return;
@@ -787,6 +789,7 @@ async function loadInvitations() {
         </table>`;
     } catch (e) {
         console.error('Failed to load invitations:', e);
+        setTabBadge('members', 0);
     }
 }
 
@@ -1108,6 +1111,7 @@ async function init() {
             loadOverlapCheckSettings(),
             loadMinAttendanceSettings(),
             loadWorkflowSettings(),
+            loadInvitations(),
         ]);
         const statusData = results[0].status === 'fulfilled' ? results[0].value : null;
         const syncSettings = results[5].status === 'fulfilled' ? results[5].value : null;
@@ -1115,11 +1119,13 @@ async function init() {
         // Show setup wizard or keyword card
         const isConfigured = syncSettings && syncSettings.calendar_setup_dismissed;
         const hasCalExceptions = statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0;
-        if (!isConfigured && !hasCalExceptions) {
+        const needsSetup = !isConfigured && !hasCalExceptions;
+        if (needsSetup) {
             showSetupWizard();
         } else {
             showSyncKeywordCard();
         }
+        setTabBadgeDot('settings', needsSetup);
 
         // Show preview calendar based on calendar exceptions range
         if (statusData && statusData.calendar_exceptions && statusData.calendar_exceptions.count > 0) {
@@ -1128,9 +1134,32 @@ async function init() {
                 statusData.calendar_exceptions.max_date
             );
         }
+
+        // 初期表示タブの決定: セットアップ未完了なら設定タブ、通常運用ならシフト構築タブ
+        switchTab(needsSetup ? 'settings' : 'builder');
     } catch (e) {
         console.error('Init error:', e);
     }
+}
+
+// --- Tab badges ---
+function setTabBadge(tabName, count) {
+    const el = document.getElementById(`badge-${tabName}`);
+    if (!el) return;
+    if (count > 0) {
+        el.textContent = String(count);
+        el.hidden = false;
+    } else {
+        el.textContent = '';
+        el.hidden = true;
+    }
+}
+
+function setTabBadgeDot(tabName, show) {
+    const el = document.getElementById(`badge-${tabName}`);
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = !show;
 }
 
 // --- Tab switching ---
@@ -1363,6 +1392,9 @@ async function importOpeningHours() {
 async function loadPeriods() {
     const data = await api.get('/api/admin/periods');
     const container = document.getElementById('periods-table-container');
+
+    const buildPending = (data || []).filter(p => p.status === 'closed').length;
+    setTabBadge('builder', buildPending);
 
     if (!data || data.length === 0) {
         container.innerHTML = '<div class="empty-state"><p>シフト期間はまだありません</p><p class="empty-state-hint">上のフォームから新しいシフト期間を作成してください</p></div>';
