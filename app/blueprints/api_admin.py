@@ -11,7 +11,8 @@ from app.models.shift import ShiftPeriod, ShiftSchedule, ShiftScheduleEntry
 from app.models.user import User
 from app.services.shift_service import (
     get_submissions_for_period, save_schedule, get_worker_hours_summary,
-    get_opening_hours_for_period,
+    get_opening_hours_for_period, delete_period_with_cleanup,
+    get_period_impact_summary,
 )
 from app.services.approval_service import submit_for_approval, confirm_schedule, confirm_schedule_direct
 from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
@@ -345,9 +346,11 @@ def get_sync_logs():
 def get_periods():
     user = get_current_user()
     org = _get_or_create_org(user)
-    periods = ShiftPeriod.query.filter_by(organization_id=org.id).order_by(
-        ShiftPeriod.start_date.desc()
-    ).all()
+    include_archived = request.args.get('include_archived', '').lower() in ('true', '1', 'yes')
+    query = ShiftPeriod.query.filter_by(organization_id=org.id)
+    if not include_archived:
+        query = query.filter(ShiftPeriod.is_archived.is_(False))
+    periods = query.order_by(ShiftPeriod.start_date.desc()).all()
     return jsonify([p.to_dict() for p in periods])
 
 
@@ -453,6 +456,133 @@ def update_period(period_id):
         db.session.rollback()
         return error_response("Database error", 500, code="INTERNAL_ERROR")
     return jsonify(period.to_dict())
+
+
+@api_admin_bp.route('/periods/<int:period_id>/archive', methods=['POST'])
+@require_role('admin')
+def archive_period(period_id):
+    """シフト期間をアーカイブする。冪等: 既にアーカイブ済でも 200 を返す。"""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    if not period.is_archived:
+        period.is_archived = True
+        period.archived_at = datetime.utcnow()
+        log_audit(
+            action='PERIOD_ARCHIVED',
+            resource_type='shift_period',
+            resource_id=period.id,
+            actor_id=user.id,
+            organization_id=org.id,
+            new_values={'is_archived': True, 'name': period.name},
+        )
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(period.to_dict())
+
+
+@api_admin_bp.route('/periods/<int:period_id>/unarchive', methods=['POST'])
+@require_role('admin')
+def unarchive_period(period_id):
+    """シフト期間のアーカイブを解除する。冪等: 既に解除済でも 200 を返す。"""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    if period.is_archived:
+        period.is_archived = False
+        period.archived_at = None
+        log_audit(
+            action='PERIOD_UNARCHIVED',
+            resource_type='shift_period',
+            resource_id=period.id,
+            actor_id=user.id,
+            organization_id=org.id,
+            new_values={'is_archived': False, 'name': period.name},
+        )
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(period.to_dict())
+
+
+@api_admin_bp.route('/periods/<int:period_id>/impact', methods=['GET'])
+@require_role('admin')
+def get_period_impact(period_id):
+    """削除前の影響範囲を返す（UI の確認ダイアログ用）。"""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+    return jsonify(get_period_impact_summary(period))
+
+
+@api_admin_bp.route('/periods/<int:period_id>', methods=['DELETE'])
+@require_role('admin')
+def delete_period(period_id):
+    """シフト期間を完全削除する。
+
+    フェールセーフのため、is_archived=True のシフト期間のみ削除を許可する
+    （誤操作防止のため、削除前にアーカイブを経由させる）。
+
+    関連する Reminder / VacancyRequest / ShiftChangeLog を手動でクリーンアップし、
+    Google Calendar event は best-effort で削除する。
+    """
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    period = db.session.get(ShiftPeriod, period_id)
+    if not period or period.organization_id != org.id:
+        return error_response("Not found", 404, code="NOT_FOUND")
+
+    if not period.is_archived:
+        return error_response(
+            "アーカイブ済みのシフト期間のみ削除できます。先にアーカイブしてください。",
+            409,
+            code="ARCHIVE_REQUIRED",
+        )
+
+    snapshot = {
+        'id': period.id,
+        'name': period.name,
+        'start_date': period.start_date.isoformat(),
+        'end_date': period.end_date.isoformat(),
+        'status': period.status,
+        'is_archived': period.is_archived,
+    }
+
+    try:
+        summary = delete_period_with_cleanup(period)
+        log_audit(
+            action='PERIOD_DELETED',
+            resource_type='shift_period',
+            resource_id=period_id,
+            actor_id=user.id,
+            organization_id=org.id,
+            old_values=snapshot,
+            new_values={'cleanup_summary': summary},
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete period %s: %s", period_id, e)
+        return error_response(
+            "Failed to delete period",
+            500,
+            code="INTERNAL_ERROR",
+        )
+
+    return jsonify({'success': True, 'cleanup_summary': summary})
 
 
 # --- Period Opening Hours ---
@@ -640,6 +770,12 @@ def confirm_period_schedule(period_id):
         'synced': sum(1 for r in sync_results if r.get('success')),
         'needs_worker_action': sum(1 for r in sync_results if r.get('needs_worker_action')),
         'failed': sum(1 for r in sync_results if r.get('error') and not r.get('needs_worker_action')),
+    }
+    # アーカイブ確認ダイアログ用に period 情報を含める
+    data['period'] = {
+        'id': period.id,
+        'name': period.name,
+        'is_archived': period.is_archived,
     }
     return jsonify(data)
 

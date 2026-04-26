@@ -386,7 +386,13 @@
                 </div>
 
                 <div class="card">
-                    <h3>シフト期間一覧</h3>
+                    <div class="flex" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <h3 style="margin:0;">シフト期間一覧</h3>
+                        <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.9em;color:var(--color-neutral-600);cursor:pointer;">
+                            <input type="checkbox" id="periods-include-archived" style="margin:0;">
+                            アーカイブ済を表示
+                        </label>
+                    </div>
                     <div id="periods-table-container"></div>
                 </div>
             </div>
@@ -475,7 +481,12 @@
             <!-- Builder Tab -->
             <div id="tab-builder" class="tab-content active">
                 <div class="card mb-16">
-                    <h3>シフト構築</h3>
+                    <div class="flex" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+                        <h3 style="margin:0;">シフト構築</h3>
+                        <button class="btn btn-outline" id="btn-goto-archived-periods" style="padding:6px 12px;font-size:0.85em;" title="アーカイブ済のシフト期間を一覧表示します">
+                            <i data-lucide="archive" style="width:14px;height:14px;"></i> アーカイブ済を見る
+                        </button>
+                    </div>
                     <p class="help-text mb-16">アルバイトが提出したシフト希望をもとに、実際のシフトスケジュールを組み立てます。カレンダーの日付をクリックして、スタッフの割当を行ってください。</p>
                     <div class="form-group">
                         <label>シフト期間を選択</label>
