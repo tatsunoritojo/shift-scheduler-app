@@ -114,11 +114,8 @@ def create_app(config_name=None):
     _register_error_handlers(app)
     _register_teardown(app)
 
-    # Create tables directly only in testing (production uses flask db upgrade)
-    if app.config.get('TESTING'):
-        with app.app_context():
-            db.create_all()
-
+    # Tests build schema via migrations in conftest.py to mirror production
+    # (the create_all() shortcut used to bypass dialect-specific migration bugs).
     return app
 
 

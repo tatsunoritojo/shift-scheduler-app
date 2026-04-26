@@ -1,9 +1,15 @@
-"""Shared fixtures for the test suite."""
+"""Shared fixtures for the test suite.
+
+Schema is built via Alembic migrations (not `db.create_all()`) so that
+dialect-specific migration bugs surface in CI before reaching production.
+This mirrors how Vercel applies migrations on cold start.
+"""
 
 from datetime import date, datetime
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import text
 
 from app import create_app
 from app.extensions import db as _db
@@ -26,14 +32,46 @@ def app():
         yield application
 
 
-@pytest.fixture(autouse=True)
-def _setup_db(app):
-    """Create all tables before each test, drop after."""
+@pytest.fixture(scope="session", autouse=True)
+def _build_schema(app):
+    """Build schema via Alembic migrations once per test session.
+
+    Migration-based setup (vs db.create_all()) ensures any dialect-specific
+    DDL bug — e.g. a Boolean server_default that fails on PostgreSQL —
+    surfaces in pytest before production deploy.
+    """
     with app.app_context():
+        # Defensive cleanup in case of leftover state from prior runs.
+        _db.drop_all()
+        _db.session.execute(text("DROP TABLE IF EXISTS alembic_version"))
+        _db.session.commit()
+
+        from flask_migrate import upgrade
+        upgrade()
+
+        # Create tables not managed by migrations (Flask-Session's `sessions`
+        # table is registered with the same metadata but managed by the
+        # extension, not Alembic). create_all() is idempotent on existing
+        # tables so model tables are not re-created.
         _db.create_all()
+
         yield
+
         _db.session.remove()
         _db.drop_all()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_test_data(app, _build_schema):
+    """Truncate all data tables before each test for isolation."""
+    with app.app_context():
+        # Reverse FK order so child tables are cleared before parents.
+        for table in reversed(_db.metadata.sorted_tables):
+            _db.session.execute(table.delete())
+        _db.session.commit()
+        yield
+        _db.session.rollback()
+        _db.session.remove()
 
 
 @pytest.fixture()

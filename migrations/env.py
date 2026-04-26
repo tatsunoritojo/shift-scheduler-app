@@ -1,4 +1,5 @@
 import logging
+import os
 from logging.config import fileConfig
 
 from flask import current_app
@@ -16,6 +17,16 @@ logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
+    # Allow auto-migration to use a different DB URL than the running app.
+    # On Vercel + Neon, app runtime uses the pooled URL (DATABASE_URL) for
+    # performance, but DDL must run on the unpooled URL because pooled
+    # connections reject ALTER TABLE in transactions.
+    override_url = os.environ.get('ALEMBIC_OVERRIDE_DB_URL')
+    if override_url:
+        from sqlalchemy import create_engine
+        if override_url.startswith('postgres://'):
+            override_url = override_url.replace('postgres://', 'postgresql://', 1)
+        return create_engine(override_url)
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions['migrate'].db.get_engine()
