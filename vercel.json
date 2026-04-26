@@ -2,11 +2,6 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ],
-  "functions": {
-    "api/**/*.py": {
-      "includeFiles": "migrations/**"
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/process-tasks",
