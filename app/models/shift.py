@@ -12,6 +12,8 @@ class ShiftPeriod(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     submission_deadline = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), nullable=False, default='draft')  # draft, open, closed, finalized
+    is_archived = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+    archived_at = db.Column(db.DateTime, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -30,6 +32,8 @@ class ShiftPeriod(db.Model):
             'end_date': self.end_date.isoformat(),
             'submission_deadline': self.submission_deadline.isoformat() if self.submission_deadline else None,
             'status': self.status,
+            'is_archived': self.is_archived,
+            'archived_at': self.archived_at.isoformat() if self.archived_at else None,
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
