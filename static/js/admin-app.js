@@ -14,6 +14,7 @@ const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
 let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
+let periodsIncludeArchived = false; // シフト期間タブのアーカイブ表示トグル状態
 
 // --- Dirty tracking for save buttons ---
 // A save button starts as btn-outline (white with blue border). When the user
@@ -466,6 +467,17 @@ function setupStaticHandlers() {
 
     // Periods
     document.getElementById('btn-create-period').addEventListener('click', () => createPeriod());
+    const includeArchivedToggle = document.getElementById('periods-include-archived');
+    if (includeArchivedToggle) {
+        includeArchivedToggle.addEventListener('change', (e) => {
+            periodsIncludeArchived = e.target.checked;
+            loadPeriods();
+        });
+    }
+    const btnGotoArchived = document.getElementById('btn-goto-archived-periods');
+    if (btnGotoArchived) {
+        btnGotoArchived.addEventListener('click', () => gotoArchivedPeriods());
+    }
 
     // Builder
     document.getElementById('builder-period-select').addEventListener('change', () => loadBuilderData());
@@ -558,6 +570,9 @@ function setupDelegatedHandlers() {
             case 'deleteSettingsPopup': deleteSettingsPopup(Number(target.dataset.excId)); break;
             case 'deleteException': deleteException(Number(target.dataset.id)); break;
             case 'updatePeriodStatus': updatePeriodStatus(Number(target.dataset.id), target.dataset.status); break;
+            case 'archivePeriod': archivePeriod(Number(target.dataset.id), target.dataset.name); break;
+            case 'unarchivePeriod': unarchivePeriod(Number(target.dataset.id)); break;
+            case 'deletePeriod': deletePeriod(Number(target.dataset.id), target.dataset.name); break;
             case 'closeAdminDayPopup': closeAdminDayPopup(); break;
             case 'toggleWorkerAssignment': toggleWorkerAssignment(Number(target.dataset.userId), target.dataset.date); break;
             case 'revokeInvitation': revokeInvitation(Number(target.dataset.id)); break;
@@ -1390,14 +1405,23 @@ async function importOpeningHours() {
 
 // --- Periods ---
 async function loadPeriods() {
-    const data = await api.get('/api/admin/periods');
+    const url = periodsIncludeArchived
+        ? '/api/admin/periods?include_archived=true'
+        : '/api/admin/periods';
+    const data = await api.get(url);
     const container = document.getElementById('periods-table-container');
 
-    const buildPending = (data || []).filter(p => p.status === 'closed').length;
+    // バッジ ⑤ は閉鎖中（status=closed）かつ未アーカイブの期間数を表示
+    const buildPending = (data || []).filter(
+        p => p.status === 'closed' && !p.is_archived
+    ).length;
     setTabBadge('builder', buildPending);
 
     if (!data || data.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>シフト期間はまだありません</p><p class="empty-state-hint">上のフォームから新しいシフト期間を作成してください</p></div>';
+        const msg = periodsIncludeArchived
+            ? '<p>シフト期間はまだありません</p><p class="empty-state-hint">上のフォームから新しいシフト期間を作成してください</p>'
+            : '<p>表示できるシフト期間はありません</p><p class="empty-state-hint">「アーカイブ済を表示」を有効にするとアーカイブ済みも見られます</p>';
+        container.innerHTML = `<div class="empty-state">${msg}</div>`;
         return;
     }
 
@@ -1409,22 +1433,167 @@ async function loadPeriods() {
         <table class="data-table">
             <thead><tr><th>名前</th><th>期間</th><th>ステータス</th><th>操作</th></tr></thead>
             <tbody>
-                ${data.map(p => `
-                    <tr>
-                        <td>${escapeHtml(p.name)}</td>
-                        <td>${p.start_date} 〜 ${p.end_date}</td>
-                        <td><span class="badge badge-${p.status}">${statusLabels[p.status] || p.status}</span></td>
-                        <td>
-                            ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
-                            ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
-                            ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
-                            <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
-                        </td>
-                    </tr>
-                `).join('')}
+                ${data.map(p => renderPeriodRow(p, statusLabels)).join('')}
             </tbody>
         </table>
     `;
+}
+
+function renderPeriodRow(p, statusLabels) {
+    const archivedBadge = p.is_archived
+        ? '<span class="badge" style="background:var(--color-neutral-200);color:var(--color-neutral-700);margin-left:6px;">アーカイブ済</span>'
+        : '';
+    const rowStyle = p.is_archived ? 'opacity:0.65;' : '';
+    const statusBadge = `<span class="badge badge-${p.status}">${statusLabels[p.status] || p.status}</span>${archivedBadge}`;
+
+    if (p.is_archived) {
+        // アーカイブ済の場合: 復元・完全削除のみ
+        return `
+            <tr style="${rowStyle}">
+                <td>${escapeHtml(p.name)}</td>
+                <td>${p.start_date} 〜 ${p.end_date}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="unarchivePeriod" data-id="${p.id}" title="アーカイブを解除して通常表示に戻します"><i data-lucide="archive-restore" style="width:13px;height:13px;"></i> 復元</button>
+                    <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;color:var(--color-danger-600,#dc2626);border-color:var(--color-danger-300,#fca5a5);" data-action="deletePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="シフト期間と関連データを完全に削除します"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> 完全削除</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // 通常表示（完全削除はアーカイブ後のみ可能なため、ここには配置しない — フェールセーフ）
+    return `
+        <tr>
+            <td>${escapeHtml(p.name)}</td>
+            <td>${p.start_date} 〜 ${p.end_date}</td>
+            <td>${statusBadge}</td>
+            <td>
+                ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
+                ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
+                ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
+                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
+                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="archivePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="一覧から非表示にします（後で復元・完全削除が可能）"><i data-lucide="archive" style="width:13px;height:13px;"></i> アーカイブ</button>
+            </td>
+        </tr>
+    `;
+}
+
+async function archivePeriod(periodId, periodName) {
+    showConfirmDialog(
+        `「${periodName}」をアーカイブしますか？`,
+        'アーカイブ済の期間は一覧から非表示になります。「アーカイブ済を表示」トグルから後で確認・復元できます。',
+        'btn-primary',
+        'アーカイブする',
+        async () => {
+            try {
+                await api.post(`/api/admin/periods/${periodId}/archive`, {});
+                showToast('アーカイブしました', 'success');
+                await loadPeriods();
+                await loadBuilderPeriodSelect();
+            } catch (e) {
+                showToast(`アーカイブに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+async function unarchivePeriod(periodId) {
+    try {
+        await api.post(`/api/admin/periods/${periodId}/unarchive`, {});
+        showToast('アーカイブを解除しました', 'success');
+        await loadPeriods();
+        await loadBuilderPeriodSelect();
+    } catch (e) {
+        showToast(`アーカイブ解除に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function deletePeriod(periodId, periodName) {
+    // 削除前に影響範囲を取得
+    let impact;
+    try {
+        impact = await api.get(`/api/admin/periods/${periodId}/impact`);
+    } catch (e) {
+        showToast(`影響範囲の取得に失敗しました: ${e.message}`, 'error');
+        return;
+    }
+
+    const lines = [];
+    lines.push('<strong>この操作は取り消せません。</strong>');
+    lines.push('');
+    lines.push('削除される関連データ:');
+    lines.push(`・提出されたシフト希望: ${impact.submissions} 件`);
+    lines.push(`・確定済シフト枠: ${impact.entries} 件`);
+    if (impact.synced_entries > 0) {
+        lines.push(`　（うち Google カレンダー同期済: ${impact.synced_entries} 件 — best-effort で削除を試みます）`);
+    }
+    if (impact.vacancies > 0) {
+        lines.push(`・急募リクエスト: ${impact.vacancies} 件`);
+    }
+    if (impact.change_logs > 0) {
+        lines.push(`・シフト変更履歴: ${impact.change_logs} 件`);
+    }
+    if (impact.reminders > 0) {
+        lines.push(`・リマインダ送信記録: ${impact.reminders} 件`);
+    }
+
+    showConfirmDialog(
+        `「${periodName}」を完全に削除しますか？`,
+        lines.join('<br>'),
+        'btn-danger',
+        '完全に削除する',
+        async () => {
+            try {
+                const result = await api.delete(`/api/admin/periods/${periodId}`);
+                const summary = result && result.cleanup_summary ? result.cleanup_summary : {};
+                let msg = '完全に削除しました';
+                const notes = [];
+                if (summary.calendar_events_failed > 0) {
+                    notes.push(`カレンダー削除失敗: ${summary.calendar_events_failed} 件`);
+                }
+                if (summary.calendar_events_skipped > 0) {
+                    notes.push(`カレンダー未同期スキップ: ${summary.calendar_events_skipped} 件`);
+                }
+                if (notes.length > 0) {
+                    msg += `（${notes.join('、')}）`;
+                }
+                showToast(msg, 'success');
+                await loadPeriods();
+                await loadBuilderPeriodSelect();
+            } catch (e) {
+                showToast(`削除に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
+}
+
+function gotoArchivedPeriods() {
+    // シフト期間タブへ遷移し、アーカイブ済を表示する
+    periodsIncludeArchived = true;
+    const cb = document.getElementById('periods-include-archived');
+    if (cb) cb.checked = true;
+    switchTab('periods');
+    loadPeriods();
+}
+
+async function promptArchiveAfterConfirm(period) {
+    if (!period || period.is_archived) return;
+    showConfirmDialog(
+        'シフトを確定しました',
+        `このシフト期間「${escapeHtml(period.name)}」をアーカイブしますか？<br>アーカイブ済の期間は一覧から非表示になります（後で復元可能）。`,
+        'btn-primary',
+        'アーカイブする',
+        async () => {
+            try {
+                await api.post(`/api/admin/periods/${period.id}/archive`, {});
+                showToast('アーカイブしました', 'success');
+                await loadPeriods();
+                await loadBuilderPeriodSelect();
+            } catch (e) {
+                showToast(`アーカイブに失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 }
 
 async function createPeriod() {
@@ -1741,10 +1910,16 @@ async function updatePeriodStatus(id, status) {
 
 // --- Builder ---
 async function loadBuilderPeriodSelect() {
+    // Builder dropdown は archived を除外（include_archived は default false）
     const periods = await api.get('/api/admin/periods');
     const select = document.getElementById('builder-period-select');
+    const previousValue = select.value;
     select.innerHTML = '<option value="">選択してください</option>' +
         periods.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.start_date} 〜 ${p.end_date})</option>`).join('');
+    // 直前に選択していた期間がアーカイブされた場合の selection クリア
+    if (previousValue && Array.from(select.options).some(o => o.value === previousValue)) {
+        select.value = previousValue;
+    }
 }
 
 async function loadBuilderData() {
@@ -2492,6 +2667,14 @@ async function confirmSchedule() {
                 if (needsAction > 0) msg += `, ${needsAction}件は本人によるカレンダー追加が必要`;
                 if (failed > 0) msg += `, ${failed}件失敗`;
                 showToast(msg, success > 0 ? 'success' : 'warning');
+
+                // Refresh schedule view to reflect new confirmed state
+                await loadBuilderData();
+
+                // 確定後にアーカイブ確認ダイアログを表示
+                if (result.period) {
+                    promptArchiveAfterConfirm(result.period);
+                }
             } catch (e) {
                 showToast(`確定に失敗しました: ${e.message}`, 'error');
             }
