@@ -11,8 +11,19 @@ from alembic import context
 config = context.config
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
-fileConfig(config.config_file_name)
+# disable_existing_loggers=False:
+#   デフォルト True のままだと、本ファイル経由で Alembic が起動した瞬間に
+#   既存の logger（特に api/index.py の `api.index` logger）が disabled に
+#   される。結果として `_run_auto_migration()` の logger.info("Auto-migration
+#   completed") も logger.error("Auto-migration FAILED") も本番ログから
+#   完全に消え、migration が成功したのか失敗したのか観測する手段が
+#   無くなる。Vercel での auto-migration 不発が長期に温存されたのは
+#   この観測性欠落が直接の原因。
+# encoding='utf-8':
+#   alembic.ini に日本語コメントを書いた際、Windows の cp932 で読み込み
+#   失敗するため明示。Vercel Linux のデフォルトは UTF-8 なので本番は
+#   無くても動くが、開発環境差を吸収するために統一する。
+fileConfig(config.config_file_name, disable_existing_loggers=False, encoding='utf-8')
 logger = logging.getLogger('alembic.env')
 
 
