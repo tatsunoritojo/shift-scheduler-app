@@ -82,6 +82,9 @@ yarn-error.log*
 *.mov
 *.avi
 
+# LP redesign v2 の Worker 目線スクショ (個人情報含む可能性、公開前に差し替え予定)
+docs/lp-redesign-v2/*.jpg
+
 # Claude Code ローカル状態
 .claude/scheduled_tasks.lock
 .claude/settings.local.json

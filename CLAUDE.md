@@ -16,6 +16,12 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 
 次フェーズ: ClaudeDesign に Phase 2a-3 修正依頼を投げる。Scene 1 + Scene 2 + Scene 4 のコピーを「実装と整合する形」に微調整するのみ（核となる動作は全て実装側で支えられている）。
 
+**次セッション着手用ポインタ:**
+- ✉️ 投げる依頼書: `docs/lp-redesign-v2/phase-2a-3-fix-request.md` — 「プロンプト本文（ここから下をコピペ）」セクションをそのまま ClaudeDesign に渡せばよい状態
+- 📜 前セッション履歴: `docs/lp-redesign-v2/phase-2a-fix-request.md` — Phase 2a-2 修正依頼の履歴（既反映済）
+- 🧭 fact 判定根拠: `docs/sequence-diagrams/02-worker-monthly-flow.md`（Worker UI Free/Busy 連動の正確な経路を追記済、PR #25）
+- ⚠️ 既存問題（無関係）: `tests/test_reminder.py::TestSubmissionReminders::test_auto_submission_reminders` は日付固定（2026-04-30）で常時失敗。LP 対応とは無関係なので別 PR で修正する
+
 ## アクティブな対応事項（次セッション着手用）
 
 **最終更新: 2026-04-26**

@@ -1,0 +1,2415 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>シフリー — 月末が、少しだけ早く終わる。[v1.5 BRIGHTBLUE]</title>
+<!-- Phase 1.5 · BRIGHTBLUE patch · 2026-04-23 · structure unchanged, palette swapped only -->
+<meta name="description" content="シフリーは、Google カレンダーに直接つながる無料のシフト管理ツール。希望を集め、配置し、戻す。月末を、少しだけ早く終わらせるために。"/>
+<link rel="icon" href="assets/icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Shared brand tokens (LP + App) */
+  --paper:        #F5F3EC;
+  --paper-2:      #ECE8DB;
+  --paper-3:      #DCD8C8;
+  --ink:          #0A0A0A;
+  --ink-2:        #262622;
+  --ink-mute:     #5E5D56;
+  --ink-quiet:    #9C9A8E;
+  --rule:         #BEBAA8;
+  --brand:        #00CCFF;
+  --brand-deep:   #0088B5;
+  --brand-ink:    #003A55;
+  --spark:        #FFE626;
+  --warn:         #9B2F23;
+  /* alias — legacy reference, points to brand-deep so copy on paper stays legible */
+  --accent:       var(--brand-deep);
+
+  --mincho: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans:   "Zen Kaku Gothic New", "Hiragino Sans", system-ui, sans-serif;
+  --mono:   "JetBrains Mono", ui-monospace, monospace;
+  --disp:   "Fraunces", "Shippori Mincho", serif;
+
+  --page-pad: clamp(20px, 4.2vw, 72px);
+}
+
+/* === BRIGHTBLUE patch (Phase 1.5) =============================================
+   Shippori Mincho becomes heavier on brand-blue fields (light-on-color needs
+   thicker strokes to read). Scoped to elements inheriting --on-brand context. */
+.on-brand,
+.on-brand h1,
+.on-brand h2,
+.on-brand h3,
+.on-brand h4 {
+  font-weight: 700;
+}
+/* Accent recolour of the 朱 ring / chip / hatch via variable swap.
+   Structure is unchanged — only the color token reference moves. */
+:root{
+  --hinge-ring:   var(--spark);
+  --wish-hatch:   rgba(245,243,236,0.85); /* white 0.85 on brand */
+  --chip-fill:    var(--spark);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0; background:var(--paper); color:var(--ink)}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  font-feature-settings:"palt";
+  font-size:15px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit; text-decoration:none}
+button{font:inherit; cursor:pointer}
+
+/* skip link */
+.skip{
+  position:absolute; left:-9999px; top:0;
+  background:var(--ink); color:var(--paper);
+  padding:8px 14px; font-family:var(--mono); font-size:12px;
+}
+.skip:focus{left:12px; top:12px; z-index:100}
+
+/* ============ MASTHEAD (fixed thin bar) ============ */
+.masthead{
+  position:fixed; top:0; left:0; right:0; z-index:40;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center; gap:18px;
+  padding:14px var(--page-pad) 12px;
+  background:rgba(245,243,236,0.82);
+  backdrop-filter:saturate(120%) blur(6px);
+  -webkit-backdrop-filter:saturate(120%) blur(6px);
+  border-bottom:1px solid var(--rule);
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.14em;
+  color:var(--ink-mute);
+}
+.masthead .lock{display:inline-flex; align-items:center; gap:10px}
+.masthead .mark{
+  width:18px; height:18px; border-radius:4px; background:var(--ink);
+  position:relative; display:inline-block;
+}
+.masthead .mark::before{
+  content:""; position:absolute; left:4px; top:3px; width:7px; height:2px; background:var(--paper); border-radius:1px;
+  box-shadow: 0 3px 0 var(--paper);
+}
+.masthead .mark::after{
+  content:""; position:absolute; right:3px; top:3px; width:2px; height:10px; background:var(--paper);
+  border-bottom-right-radius:6px; transform:rotate(18deg);
+}
+.masthead .nm{
+  font-family:var(--mincho); font-weight:600; font-size:14px; letter-spacing:.16em;
+  color:var(--ink);
+}
+.masthead .mid{text-align:center; letter-spacing:.3em}
+.masthead .right{text-align:right}
+.masthead .cta{
+  display:inline-block; padding:5px 11px; border:1px solid var(--ink); color:var(--ink);
+  text-decoration:none;
+}
+.masthead .cta:hover{background:var(--ink); color:var(--paper)}
+
+/* ============ HERO ============ */
+.hero{
+  position:relative;
+  height:100svh;
+  min-height:640px;
+  padding: 72px var(--page-pad) 28px;
+  display:grid;
+  grid-template-columns: 5fr 7fr;
+  gap: clamp(28px, 3vw, 56px);
+  align-items:stretch;
+  border-bottom:1px solid var(--rule);
+}
+
+.hero .copy{
+  align-self:end;
+  padding-bottom: clamp(24px, 6vh, 80px);
+  position:relative;
+  z-index:2;
+}
+.hero .eyebrow{
+  font-family:var(--mono);
+  font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--accent);
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:24px;
+}
+.hero .eyebrow::before{content:""; width:36px; height:1px; background:var(--accent); display:inline-block}
+.hero h1{
+  font-family:var(--mincho);
+  font-weight:600;
+  font-size: clamp(44px, 6.4vw, 96px);
+  line-height:1.05;
+  letter-spacing:-0.01em;
+  margin:0 0 22px;
+  color:var(--ink);
+}
+.hero h1 .en{
+  display:block;
+  font-family:var(--disp);
+  font-weight:300;
+  font-style:italic;
+  font-size: clamp(20px, 2vw, 34px);
+  color:var(--ink-mute);
+  margin-top:18px;
+  letter-spacing:-0.005em;
+}
+.hero .lede{
+  font-family:var(--mincho);
+  font-size: clamp(14px, 1.1vw, 17px);
+  line-height:1.95;
+  color:var(--ink-2);
+  max-width: 440px;
+  margin:0 0 26px;
+}
+.hero .actions{
+  display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+}
+.hero .btn{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:13px 20px;
+  font-family:var(--mincho);
+  font-size:15px;
+  color:var(--paper);
+  background:var(--ink);
+  border:1px solid var(--ink);
+  transition: background .2s, color .2s, transform .2s;
+}
+.hero .btn:hover{background:var(--accent); border-color:var(--accent)}
+.hero .btn .arr{font-family:var(--disp); font-style:italic; font-size:16px; transition:transform .2s}
+.hero .btn:hover .arr{transform:translateX(3px)}
+.hero .btn.ghost{
+  background:transparent; color:var(--ink);
+}
+.hero .btn.ghost:hover{background:var(--ink); color:var(--paper)}
+.hero .actions .note{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.15em; color:var(--ink-mute);
+}
+
+.hero .tag-row{
+  margin-top:28px;
+  display:flex; gap:10px; flex-wrap:wrap;
+  font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ink-mute);
+}
+.hero .tag-row span{
+  border:1px solid var(--rule); padding:4px 9px;
+}
+
+/* ---- field (right side) ---- */
+.field-wrap{
+  position:relative;
+  align-self:center;
+  height: min(68vh, 560px);
+  margin-top: 40px;
+}
+.field{
+  position:absolute; inset:0;
+  /* leave margin for rule labels */
+  padding: 28px 16px 24px 34px;
+}
+.field .lbl-days{
+  position:absolute; left:34px; right:16px; top:6px;
+  display:grid; grid-template-columns:repeat(7,1fr); gap:8px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.15em; color:var(--ink-quiet);
+  text-align:center;
+}
+.field .lbl-days span.hinge{color:var(--accent)}
+.field .lbl-weeks{
+  position:absolute; left:6px; top:46px; bottom:24px;
+  display:grid; grid-template-rows:repeat(5,1fr); gap:8px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.15em; color:var(--ink-quiet);
+  align-items:center;
+}
+.field .month-mark{
+  position:absolute; left:6px; top:6px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ink-quiet);
+  display:flex; flex-direction:column; gap:2px; align-items:flex-start;
+  line-height:1.1;
+}
+.field .month-mark .mm-jp{font-size:9px; color:var(--ink-quiet); opacity:.75}
+.field .month-mark .mm-en{color:var(--accent)}
+.cell.other-month{opacity:.55}
+.cell.other-month .n{color:var(--ink-quiet)}
+.field .grid{
+  position:relative;
+  height:100%;
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  grid-template-rows:repeat(5,1fr);
+  gap:8px;
+}
+.cell{
+  position:relative;
+  background:var(--paper);
+  border:1px solid var(--rule);
+  overflow:hidden;
+}
+.cell .n{
+  position:absolute; top:5px; left:6px;
+  font-family:var(--mono); font-size:9.5px; color:var(--ink-quiet); letter-spacing:.05em;
+}
+.cell .chip{
+  position:absolute; left:4px; right:4px; bottom:4px;
+  height:5px; background:var(--spark);
+  transform:scaleX(0); transform-origin:left;
+}
+.cell .hatch{
+  position:absolute; inset:2px;
+  background: repeating-linear-gradient(-45deg, transparent 0 5px, rgba(0,136,181,.42) 5px 6px);
+  opacity:0;
+}
+.cell.hinge{outline: 1px solid transparent; background: rgba(255,230,38,0.18)}
+.cell.closed{background:var(--paper-2)}
+.cell.closed .n{color:var(--ink-quiet)}
+.cell.closed::after{
+  content:""; position:absolute; inset:0;
+  background: repeating-linear-gradient(-45deg, transparent 0 7px, rgba(156,154,142,.35) 7px 8px);
+}
+
+/* zoom frame (hinge marker) */
+.zoom-frame{
+  position:absolute;
+  border:1.5px solid var(--spark);
+  pointer-events:none;
+  opacity:0;
+}
+.zoom-frame::before, .zoom-frame::after,
+.zoom-frame .c1, .zoom-frame .c2{
+  content:""; position:absolute; background:var(--spark);
+}
+.zoom-frame::before{left:-1px; top:-1px; width:10px; height:1px}
+.zoom-frame::after{left:-1px; top:-1px; width:1px; height:10px}
+.zoom-frame .c1{right:-1px; bottom:-1px; width:10px; height:1px}
+.zoom-frame .c2{right:-1px; bottom:-1px; width:1px; height:10px}
+.zoom-frame .lbl{
+  position:absolute; left:0; bottom:-22px;
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.18em;
+  color:var(--ink); background:var(--spark); padding:2px 6px;
+  white-space:nowrap;
+}
+
+/* timeline marks under field */
+.field .axis{
+  position:absolute; left:34px; right:16px; bottom:2px;
+  height:18px;
+  display:grid; grid-template-columns: repeat(4, 1fr);
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--ink-quiet);
+  align-items:end;
+}
+.field .axis span{border-top:1px solid var(--rule); padding-top:3px}
+.field .axis span.active{color:var(--accent); border-top-color:var(--accent)}
+
+/* bottom bar of hero (craft signal) */
+.hero-foot{
+  position:absolute; left:var(--page-pad); right:var(--page-pad); bottom:14px;
+  display:flex; justify-content:space-between; align-items:center; gap:18px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--ink-mute);
+  border-top:1px solid var(--rule);
+  padding-top:12px;
+}
+.hero-foot .phase{display:flex; gap:16px; align-items:center}
+.hero-foot .dot{width:5px;height:5px;background:var(--accent);border-radius:50%;display:inline-block}
+.hero-foot button.skip-btn{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.15em;
+  background:transparent; border:1px solid var(--ink-mute); color:var(--ink-mute);
+  padding:5px 11px;
+}
+.hero-foot button.skip-btn:hover{color:var(--ink); border-color:var(--ink)}
+.hero-foot button.skip-btn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+
+/* ============ HERO ANIMATION — 9s loop ============ */
+/* driven entirely by CSS animations on cells with --i stagger */
+
+/* Phase beats (9s total):
+   0.0 – 1.5s  FIELD OPENS (empty grid breathes)
+   1.5 – 4.0s  WISHES (hatch appears, staggered)
+   4.0 – 6.8s  ASSIGN (black chip fills bottom to full)
+   6.8 – 9.0s  HOLD + hinge zoom-frame flickers in
+*/
+
+@keyframes hatchIn{
+  0%, 14%   { opacity: 0 }
+  22%, 40%  { opacity: 1 }
+  44%       { opacity: .85 }
+  75%, 100% { opacity: 0 }
+}
+@keyframes chipIn{
+  0%, 40%   { transform:scaleX(0); background: var(--ink) }
+  48%, 70%  { transform:scaleX(1); background: var(--ink) }
+  78%, 100% { transform:scaleX(0); background: var(--ink) }
+}
+@keyframes cellBreathe{
+  0%, 100%{ border-color: var(--rule); background: var(--paper) }
+  50%    { border-color: #a8a490; background: var(--paper) }
+}
+@keyframes frameIn{
+  0%, 72%    { opacity:0; transform: scale(.9) }
+  78%, 92%   { opacity:1; transform: scale(1) }
+  96%, 100%  { opacity:0; transform: scale(1.04) }
+}
+@keyframes hingeRing{
+  0%, 68% { box-shadow: inset 0 0 0 0 rgba(255,230,38,0) }
+  74%, 92% { box-shadow: inset 0 0 0 2px #FFE626 }
+  96%, 100% { box-shadow: inset 0 0 0 0 rgba(255,230,38,0) }
+}
+@keyframes axisTick{
+  0%, 1%  { color: var(--ink-quiet); border-top-color:var(--rule)}
+  3%, 22% { color: var(--accent); border-top-color:var(--accent)}
+  25%, 100%{color: var(--ink-quiet); border-top-color:var(--rule)}
+}
+
+.anim-on .cell:not(.hinge){
+  animation: cellBreathe 9s linear infinite;
+}
+.anim-on .cell.hinge{
+  background: rgba(255,230,38,0.28) !important;
+}
+.anim-on .cell.wish .hatch{
+  animation: hatchIn 9s ease-in-out infinite;
+  animation-delay: calc(var(--i,0) * 60ms);
+}
+.anim-on .cell.assign .chip{
+  animation: chipIn 9s cubic-bezier(.6,.1,.2,1) infinite;
+  animation-delay: calc(var(--i,0) * 45ms);
+}
+.anim-on .zoom-frame{
+  animation: frameIn 9s ease-in-out infinite;
+}
+.anim-on .cell.hinge{
+  animation: cellBreathe 9s linear infinite, hingeRing 9s ease-in-out infinite;
+}
+.anim-on .axis span:nth-child(1){animation: axisTick 9s infinite; animation-delay: 0s}
+.anim-on .axis span:nth-child(2){animation: axisTick 9s infinite; animation-delay: 2.25s}
+.anim-on .axis span:nth-child(3){animation: axisTick 9s infinite; animation-delay: 4.5s}
+.anim-on .axis span:nth-child(4){animation: axisTick 9s infinite; animation-delay: 6.75s}
+
+/* paused state */
+.anim-paused *{
+  animation-play-state: paused !important;
+}
+
+/* static (reduced-motion / skip): show final composed state */
+.anim-off .cell.wish .hatch{opacity: 1}
+.anim-off .cell.assign .chip{transform:scaleX(1)}
+.anim-off .zoom-frame{opacity:1}
+.anim-off .cell.hinge{box-shadow: inset 0 0 0 1.5px rgba(0,136,181,.85)}
+.anim-off .axis span.default-active{color:var(--accent); border-top-color:var(--accent)}
+
+@media (prefers-reduced-motion: reduce){
+  .anim-on .cell, .anim-on .cell .hatch, .anim-on .cell .chip,
+  .anim-on .zoom-frame, .anim-on .cell.hinge, .anim-on .axis span{
+    animation:none !important;
+  }
+  .anim-on .cell.wish .hatch{opacity:1}
+  .anim-on .cell.assign .chip{transform:scaleX(1)}
+  .anim-on .zoom-frame{opacity:1}
+  .anim-on .cell.hinge{box-shadow: inset 0 0 0 1.5px rgba(0,136,181,.85)}
+}
+
+/* ============ CONNECTOR A ============ */
+/* Hero → Scene 1 handoff: macro (field) → micro (single hinge cell) → scene 1 */
+
+.connector{
+  position:relative;
+  height: 200vh;  /* scroll distance — compressed 1/3 per addendum (1/2 of original for readability) */
+}
+.connector-sticky{
+  position:sticky; top:0;
+  height:100vh;
+  overflow:hidden;
+  background:var(--paper);
+  /* progress variable set by JS (fallback) or scroll-timeline */
+  --p: 0;
+}
+.connector-sticky .progress-rail{
+  position:absolute; top:56px; left:var(--page-pad); right:var(--page-pad);
+  height:1px; background:var(--rule); z-index:5;
+}
+.connector-sticky .progress-rail::after{
+  content:""; position:absolute; left:0; top:0; height:1px; background:var(--accent);
+  width: calc(var(--p) * 100%);
+  transform-origin:left;
+}
+.connector-sticky .scale-readout{
+  position:absolute; top:34px; left:var(--page-pad);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; color:var(--ink-mute);
+}
+.connector-sticky .scale-readout b{color:var(--accent); font-weight:500}
+.connector-sticky .frame-readout{
+  position:absolute; top:34px; right:var(--page-pad);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; color:var(--ink-mute);
+}
+
+/* macro stage: the same 7×5 field, transformed */
+.macro-stage{
+  position:absolute; inset:72px var(--page-pad) 80px;
+  display:grid; place-items:center;
+  perspective: 1200px;
+}
+.macro-field{
+  position:relative;
+  width: min(74vw, 920px);
+  aspect-ratio: 16/10;
+  /* origin = hinge cell (col 2 of 7, row 2 of 5) → roughly 35% x, 30% y */
+  transform-origin: 21.4% 30%;
+  /* --s is now driven by JS (staged: 4 dwells + 3 transits) */
+  --s: 1;
+  transform: scale(var(--s));
+  transition: transform 80ms linear;
+}
+.macro-field .grid{
+  position:absolute; inset:0;
+  display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(5,1fr); gap:8px;
+}
+.macro-field .mc{
+  background:var(--paper); border:1px solid var(--rule); position:relative; overflow:hidden;
+}
+.macro-field .mc.wish::after{
+  content:""; position:absolute; inset:3px;
+  background: repeating-linear-gradient(-45deg, transparent 0 5px, rgba(0,136,181,.42) 5px 6px);
+}
+.macro-field .mc.assign::before{
+  content:""; position:absolute; left:4px; right:4px; bottom:4px; height:6px; background:var(--ink);
+}
+.macro-field .mc.closed{background:var(--paper-2)}
+.macro-field .mc.closed::after{
+  content:""; position:absolute; inset:0;
+  background: repeating-linear-gradient(-45deg, transparent 0 7px, rgba(156,154,142,.35) 7px 8px);
+}
+/* HINGE CELL — the 05/14 hinge with embedded detail */
+.macro-field .mc.hinge{
+  outline: 1.5px solid var(--ink);
+  outline-offset: -1px;
+  background: rgba(255, 230, 38, 0.28);
+  overflow:hidden;
+}
+.macro-field .mc.hinge::before{content:none}
+.macro-field .mc.hinge .detail{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  /* detail fades in during T2 (0.30→0.50), holds through D3, fades during T3 (0.70→0.86) */
+  opacity: calc( min(1, max(0, (var(--p) - 0.30)) * 5) - max(0, (var(--p) - 0.70)) * 6 );
+}
+.macro-field .mc.hinge .detail .hd{
+  padding: 4% 6%;
+  border-bottom: 0.6px solid var(--rule);
+  display:flex; justify-content:space-between; align-items:baseline;
+}
+.macro-field .mc.hinge .detail .hd .d{
+  font-family:var(--mincho); font-weight:600; font-size: 11px;
+  color:var(--ink);
+}
+.macro-field .mc.hinge .detail .hd .t{
+  font-family:var(--mono); font-size:7px; color:var(--ink-mute); letter-spacing:.1em;
+}
+.macro-field .mc.hinge .detail .body{
+  padding: 5% 6%;
+  display:flex; flex-direction:column; gap:3%;
+  flex:1;
+}
+.macro-field .mc.hinge .detail .row{
+  display:flex; align-items:center; gap:4%;
+}
+.macro-field .mc.hinge .detail .row .lab{
+  font-family:var(--mono); font-size:6.5px; color:var(--ink-mute); letter-spacing:.1em; width:24%;
+}
+.macro-field .mc.hinge .detail .row .bar{
+  height: 6%; flex:1; background:var(--paper-3); position:relative;
+  min-height: 2px;
+}
+.macro-field .mc.hinge .detail .row .bar i{
+  position:absolute; left:0; top:0; bottom:0; background:var(--ink); width: 40%;
+}
+.macro-field .mc.hinge .detail .row .bar i.acc{background:var(--accent); left:40%; width:16%}
+.macro-field .mc.hinge .detail .row .bar i.q{background:var(--ink-quiet); left:56%; width:8%}
+.macro-field .mc.hinge .detail .row .bar i.full{width:58%}
+.macro-field .mc.hinge .detail .row .val{
+  font-family:var(--mono); font-size:6px; color:var(--ink-mute); letter-spacing:.08em;
+}
+.macro-field .mc.hinge .detail .toggle{
+  display:flex; align-items:center; gap:5%; margin-top:auto;
+}
+.macro-field .mc.hinge .detail .toggle .sw{
+  width:14%; aspect-ratio: 2/1; background:var(--accent); position:relative;
+  border-radius: 99px; min-width: 12px;
+}
+.macro-field .mc.hinge .detail .toggle .sw::after{
+  content:""; position:absolute; right:5%; top:10%; bottom:10%; aspect-ratio:1/1; background:var(--paper); border-radius:50%;
+}
+.macro-field .mc.hinge .detail .toggle .lab2{
+  font-family:var(--mincho); font-size:7.5px; color:var(--ink); font-weight:600;
+}
+
+/* annotation badges that appear during zoom */
+.macro-stage .annot{
+  position:absolute;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; color:var(--ink-mute);
+  display:flex; align-items:center; gap:10px;
+  /* annots show only during D1 (0→0.18) */
+  opacity: calc( (0.18 - var(--p)) * 6 );
+  transition: opacity 120ms;
+  pointer-events:none;
+}
+.macro-stage .annot b{color:var(--accent); font-weight:500; font-family:var(--mono)}
+.macro-stage .annot::before{content:""; width:26px; height:1px; background:var(--ink-mute)}
+.macro-stage .annot.a1{ top: 30%; left: 3vw; }
+.macro-stage .annot.a2{ top: 58%; right: 3vw; flex-direction:row-reverse; }
+.macro-stage .annot.a2::before{background:var(--ink-mute)}
+
+/* when t > 0.6, we fade out the field frame lines so only the hinge's interior fills */
+.connector-sticky .field-fade{
+  position:absolute; inset:0; background: var(--paper); pointer-events:none;
+  opacity: calc( max(0, var(--p) - 0.80) * 5 );
+}
+
+/* ============ DWELL COPY — story beats that crossfade with progress ============ */
+.dwell-copy{
+  position:absolute; left: var(--page-pad); right: var(--page-pad);
+  bottom: 68px;
+  display:grid; grid-template-columns: 180px 1fr; gap: 32px;
+  pointer-events:none;
+  z-index: 6;
+}
+.dwell-copy .beat{
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--mincho);
+  font-weight: 600;
+  font-size: clamp(22px, 2.3vw, 32px);
+  line-height: 1.45;
+  color: var(--ink);
+  max-width: 720px;
+  letter-spacing: -0.005em;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 260ms ease, transform 340ms cubic-bezier(.2,0,.1,1);
+}
+.dwell-copy .beat .mark{
+  display:block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .22em;
+  color: var(--ink-mute);
+  margin-bottom: 10px;
+  font-weight: 400;
+}
+.dwell-copy .beat .mark em{font-style:normal; color:var(--ink); font-weight:500}
+.dwell-copy .beat.is-active{opacity:1; transform:translateY(0)}
+.dwell-copy .beat em.spark{
+  font-style:normal;
+  background: var(--spark);
+  padding: 0 .12em;
+  color: var(--ink);
+  font-weight: 700;
+}
+.dwell-copy .chapter-rail{
+  grid-column: 1;
+  grid-row: 1;
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  color: var(--ink-quiet);
+  align-self: end;
+}
+.dwell-copy .chapter-rail .r{display:flex;align-items:center;gap:8px;transition:color 220ms}
+.dwell-copy .chapter-rail .r .dot{
+  width: 5px; height: 5px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  border-radius: 50%;
+  transition: all 220ms;
+}
+.dwell-copy .chapter-rail .r.on{color:var(--ink)}
+.dwell-copy .chapter-rail .r.on .dot{background:var(--spark); border-color:var(--ink)}
+.dwell-copy .chapter-rail .r.past{color:var(--ink-mute)}
+.dwell-copy .chapter-rail .r.past .dot{background:var(--ink); border-color:var(--ink)}
+
+@media (max-width:860px){
+  .dwell-copy{grid-template-columns:1fr; bottom: 40px}
+  .dwell-copy .chapter-rail{flex-direction:row; gap:14px}
+  .dwell-copy .beat{font-size: 18px}
+}
+
+/* Reduced motion: show all beats stacked, no crossfade drama */
+@media (prefers-reduced-motion: reduce){
+  .dwell-copy .beat{opacity:1; transform:none; position:relative; grid-row:auto; margin-bottom: 16px}
+  .dwell-copy .beat:nth-child(n+2){display:none}
+  .dwell-copy .beat.is-active{display:block}
+}
+
+/* scene 1 wireframe (underneath macro stage) */
+.scene1-wire{
+  position:absolute; inset:72px var(--page-pad) 80px;
+  display:grid; place-items:center;
+  opacity: calc( max(0, var(--p) - 0.88) * 9 );
+  pointer-events: none;
+}
+.scene1-card{
+  width: min(74vw, 920px);
+  aspect-ratio: 16/10;
+  position:relative;
+  background:var(--paper);
+  border:1px solid var(--ink);
+  padding: 4% 4.5%;
+  display:grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 2.4%;
+}
+.scene1-card .wtag{
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--accent);
+}
+.scene1-card h3{
+  margin:0;
+  font-family:var(--mincho); font-weight:600; font-size: clamp(24px, 3vw, 44px);
+  line-height:1.2; letter-spacing:-0.005em;
+}
+.scene1-card .lead{
+  font-family:var(--mincho); font-size: clamp(13px, 1vw, 16px); color:var(--ink-2); line-height:1.9;
+  max-width: 68%;
+}
+.scene1-card .stub{
+  background:var(--paper-2); border:1px dashed var(--rule);
+  position:relative; overflow:hidden;
+}
+.scene1-card .stub::before{
+  content:"IMG · 招待ランディング / 期間公開メール · Worker 目線";
+  position:absolute; inset:auto 0 14px; text-align:center;
+  font-family:var(--mono); font-size:11px; letter-spacing:.15em; color:var(--ink-mute);
+}
+.scene1-card .stub::after{
+  content:""; position:absolute; inset:0;
+  background: repeating-linear-gradient(-45deg, transparent 0 12px, rgba(156,154,142,0.14) 12px 13px);
+}
+.scene1-card .foot-row{
+  display:grid; grid-template-columns: auto 1fr auto; gap: 20px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.15em; color:var(--ink-mute);
+  border-top:1px solid var(--rule); padding-top: 14px;
+  align-items:center;
+}
+.scene1-card .foot-row b{color:var(--ink); font-weight:500}
+.scene1-card .foot-row .tline{height:1px; background:var(--rule); position:relative}
+.scene1-card .foot-row .tline::after{content:""; position:absolute; left:0; top:0; height:1px; background:var(--accent); width:16%}
+
+/* ============ AFTER-CONNECTOR placeholder (Scene 1 full) ============ */
+.scene1-full{
+  min-height: 100vh;
+  padding: var(--page-pad);
+  border-top:1px solid var(--rule);
+  background:var(--paper);
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items:start;
+}
+.scene1-full .l{
+  padding-top: 40px;
+  border-top: 2px solid var(--ink);
+}
+.scene1-full .l .tag{
+  font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--accent); margin-bottom:14px;
+}
+.scene1-full .l h2{
+  font-family:var(--mincho); font-weight:600; font-size: clamp(30px, 3.4vw, 52px);
+  line-height:1.2; letter-spacing:-0.005em; margin:0 0 24px;
+}
+.scene1-full .l p{
+  font-family:var(--mincho); font-size: clamp(14px, 1vw, 16px);
+  line-height:1.95; color:var(--ink-2); margin: 0 0 14px; max-width: 38ch;
+}
+.scene1-full .r{
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+}
+.scene1-full .r .stub{
+  background:var(--paper-2); border:1px dashed var(--rule);
+  aspect-ratio: 4/3;
+  position:relative; overflow:hidden;
+}
+.scene1-full .r .stub::before{
+  content:"PLACEHOLDER · Phase 2 で展開";
+  position:absolute; inset:auto 0 12px;
+  text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.15em; color:var(--ink-mute);
+}
+.scene1-full .r .stub::after{
+  content:""; position:absolute; inset:0;
+  background: repeating-linear-gradient(-45deg, transparent 0 14px, rgba(156,154,142,0.14) 14px 15px);
+}
+.scene1-full .r .caption{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--ink-mute);
+  margin-top:14px; display:flex; justify-content:space-between;
+}
+.scene1-full .r .caption b{color:var(--ink); font-weight:500}
+
+/* spacer so end of page is clean */
+.endspace{
+  padding: 80px var(--page-pad) 120px;
+  border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em; color:var(--ink-mute);
+  display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:18px;
+}
+.endspace b{color:var(--ink); font-weight:500; display:block; margin-bottom:6px}
+
+/* ============ MOBILE ============ */
+@media (max-width: 860px){
+  .hero{
+    grid-template-columns: 1fr;
+    height: auto; min-height: 100svh;
+    padding-top: 88px;
+  }
+  .hero .copy{padding-bottom: 24px}
+  .field-wrap{height: 52vh; min-height: 320px; margin-top: 0}
+  .hero-foot{position:static; margin-top: 28px}
+  .masthead .mid{display:none}
+  .scene1-full{grid-template-columns:1fr; gap: 32px}
+  .macro-stage .annot{display:none}
+  .connector{height: 170vh}
+}
+
+/* ============ SCENE 1 / SCENE 2 — Phase 2a-1 ============ */
+.scene{
+  position:relative;
+  padding: 112px var(--page-pad) 88px;
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  overflow: hidden;
+}
+.scene + .scene{ border-top: 1px solid var(--rule); }
+.scene-rail{
+  position:absolute; top: 28px; left: var(--page-pad); right: var(--page-pad);
+  display:flex; align-items:center; gap:12px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; color: var(--ink-mute);
+}
+.scene-rail .rail-num{font-weight:500; color:var(--ink); font-family:var(--disp); font-style:italic; font-size:18px; letter-spacing:0}
+.scene-rail .rail-dot{width:5px; height:5px; background:var(--ink); border-radius:50%}
+.scene-reprise{
+  position:absolute; top:24px; right: var(--page-pad);
+  display:flex; align-items:center; gap:10px;
+  font-family: var(--mono); font-size: 10px; letter-spacing:.18em; color: var(--ink-quiet);
+}
+.scene-reprise .reprise-cell{
+  display:inline-flex; align-items:center; justify-content:center;
+  width: 26px; height: 26px;
+  background: var(--spark);
+  color: var(--ink);
+  font-family: var(--mincho); font-weight: 700; font-size: 14px; letter-spacing:0;
+}
+.scene-reprise .reprise-cell .rn{line-height:1}
+.scene-reprise .reprise-date{color:var(--ink)}
+.scene-inner{
+  display:grid; grid-template-columns: 1fr 1.25fr; gap: 64px;
+  align-items:start; margin-top: 40px;
+}
+.scene-inner-2{ grid-template-columns: 1fr 1.4fr; }
+.scene-eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.22em; color:var(--ink-mute);
+  margin-bottom: 22px; display:flex; align-items:center; gap:10px;
+}
+.scene-eyebrow::before{content:""; width:28px; height:1px; background:var(--ink-mute)}
+.scene-h{
+  font-family: var(--mincho); font-weight: 700;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.22; letter-spacing: -0.01em;
+  margin: 0 0 28px;
+}
+.scene-h em{font-style:normal}
+.scene-h em.under{
+  background-image: linear-gradient(var(--spark), var(--spark));
+  background-repeat: no-repeat;
+  background-position: 0 84%;
+  background-size: 100% 36%;
+  padding: 0 .08em;
+}
+.scene-lede{
+  font-family: var(--mincho); font-size: 17px; line-height: 1.95; color: var(--ink);
+  margin: 0 0 18px;
+}
+.scene-body{
+  font-family: var(--mincho); font-size: 15px; line-height: 2; color: var(--ink-2);
+  margin: 0 0 28px; max-width: 540px;
+}
+.scene-body b{color:var(--ink); font-weight:600}
+.scene-tag-row{
+  display:flex; flex-wrap:wrap; gap: 18px; padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.scene-tag-row .kv{
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .15em; color: var(--ink-2);
+  display:flex; align-items:center; gap:8px;
+}
+.scene-tag-row .kv b{
+  color: var(--ink-mute); font-weight:400; font-size:9.5px;
+  letter-spacing: .22em;
+}
+.scene-foot{
+  margin-top: 72px; padding-top: 18px;
+  display:flex; align-items:center; gap: 18px;
+  border-top: 1px solid var(--ink);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing:.18em; color: var(--ink-mute);
+}
+.scene-foot .sf-num{color:var(--ink); font-weight:500}
+.scene-foot .sf-rule{flex:1; height:1px; background:var(--rule)}
+.scene-foot .pending{color:var(--ink-quiet)}
+
+/* ---- Scene 1 stage: inbox + mail-card + artefacts ---- */
+.scene-stage{position:relative; min-height: 520px}
+.inbox{
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  width: 84%;
+}
+.inbox-chrome{
+  display:flex; align-items:center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  font-family: var(--mono); font-size: 10px; letter-spacing:.12em; color:var(--ink-mute);
+}
+.inbox-chrome .ic-dot{width:8px; height:8px; border-radius:50%; background:var(--rule)}
+.inbox-chrome .ic-title{margin-left: 12px; color:var(--ink)}
+.inbox-chrome .ic-meta{margin-left:auto}
+.inbox-list{list-style:none; margin:0; padding:0}
+.inbox-list .mail{
+  display:grid; grid-template-columns: 64px 180px 1fr auto;
+  gap: 12px; padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px; color: var(--ink-2);
+  align-items:baseline;
+}
+.inbox-list .mail:last-child{border-bottom:0}
+.inbox-list .when{font-family:var(--mono); font-size:10px; color:var(--ink-quiet); letter-spacing:.1em}
+.inbox-list .who{font-family:var(--sans); font-weight:500; color:var(--ink-mute); font-size:12.5px}
+.inbox-list .subj{font-family:var(--mincho); color:var(--ink-2); font-size:14px; line-height:1.5}
+.inbox-list .mail.is-new{background:var(--paper); position:relative}
+.inbox-list .mail.is-new::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--spark);
+}
+.inbox-list .mail.is-new .who{color:var(--ink); font-weight:600}
+.inbox-list .mail.is-new .subj{color:var(--ink); font-weight:600}
+.inbox-list .tag{
+  background:var(--spark); color:var(--ink); padding:2px 6px;
+  font-family:var(--mono); font-size:9px; letter-spacing:.18em; font-weight:500;
+}
+
+.mail-card{
+  position: absolute; right: 0; top: 48px;
+  width: 56%;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 22px 24px 20px;
+  box-shadow: 14px 14px 0 0 var(--paper-2);
+}
+.mail-card .mc-head{
+  display:flex; justify-content:space-between; gap:16px;
+  font-family: var(--mono); font-size: 10px; letter-spacing:.12em; color:var(--ink-mute);
+  padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+}
+.mail-card .mc-head .mc-from{color:var(--ink)}
+.mail-card .mc-subj{
+  font-family: var(--mincho); font-weight:600; font-size: 18px; margin: 14px 0 10px;
+  letter-spacing: -0.005em;
+}
+.mail-card .mc-body{
+  font-family:var(--mincho); font-size: 13.5px; line-height: 1.95; color:var(--ink-2);
+  margin: 0 0 18px;
+}
+.mail-card .mc-cta{
+  display:inline-block;
+  background: var(--ink); color: var(--paper);
+  padding: 10px 18px;
+  font-family: var(--mono); font-size: 11px; letter-spacing:.15em;
+}
+.mail-card .mc-foot{
+  margin-top: 18px; padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mincho); font-size: 12px; color: var(--ink-mute); line-height:1.8;
+}
+.mail-card .mc-foot b{color:var(--ink); font-weight:600}
+
+.artefacts{
+  position:absolute; right: 4%; bottom: -28px;
+  display:flex; gap: 14px;
+}
+.art{
+  width: 86px; height: 118px; background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 8px;
+  font-family: var(--mono); font-size: 8px; letter-spacing:.1em; color:var(--ink-mute);
+  position:relative;
+  transition: transform .3s;
+}
+.art:hover{transform: translateY(-4px)}
+.art:nth-child(1){transform: rotate(-6deg)}
+.art:nth-child(2){transform: rotate(1deg) translateY(6px)}
+.art:nth-child(3){transform: rotate(7deg) translateY(-2px)}
+.art .art-tag{display:block; margin-bottom: 6px; color: var(--ink-mute)}
+.art .art-body{height: calc(100% - 20px); display:flex; flex-direction:column; gap:3px}
+.art-mini-cal{display:grid; grid-template-columns:repeat(6,1fr); gap:2px; height:100%}
+.art-mini-cal span{background:var(--paper-2)}
+.art-mini-cal span.h{background:var(--spark)}
+.art-pdf b{font-family:var(--mincho); font-size:9px; color:var(--ink); font-weight:600; line-height:1.3}
+.art-pdf span{color:var(--ink-mute); font-size:7px}
+.art-pdf i{display:block; height:2px; background:var(--rule); margin-top:4px; font-style:normal}
+.art-pdf i.short{width:60%}
+.art-txt{font-family:var(--mono); font-size:7px; line-height:1.6; color:var(--ink-2)}
+
+/* ---- Scene 2 stage: overlap visualisation ---- */
+.overlap{
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  padding: 24px 28px 20px;
+  position: relative;
+}
+.ov-title{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding-bottom: 14px; border-bottom: 1px solid var(--ink);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--ink-mute);
+}
+.ov-title .ov-date{font-family:var(--mincho); font-weight:700; color:var(--ink); font-size:18px; letter-spacing:0}
+.ov-title .ov-hours{color:var(--ink-2)}
+.ov-grid{display:flex; flex-direction:column; gap:16px; padding: 22px 0 12px}
+.ov-hours-row{
+  display:grid; grid-template-columns: 120px 1fr;
+  padding-bottom: 8px;
+}
+.ov-hours-row::before{content:""}
+.ov-hours-row{display:flex; gap: 0; padding-left: 120px}
+.ov-hours-row span{
+  flex: 1;
+  font-family:var(--mono); font-size: 9.5px; color:var(--ink-quiet); letter-spacing:.1em;
+}
+.ov-row{display:grid; grid-template-columns: 120px 1fr; align-items:center; gap: 16px; min-height: 32px}
+.ov-label{
+  font-family: var(--mono); font-size: 10px; letter-spacing: .2em; color: var(--ink-mute);
+  text-align: right; padding-right: 8px;
+  border-right: 1px solid var(--rule);
+  line-height: 1.2;
+}
+.ov-track{
+  position:relative; height: 26px;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(100%/12 - 1px), var(--rule) calc(100%/12 - 1px) calc(100%/12));
+  background-color: var(--paper);
+  border: 1px solid var(--rule);
+}
+.ov-evt{
+  position:absolute; top: 3px; bottom: 3px;
+  background: var(--ink); color: var(--paper);
+  padding: 0 8px; display:flex; align-items:center;
+  font-family: var(--mincho); font-size: 10px; font-weight:500;
+}
+.ov-shift-track{
+  background: repeating-linear-gradient(90deg, transparent 0 calc(100%/12 - 1px), var(--rule) calc(100%/12 - 1px) calc(100%/12));
+  background-color: var(--paper);
+}
+.ov-band{
+  position:absolute; top:0; bottom:0; left:0; right:0;
+  background: repeating-linear-gradient(30deg, transparent 0 5px, rgba(0,136,181,.32) 5px 6px);
+}
+.ov-intersect .ov-track{background: transparent; border-color: transparent; background-color: transparent}
+.ov-cut{
+  position:absolute; top:50%; height: 2px;
+  background: var(--warn, #9B2F23);
+  transform: translateY(-50%);
+}
+.ov-cut::before, .ov-cut::after{
+  content:""; position:absolute; left:50%; top:50%;
+  width: 12px; height: 2px; background: var(--warn, #9B2F23);
+  transform-origin:center;
+}
+.ov-cut::before{transform: translate(-50%,-50%) rotate(45deg)}
+.ov-cut::after{transform: translate(-50%,-50%) rotate(-45deg)}
+.ov-slot{
+  position:absolute; top: 3px; bottom: 3px;
+  background: var(--spark);
+  color: var(--ink); padding: 0 10px;
+  display:flex; align-items:center;
+  font-family: var(--mincho); font-weight:700; font-size: 11px;
+}
+.ov-foot{
+  margin-top: 10px; padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mincho); font-size: 12.5px; color: var(--ink-2); line-height:1.8;
+}
+.ov-foot b{color:var(--ink); font-weight:600}
+
+/* placeholder for Scene 3-6 */
+.scene-placeholder{
+  padding: 72px var(--page-pad) 72px;
+  background: var(--paper-2);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.scene-placeholder .sp-inner{
+  display:grid; grid-template-columns: 160px 1fr auto; gap: 40px; align-items:center;
+}
+.scene-placeholder .sp-num{
+  font-family: var(--disp); font-style:italic; font-weight:300;
+  font-size: 56px; color: var(--ink-mute); letter-spacing: -0.02em; line-height:1;
+}
+.scene-placeholder .sp-list{
+  display:grid; grid-template-columns: 1fr 1fr; gap: 8px 32px;
+  font-family: var(--mincho); font-size: 14px; color: var(--ink-2);
+}
+.scene-placeholder .sp-foot{
+  font-family: var(--mono); font-size: 10px; letter-spacing:.15em; color: var(--ink-mute);
+  text-align: right; line-height: 1.8;
+}
+
+@media (max-width: 860px){
+  .scene{padding: 96px 20px 68px}
+  .scene-inner, .scene-inner-2{grid-template-columns: 1fr; gap: 36px}
+  .mail-card{position:relative; top:0; width:100%; margin-top: 18px}
+  .artefacts{position:relative; right:auto; bottom:auto; margin-top: 40px; justify-content:center}
+  .scene-reprise{display:none}
+  .ov-row{grid-template-columns: 72px 1fr; gap: 10px}
+  .ov-hours-row{padding-left: 82px}
+  .ov-label{font-size: 9px}
+  .scene-placeholder .sp-inner{grid-template-columns:1fr; gap:18px}
+  .scene-placeholder .sp-list{grid-template-columns:1fr}
+}
+
+/* ============ SCENE 03–06 + CONNECTOR B — Phase 2a-2 ============ */
+
+/* Scene 3 — Roster */
+.roster{
+  background:var(--paper); border:1px solid var(--ink);
+  box-shadow: 14px 14px 0 0 var(--paper-2);
+}
+.roster-head{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding: 14px 18px; border-bottom: 1px solid var(--ink);
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em; color:var(--ink-mute);
+}
+.roster-head .rh-title{color:var(--ink); font-family:var(--mincho); font-weight:700; font-size:16px; letter-spacing:0}
+.roster-head .rh-meta b{color:var(--warn, #9B2F23); font-weight:600}
+.roster-list{list-style:none; margin:0; padding:0}
+.roster-list .rs{
+  display:grid; grid-template-columns: 1fr 110px 14px 1.2fr;
+  align-items:center; gap: 14px;
+  padding: 11px 18px; border-bottom: 1px solid var(--rule);
+  font-family:var(--sans); font-size:13px; color:var(--ink-2);
+}
+.roster-list .rs:last-child{border-bottom:0}
+.roster-list .who{font-family:var(--mincho); font-weight:600; color:var(--ink); font-size:14.5px}
+.roster-list .when{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--ink-mute)}
+.roster-list .dot{width:8px; height:8px; border-radius:50%; background:var(--rule); justify-self:center}
+.roster-list .status{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--ink-mute)}
+.roster-list .rs.done .dot{background:var(--ink)}
+.roster-list .rs.done .status{color:var(--ink-mute)}
+.roster-list .rs.ping{background: rgba(255,230,38,0.12)}
+.roster-list .rs.ping .dot{background:var(--spark); box-shadow: 0 0 0 2px var(--ink)}
+.roster-list .rs.ping .when{color:var(--warn,#9B2F23)}
+.roster-list .rs.ping .status b{color:var(--ink); font-weight:600}
+.roster-list .rs.ping .status i{font-style:normal; color:var(--ink-mute); font-family:var(--mono)}
+.roster-foot{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding: 12px 18px; border-top: 1px solid var(--ink);
+  font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--ink-mute);
+}
+.roster-foot b{color:var(--ink); font-weight:600}
+.roster-foot .next-ping{color:var(--ink-2)}
+
+/* Scene 4 — Assignment matrix */
+.assign{background:var(--paper); border:1px solid var(--ink); box-shadow: 14px 14px 0 0 var(--paper-2)}
+.assign-head{
+  display:grid; grid-template-columns: 1fr auto auto; gap: 24px; align-items:baseline;
+  padding: 14px 18px; border-bottom: 1px solid var(--ink);
+  font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--ink-mute);
+}
+.assign-head .ah-w{font-family:var(--mincho); font-weight:700; color:var(--ink); font-size:16px; letter-spacing:0}
+.assign-head b{color:var(--ink); font-weight:600; font-size:13px}
+.assign-grid{
+  display:grid; grid-template-columns: 1.05fr 60px 1fr; gap: 0;
+  padding: 16px 18px;
+}
+.slots, .cands{display:flex; flex-direction:column; gap:10px}
+.slot-title, .cands .slot-title{
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.22em; color:var(--ink-mute);
+  padding-bottom: 8px; border-bottom: 1px solid var(--rule); margin-bottom: 6px;
+}
+.slot{
+  border:1px solid var(--rule); padding: 12px 14px;
+  display:flex; flex-direction:column; gap: 4px;
+  font-family:var(--mincho); font-size: 14px; color:var(--ink);
+}
+.slot .t{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--ink-mute)}
+.slot .who{font-family:var(--mincho); font-weight:600; font-size:15px}
+.slot.filled{background:var(--paper)}
+.slot.empty{
+  background: var(--paper-2);
+  border-style: dashed;
+  border-color: var(--warn, #9B2F23);
+}
+.slot.empty .who{color:var(--warn, #9B2F23); font-weight:500; font-size:12px; font-family:var(--mono); letter-spacing:.12em}
+.links{position:relative}
+.links svg{width:100%; height:100%; display:block}
+.cand{
+  display:flex; flex-direction:column; gap:4px;
+  padding: 12px 14px; border:1px solid var(--rule);
+  font-family:var(--mincho); font-size:14px;
+  position:relative;
+}
+.cand .who{font-weight:600; color:var(--ink); font-size:14.5px}
+.cand .want{font-family:var(--mono); font-size:10.5px; color:var(--ink-mute); letter-spacing:.1em}
+.cand.assigned{background:var(--paper-2); border-color:var(--ink)}
+.cand.free{background:var(--paper)}
+.cand .warn-tag{
+  position:absolute; right: -1px; top: -1px;
+  background: var(--warn,#9B2F23); color:var(--paper);
+  padding: 2px 8px;
+  font-family:var(--mono); font-size:9px; letter-spacing:.12em;
+}
+.assign-foot{
+  padding: 12px 18px; border-top: 1px solid var(--ink);
+  font-family:var(--mincho); font-size:13px; color: var(--ink); line-height:1.6;
+  background: rgba(155,47,35,0.04);
+}
+.warn-cell{display:flex; gap: 10px; align-items:flex-start}
+.warn-cell b{
+  display:inline-block; min-width:18px; height:18px; line-height:18px;
+  text-align:center; background:var(--warn,#9B2F23); color:var(--paper);
+  font-family:var(--mono); font-weight:700; font-size:11px;
+}
+
+/* Scene 5 — Google calendar week view */
+.gcal{background:var(--paper); border:1px solid var(--ink)}
+.gcal-head{
+  display:grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items:center;
+  padding: 12px 18px; border-bottom: 1px solid var(--ink);
+  font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--ink-mute);
+}
+.gcal-head .g-month{color:var(--ink); font-family:var(--mincho); font-weight:700; font-size:16px; letter-spacing:0}
+.gcal-head .g-tools{display:flex; gap:6px}
+.gcal-head .g-tools span{width:8px; height:8px; background:var(--rule); border-radius:50%}
+.gcal-grid{display:grid; grid-template-columns: 32px 1fr; min-height: 360px}
+.gc-times{
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding: 30px 0 8px; font-family:var(--mono); font-size:9px; color:var(--ink-quiet); letter-spacing:.1em;
+  border-right: 1px solid var(--rule);
+}
+.gc-times span{padding-left: 4px}
+.gc-days{display:grid; grid-template-columns: repeat(7, 1fr)}
+.gc-day{
+  position:relative;
+  border-right: 1px solid var(--rule);
+  min-height: 360px;
+}
+.gc-day:last-child{border-right:0}
+.gc-day .gd{
+  display:flex; flex-direction:column; align-items:center; gap: 2px;
+  padding: 8px 0 12px;
+  font-family:var(--mono); font-size: 10px; letter-spacing:.12em; color:var(--ink-mute);
+  border-bottom: 1px solid var(--rule);
+}
+.gc-day .gd i{font-style:normal; font-family:var(--mincho); font-weight:600; font-size:18px; color:var(--ink); letter-spacing:0}
+.gc-day.is-hinge .gd i{background:var(--spark); padding: 2px 8px; line-height:1.1}
+.gc-day .ev{
+  position:absolute; left: 4px; right: 4px;
+  padding: 4px 6px;
+  font-family:var(--mincho); font-size:10.5px; line-height:1.3;
+  overflow:hidden;
+  /* Day cell has a 38px header; offset all events down by that.
+     Inline style="top:X%" sets --et; we honor it via calc below. */
+  margin-top: 72px;
+}
+.gc-day .ev.shift{background: var(--ink); color: var(--paper); font-weight:500}
+.gc-day .ev.personal{
+  background: var(--paper);
+  border-left: 2px solid var(--brand-deep, #0088B5);
+  color: var(--ink);
+}
+.gcal-foot{
+  display:flex; align-items:center; gap: 24px; padding: 14px 18px; border-top: 1px solid var(--ink);
+  font-family:var(--mono); font-size: 11px; letter-spacing:.14em; color:var(--ink-mute);
+}
+.gcal-foot .legend{display:flex; align-items:center; gap:8px}
+.gcal-foot .legend .lg{display:inline-block; width:14px; height:10px}
+.gcal-foot .legend .lg.shift{background:var(--ink)}
+.gcal-foot .legend .lg.personal{background:var(--paper); border-left:3px solid var(--brand-deep,#0088B5); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); border-right:1px solid var(--rule)}
+.gcal-foot .legend-note{margin-left:auto; color:var(--ink-2); font-family:var(--mincho); font-size:13px; letter-spacing:0}
+
+/* Scene 6 — Phone notification */
+.phone{display:grid; grid-template-rows: 1fr auto; gap: 22px; place-items:center}
+.phone-frame{
+  width: 280px; aspect-ratio: 9/19;
+  background: var(--ink);
+  border-radius: 36px;
+  padding: 10px;
+  position:relative;
+  box-shadow: 0 24px 0 -12px var(--paper-2);
+}
+.phone-notch{
+  position:absolute; left:50%; top: 18px; transform: translateX(-50%);
+  width: 88px; height: 22px; background: var(--ink);
+  border-radius: 14px; z-index: 2;
+}
+.phone-screen{
+  width:100%; height:100%; background: var(--paper-2);
+  border-radius: 28px;
+  padding: 50px 14px 24px;
+  display:flex; flex-direction:column; gap: 8px;
+  position:relative; overflow:hidden;
+}
+.ps-time{font-family:var(--mincho); font-weight:300; font-size:46px; color:var(--ink); text-align:center; line-height:1; margin-top:6px}
+.ps-date{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ink-mute); text-align:center; margin-bottom: 14px}
+.ps-stack{display:flex; flex-direction:column; gap: 8px}
+.ps-notif{
+  background: rgba(245,243,236,0.92);
+  backdrop-filter: blur(8px);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-family:var(--sans);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.ps-notif.primary{
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 0 6px 0 -3px rgba(0,0,0,.18);
+}
+.ps-notif.quiet{ opacity: .55; transform: scale(.96)}
+.pn-head{
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--ink-mute);
+  margin-bottom: 4px;
+}
+.pn-head .pn-app{display:flex; align-items:center; gap:6px; color:var(--ink); font-weight:500}
+.pn-icon{display:inline-block; width:12px; height:12px; background:var(--ink); border-radius:3px}
+.pn-icon.dim{background:var(--ink-quiet)}
+.pn-title{font-family:var(--mincho); font-weight:600; font-size:13px; color:var(--ink); margin-bottom:3px}
+.pn-body{font-family:var(--mincho); font-size:11.5px; color:var(--ink-2); line-height:1.5}
+.pn-body b{color:var(--ink); font-weight:600}
+.pn-actions{display:flex; gap:6px; margin-top: 8px}
+.pn-btn{
+  flex:1; text-align:center;
+  background: var(--ink); color: var(--paper);
+  padding: 6px 0; font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  border-radius: 6px;
+}
+.pn-btn.ghost{background: var(--paper-2); color: var(--ink); border: 1px solid var(--rule)}
+.phone-caption{
+  font-family:var(--mincho); font-size:13px; color:var(--ink-2);
+  text-align:center; max-width: 320px; line-height:1.7;
+}
+.phone-caption b{color:var(--ink); font-weight:600}
+
+/* ============ CONNECTOR B ============ */
+.connector-b{
+  position:relative;
+  height: 220vh; /* scroll distance */
+  background: var(--paper);
+  border-top: 1px solid var(--ink);
+}
+.cb-sticky{
+  position: sticky; top: 0; height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  padding: 88px var(--page-pad) 80px;
+  align-items: center;
+  --p: 0;
+  overflow: hidden;
+}
+.cb-rail{
+  position:absolute; top: 28px; left: var(--page-pad); right: var(--page-pad);
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.22em; color:var(--ink-mute);
+}
+.cb-rail .cb-mark{color:var(--ink); font-weight:500}
+.cb-rail .cb-meta b{color:var(--ink); font-family:var(--disp); font-style:italic; font-size:14px; letter-spacing:0}
+.cb-stack{
+  position:relative; height: 100%;
+  display:flex; flex-direction:column-reverse; /* days at bottom, month at top */
+  justify-content:flex-start; gap: 6px;
+  padding: 28px 8px 8px;
+  border-left: 1px solid var(--rule);
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--ink-mute);
+}
+.cb-slab{
+  display:grid; grid-template-columns: 96px 1fr; gap: 14px; align-items:center;
+  min-height: 22px;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 320ms ease, transform 380ms cubic-bezier(.2,0,.1,1);
+}
+.cb-slab .lab{
+  font-family:var(--mono); font-size: 10px; letter-spacing:.12em; color:var(--ink-mute);
+  border-right: 1px solid var(--rule); padding-right: 12px; text-align:right;
+}
+.cb-slab .bar{
+  height: 14px; background: var(--paper-2); border: 1px solid var(--rule);
+  position: relative;
+  width: var(--w, 0%);
+  min-width: 1px;
+}
+.cb-slab .bar.shift{background: var(--ink); border-color: var(--ink)}
+.cb-slab .bar.shift.hinge{background: var(--spark); border: 1px solid var(--ink)}
+.cb-slab.week .bar{height: 18px}
+.cb-slab.week .bar.wk{
+  background: repeating-linear-gradient(90deg,
+    var(--ink) 0 calc(var(--w)/7), var(--paper) calc(var(--w)/7) calc((var(--w)/7) + 1px),
+    var(--ink) calc((var(--w)/7) + 1px) calc(2*var(--w)/7));
+  background-color: var(--ink);
+}
+.cb-slab.month .bar{height: 24px}
+.cb-slab.month .bar.mo{
+  background: var(--ink);
+  position: relative;
+}
+.cb-slab.month .bar.mo::after{
+  content:""; position:absolute; left: 18%; top: -3px; bottom: -3px; width: 4px;
+  background: var(--spark); border: 1px solid var(--ink);
+}
+.cb-slab.is-on{ opacity: 1; transform: translateY(0) }
+.cb-slab.is-current .lab{color:var(--ink); font-weight:600}
+.cb-slab.is-current .bar{box-shadow: 0 0 0 2px rgba(0,0,0,0.06)}
+
+.cb-copy{position:relative; min-height: 200px}
+.cb-beat{
+  position:absolute; left:0; top:0; right:0; margin:0;
+  font-family: var(--mincho); font-weight: 700;
+  font-size: clamp(28px, 3vw, 44px);
+  line-height: 1.4; color: var(--ink); letter-spacing: -0.01em;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 280ms ease, transform 380ms cubic-bezier(.2,0,.1,1);
+}
+.cb-beat .mark{
+  display:block;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em;
+  color: var(--ink-mute); margin-bottom: 14px; font-weight:400;
+}
+.cb-beat em.under{
+  background-image: linear-gradient(var(--spark), var(--spark));
+  background-repeat: no-repeat; background-position: 0 84%; background-size: 100% 36%;
+  padding: 0 .08em; font-style: normal;
+}
+.cb-beat em.spark{
+  font-style:normal; background:var(--spark); padding: 0 .14em; color:var(--ink); font-weight:700;
+}
+.cb-beat.is-active{opacity:1; transform:translateY(0)}
+
+@media (max-width: 860px){
+  .cb-sticky{grid-template-columns: 1fr; gap: 24px; padding: 80px 20px 60px}
+  .cb-stack{order: 2; height: 50vh}
+  .cb-copy{order: 1; min-height: 140px}
+  .cb-beat{font-size: 22px}
+}
+@media (prefers-reduced-motion: reduce){
+  .cb-slab{opacity: 1; transform: none}
+  .cb-beat:nth-child(n+2){display:none}
+  .cb-beat.is-active{display:block}
+}
+
+/* Functional stub */
+.functional-stub{
+  padding: 88px var(--page-pad) 88px;
+  background: var(--paper-2);
+  border-top: 1px solid var(--ink);
+}
+.functional-stub .fs-inner{
+  display:grid; grid-template-columns: minmax(280px, auto) 1fr; gap: 56px; align-items:start;
+}
+.functional-stub .fs-num{
+  font-family: var(--disp); font-style:italic; font-weight:300;
+  font-size: clamp(40px, 4vw, 56px); color: var(--ink);
+  letter-spacing: -0.02em; line-height:1;
+  white-space: nowrap;
+}
+.functional-stub .fs-list{
+  display:grid; grid-template-columns: 1fr 1fr; gap: 12px 32px;
+  font-family: var(--mincho); font-size: 16px; color: var(--ink); font-weight:600;
+}
+.functional-stub .fs-foot{
+  grid-column: 1 / -1; margin-top: 24px;
+  padding-top: 18px; border-top: 1px solid var(--rule);
+  font-family: var(--mono); font-size: 10px; letter-spacing:.15em; color: var(--ink-mute);
+}
+@media (max-width: 860px){
+  .functional-stub .fs-inner{grid-template-columns: 1fr}
+  .functional-stub .fs-list{grid-template-columns: 1fr}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#scene1-full">本文へスキップ</a>
+
+<!-- ============ MASTHEAD ============ -->
+<header class="masthead">
+  <div class="lock">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="nm">シフリー</span>
+  </div>
+  <div class="mid">S H I F T , &nbsp; F R E E .</div>
+  <div class="right">
+    <a class="cta" href="#scene1-full">無料ではじめる</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<main>
+<section class="hero" id="hero" aria-labelledby="hero-title">
+  <div class="copy">
+    <div class="eyebrow">ver. 2 &nbsp;/&nbsp; 2026 spring</div>
+    <h1 id="hero-title">
+      月末が、<br/>少しだけ<br/>早く終わる。
+      <span class="en">A quieter end of the month.</span>
+    </h1>
+    <p class="lede">
+      希望を集める。希望が配置される。配置が Google カレンダーに戻る。<br/>
+      そのすべてを、あなたが見ている間に。
+    </p>
+    <div class="actions">
+      <a class="btn" href="#scene1-full">無料ではじめる<span class="arr">→</span></a>
+      <a class="btn ghost" href="#scene1-full">使い方を見る</a>
+      <span class="note">GOOGLE CALENDAR · NATIVE</span>
+    </div>
+    <div class="tag-row" aria-hidden="true">
+      <span>FREE</span><span>NO APP</span><span>PWA</span><span>OWNED BY YOU</span>
+    </div>
+  </div>
+
+  <div class="field-wrap">
+    <div class="field" id="field" aria-label="シフト組成の 1 ヶ月グリッド（概念図）">
+      <div class="lbl-days" aria-hidden="true">
+        <span>月</span><span class="hinge">火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
+      </div>
+      <div class="lbl-weeks" aria-hidden="true">
+        <span>W14</span><span>W15</span><span>W16</span><span>W17</span><span>W18</span>
+      </div>
+      <div class="month-mark" aria-hidden="true">
+        <span class="mm-en">APR</span><span class="mm-jp">2026 / 04</span>
+      </div>
+      <div class="grid" id="grid">
+        <!-- 35 cells injected -->
+      </div>
+      <!-- zoom frame anchored over hinge cell -->
+      <div class="zoom-frame" id="zoom-frame" aria-hidden="true">
+        <span class="c1"></span><span class="c2"></span>
+        <span class="lbl">ZOOM · 04 / 14 · TUE</span>
+      </div>
+      <div class="axis" aria-hidden="true">
+        <span>FIELD</span><span>WISH</span><span>ASSIGN</span><span class="default-active">ZOOM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-foot">
+    <div class="phase">
+      <span>PHASE 1 · HERO</span>
+      <span class="dot"></span>
+      <span>LOOP · 9.0 s</span>
+      <span class="dot"></span>
+      <span>CSS ONLY · ~38 KB</span>
+    </div>
+    <div>
+      <button class="skip-btn" id="skip" aria-pressed="false" aria-label="アニメーションを一時停止">SKIP ANIMATION</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONNECTOR A ============ -->
+<section class="connector" aria-label="Hero から Scene 1 へのズームイン遷移">
+  <div class="connector-sticky" id="connector">
+    <div class="scale-readout"><b id="scaleNum">1×</b> &nbsp; MACRO · 1 MONTH</div>
+    <div class="frame-readout" id="frameNum">FRAME 01 / 05</div>
+    <div class="progress-rail" aria-hidden="true"></div>
+
+    <!-- MACRO FIELD that scales up, origin = hinge cell -->
+    <div class="macro-stage" aria-hidden="true">
+      <div class="annot a1"><span>ORIGIN · <b>04 / 14 TUE</b></span></div>
+      <div class="annot a2"><span>ZOOM · <b>1 MONTH → 1 CELL</b></span></div>
+
+      <div class="dwell-copy" id="dwellCopy" aria-live="polite">
+        <div class="chapter-rail" aria-hidden="true">
+          <div class="r" data-i="0"><span class="dot"></span><span>01 MACRO</span></div>
+          <div class="r" data-i="1"><span class="dot"></span><span>02 APPROACH</span></div>
+          <div class="r" data-i="2"><span class="dot"></span><span>03 CELL</span></div>
+          <div class="r" data-i="3"><span class="dot"></span><span>04 HANDOFF</span></div>
+        </div>
+        <p class="beat is-active" data-i="0"><span class="mark">D1 · <em>1×</em> · MACRO</span>1 ヶ月は、35 マスの地形になる。</p>
+        <p class="beat" data-i="1"><span class="mark">D2 · <em>6×</em> · APPROACH</span><em class="spark">04 / 14 火曜日</em>。希望が、集まりはじめる。</p>
+        <p class="beat" data-i="2"><span class="mark">D3 · <em>28×</em> · CELL</span>この火曜日、勤務可能にしますか？</p>
+        <p class="beat" data-i="3"><span class="mark">D4 · <em>120×</em> · HANDOFF</span>そしてこの日は、1 通のメールから始まる。</p>
+      </div>
+      <div class="macro-field" id="macro">
+        <div class="grid">
+          <!-- 35 cells; row,col notation; hinge is row 2, col 2 (0-indexed row=1 col=1) -->
+          <!-- r1 -->
+          <div class="mc"></div><div class="mc"></div><div class="mc wish"></div><div class="mc"></div><div class="mc wish"></div><div class="mc"></div><div class="mc closed"></div>
+          <!-- r2 -->
+          <div class="mc assign"></div>
+          <div class="mc hinge">
+            <div class="detail">
+              <div class="hd"><span class="d">2026 · 04 · 14 火</span><span class="t">営業 10:00 – 15:00</span></div>
+              <div class="body">
+                <div class="row"><span class="lab">予定</span><span class="bar"><i></i><i class="acc"></i><i class="q"></i></span><span class="val">03</span></div>
+                <div class="row"><span class="lab">勤務可能</span><span class="bar"><i class="full"></i></span><span class="val">05h</span></div>
+                <div class="toggle"><span class="sw"></span><span class="lab2">勤務可能 · ON</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc wish"></div><div class="mc"></div><div class="mc assign"></div><div class="mc wish"></div><div class="mc"></div><div class="mc closed"></div>
+          <!-- r3 -->
+          <div class="mc"></div><div class="mc assign"></div><div class="mc wish"></div><div class="mc"></div><div class="mc assign"></div><div class="mc wish"></div><div class="mc closed"></div>
+          <!-- r4 -->
+          <div class="mc wish"></div><div class="mc"></div><div class="mc assign"></div><div class="mc wish"></div><div class="mc"></div><div class="mc assign"></div><div class="mc closed"></div>
+          <!-- r5 -->
+          <div class="mc"></div><div class="mc wish"></div><div class="mc"></div><div class="mc assign"></div><div class="mc"></div><div class="mc"></div><div class="mc closed"></div>
+        </div>
+      </div>
+      <div class="field-fade"></div>
+    </div>
+
+    <!-- SCENE 1 wire shell, fades in at the end -->
+    <div class="scene1-wire" aria-hidden="true">
+      <div class="scene1-card">
+        <div class="wtag">SCENE 01 · 月末 · 期間公開</div>
+        <h3>「来月のシフト、出してください」<br/>が、メールで届く朝。</h3>
+        <p class="lead">Admin が期間を作成し、全員に一斉通知。Worker にとっての最初の接点は、受信箱の中にある。</p>
+        <div class="stub"></div>
+        <div class="foot-row">
+          <b>ACT · 01 / 06</b><div class="tline"></div><span>SCROLL ↓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCENE 01 · 月末 · 期間公開 ============ -->
+<section class="scene scene-1" id="scene1-full" aria-labelledby="sc1-title">
+  <div class="scene-rail">
+    <span class="rail-num">01</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">月末 · 期間公開</span>
+  </div>
+
+  <!-- hinge reprise: 04/14 火 returns as a small mark -->
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 01 &nbsp;·&nbsp; 月末の朝</div>
+      <h2 id="sc1-title" class="scene-h">
+        「来月のシフト、<br/>出してください」<br/>が、メールで届く朝。
+      </h2>
+      <p class="scene-lede">
+        月末。Admin がシフト募集の期間を 1 回作る。<br/>
+        Worker 全員のメールに、同じ文面で招待が届く。
+      </p>
+      <p class="scene-body">
+        LINE グループに画像を 1 枚貼れば済む運用にも合わせて、期間告知は <b>メッセージ + カレンダー画像 / PDF</b> の両方で書き出せる。集める前に、まず「いつ分のシフトなのか」を全員で共有する。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>INPUT</b>期間 1 回 / 募集文面</span>
+        <span class="kv"><b>OUTPUT</b>メール · 画像 · PDF</span>
+        <span class="kv"><b>TIME</b>30 秒</span>
+      </div>
+    </div>
+
+    <div class="scene-stage" aria-hidden="true">
+      <!-- Inbox composition -->
+      <div class="inbox">
+        <div class="inbox-chrome">
+          <span class="ic-dot"></span><span class="ic-dot"></span><span class="ic-dot"></span>
+          <span class="ic-title">受信トレイ &nbsp;/&nbsp; INBOX</span>
+          <span class="ic-meta">12 件</span>
+        </div>
+        <ul class="inbox-list">
+          <li class="mail"><span class="when">昨日</span><span class="who">Google カレンダー</span><span class="subj">リマインダー：10:00 ミーティング</span></li>
+          <li class="mail"><span class="when">昨日</span><span class="who">領収書 · Amazon</span><span class="subj">注文の発送が完了しました</span></li>
+          <li class="mail is-new"><span class="when">09:04</span><span class="who">シフリー / 店長 東城</span><span class="subj">＜シフト募集＞ 05 月度 (05/01 – 05/31)</span><span class="tag">NEW</span></li>
+          <li class="mail"><span class="when">08:30</span><span class="who">ニュースレター</span><span class="subj">今週の飲食マガジン</span></li>
+          <li class="mail"><span class="when">08:12</span><span class="who">家族 LINE 通知</span><span class="subj">明日の予定について</span></li>
+        </ul>
+      </div>
+
+      <!-- Pulled-out mail preview -->
+      <div class="mail-card">
+        <div class="mc-head">
+          <span class="mc-from">店長 東城 &lt;tencho-tojo@example.com&gt;</span>
+          <span class="mc-date">04 / 28 (月) &nbsp; 09:04</span>
+        </div>
+        <h4 class="mc-subj">＜シフト募集＞ 05 月度 (05/01 – 05/31)</h4>
+        <p class="mc-body">
+          お疲れさまです。5 月のシフト募集を開始します。<br/>
+          下記リンクから、ご自身の Google カレンダーと照らしながら、勤務可能な時間帯を登録してください。
+        </p>
+        <a class="mc-cta">募集ページへ &nbsp; →</a>
+        <div class="mc-foot">
+          <span>この募集には <b>カレンダー画像</b> と <b>PDF</b> も添付されています。LINE グループへの共有はこれらを。</span>
+        </div>
+      </div>
+
+      <!-- Fanned-out artefacts: IMG + PDF + text -->
+      <div class="artefacts">
+        <div class="art img"><span class="art-tag">IMG · PNG</span><div class="art-body"><div class="art-mini-cal"><span></span><span></span><span></span><span></span><span></span><span class="h"></span><span></span><span></span><span class="h"></span><span></span><span class="h"></span><span></span><span class="h"></span><span></span><span class="h"></span><span></span><span class="h"></span><span></span></div></div></div>
+        <div class="art pdf"><span class="art-tag">PDF · A4</span><div class="art-body art-pdf"><b>05 月度 &nbsp;シフト募集</b><span>2026.05.01 – 05.31</span><i></i><i></i><i class="short"></i></div></div>
+        <div class="art txt"><span class="art-tag">TEXT · コピー</span><div class="art-body art-txt">＜シフト募集＞<br/>期間: 05/01 – 05/31<br/>締切: 04/24 23:59<br/>下記 URL から登録をお願いします</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 01 / 06</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; 02 · 提出期間 · 希望集まる</span>
+  </div>
+</section>
+
+<!-- ============ SCENE 02 · 提出期間 · 希望集まる ============ -->
+<section class="scene scene-2" id="scene2" aria-labelledby="sc2-title">
+  <div class="scene-rail">
+    <span class="rail-num">02</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">提出期間 · 希望集まる</span>
+  </div>
+
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner scene-inner-2">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 02 &nbsp;·&nbsp; 重なりを、先に消す</div>
+      <h2 id="sc2-title" class="scene-h">
+        Google カレンダーに<br/>
+        <em class="under">もう予定が入っている時間</em>は、<br/>
+        最初から出てこない。
+      </h2>
+      <p class="scene-lede">
+        Worker は、<b>勤務可能な時間帯</b>を埋めていく。その画面に<br/>
+        表示されるのは、Google カレンダーに<b>空きがある時間</b>だけ。
+      </p>
+      <p class="scene-body">
+        通院、家族の予定、副業、ライブ、前の日の夜勤 — カレンダーに置いた個人の時間は、募集画面で最初から<b>不可</b>として畳まれる。「出せると思ってたけど予定かぶってた」を、集める前に消す。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>INPUT</b>既存の Google 予定</span>
+        <span class="kv"><b>OUTPUT</b>勤務可能な時間帯のみ</span>
+        <span class="kv"><b>NOTE</b>読み取り · 書き戻しなし</span>
+      </div>
+    </div>
+
+    <!-- Abstract visualisation: horizontal = Google cal, vertical = shift band -->
+    <div class="scene-stage" aria-hidden="true">
+      <div class="overlap">
+        <div class="ov-title">
+          <span class="ov-date">04 / 14 &nbsp;TUE</span>
+          <span class="ov-hours">09:00 &nbsp;—&nbsp; 22:00</span>
+        </div>
+
+        <div class="ov-grid">
+          <!-- hour tick labels -->
+          <div class="ov-hours-row">
+            <span>09</span><span>11</span><span>13</span><span>15</span><span>17</span><span>19</span><span>21</span>
+          </div>
+
+          <!-- Row: Google calendar (horizontal) -->
+          <div class="ov-row ov-cal">
+            <span class="ov-label">GOOGLE CAL</span>
+            <div class="ov-track">
+              <span class="ov-evt" style="left:0%; width:14%">通院</span>
+              <span class="ov-evt" style="left:46%; width:10%">ランチ</span>
+              <span class="ov-evt" style="left:78%; width:16%">家族</span>
+            </div>
+          </div>
+
+          <!-- Row: shift open (vertical stripes) -->
+          <div class="ov-row ov-shift">
+            <span class="ov-label">SHIFT 募集</span>
+            <div class="ov-track ov-shift-track">
+              <span class="ov-band"></span>
+            </div>
+          </div>
+
+          <!-- Row: intersection — the cross-out -->
+          <div class="ov-row ov-intersect">
+            <span class="ov-label">重なり &nbsp;⌦</span>
+            <div class="ov-track">
+              <span class="ov-cut" style="left:0%; width:14%"></span>
+              <span class="ov-cut" style="left:46%; width:10%"></span>
+              <span class="ov-cut" style="left:78%; width:16%"></span>
+            </div>
+          </div>
+
+          <!-- Row: available (what Worker sees) -->
+          <div class="ov-row ov-available">
+            <span class="ov-label">提示される</span>
+            <div class="ov-track">
+              <span class="ov-slot" style="left:14%; width:32%">勤務可</span>
+              <span class="ov-slot" style="left:56%; width:22%">勤務可</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ov-foot">
+          Google カレンダーは<b>読み取る</b>だけ。シフリーが予定を書き込むことはない。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 02 / 06</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; 03 · 締切前 · 自動リマインド &nbsp; <span class="pending">(Phase 2a-2)</span></span>
+  </div>
+</section>
+
+<!-- ============ SCENE 03 · 締切前 · 自動リマインド ============ -->
+<section class="scene scene-3" id="scene3" aria-labelledby="sc3-title">
+  <div class="scene-rail">
+    <span class="rail-num">03</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">締切前 · 自動リマインド</span>
+  </div>
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 03 &nbsp;·&nbsp; 締切の 24 時間前</div>
+      <h2 id="sc3-title" class="scene-h">
+        「あの人、まだ出してない」を<br/>
+        Admin が<em class="under">気にしなくていい</em>。
+      </h2>
+      <p class="scene-lede">
+        締切前。未提出の Worker にだけ、自動でリマインドが届く。<br/>
+        誰が出していて、誰が出していないか — 一覧で見える。
+      </p>
+      <p class="scene-body">
+        Admin は督促メッセージを書かなくていい。Worker は<b>自分の状況</b>がわかる。「もう出した人にもう一度送ってしまう」事故が起こらない。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>TRIGGER</b>締切前日の朝</span>
+        <span class="kv"><b>SCOPE</b>未提出のみ</span>
+        <span class="kv"><b>CHANNEL</b>メール (LINE 連携任意)</span>
+      </div>
+    </div>
+
+    <div class="scene-stage" aria-hidden="true">
+      <div class="roster">
+        <div class="roster-head">
+          <span class="rh-title">提出状況 &nbsp;/&nbsp; ROSTER</span>
+          <span class="rh-meta">締切 &nbsp; 04 / 24 &nbsp;23:59 &nbsp;<b>· 残 14h 45m</b></span>
+        </div>
+        <ul class="roster-list">
+          <li class="rs done"><span class="who">佐藤 美咲</span><span class="when">04/19 21:04</span><span class="dot"></span><span class="status">提出済</span></li>
+          <li class="rs done"><span class="who">高橋 玲</span><span class="when">04/20 08:11</span><span class="dot"></span><span class="status">提出済</span></li>
+          <li class="rs done"><span class="who">渡辺 啓介</span><span class="when">04/20 12:50</span><span class="dot"></span><span class="status">提出済</span></li>
+          <li class="rs ping"><span class="who">中村 葵</span><span class="when">未提出</span><span class="dot"></span><span class="status"><b>リマインド済</b> &nbsp;<i>09:00</i></span></li>
+          <li class="rs done"><span class="who">小林 真衣</span><span class="when">04/22 09:33</span><span class="dot"></span><span class="status">提出済</span></li>
+          <li class="rs ping"><span class="who">伊藤 大樹</span><span class="when">未提出</span><span class="dot"></span><span class="status"><b>リマインド済</b> &nbsp;<i>09:00</i></span></li>
+          <li class="rs done"><span class="who">山本 志保</span><span class="when">04/23 14:22</span><span class="dot"></span><span class="status">提出済</span></li>
+        </ul>
+        <div class="roster-foot">
+          <span>提出 <b>05</b> / 07 &nbsp;·&nbsp; 残 <b>02 名</b></span>
+          <span class="next-ping">リマインドは前日 09:00 に 1 回。本人が出すまで Admin は何もしなくていい。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 03 / 06</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; 04 · 締切後 · シフト作成</span>
+  </div>
+</section>
+
+<!-- ============ SCENE 04 · 締切後 · シフト作成 ============ -->
+<section class="scene scene-4" id="scene4" aria-labelledby="sc4-title">
+  <div class="scene-rail">
+    <span class="rail-num">04</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">締切後 · シフト作成</span>
+  </div>
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner scene-inner-2">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 04 &nbsp;·&nbsp; 締切翌朝</div>
+      <h2 id="sc4-title" class="scene-h">
+        集めた希望は、<br/>
+        <em class="under">埋めるべき枠</em>の隣に並ぶ。
+      </h2>
+      <p class="scene-lede">
+        必要人数と希望者数が、同じ画面に重なって見える。<br/>
+        足りないコマ、余ってるコマ、ひと目でわかる。
+      </p>
+      <p class="scene-body">
+        Worker 名をクリックで割り当てる。<br/>
+        集めた希望と必要枠が、<b>同じ画面に並ぶ</b>。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>VIEW</b>必要枠 × 希望者</span>
+        <span class="kv"><b>FLOW</b>クリックで配置</span>
+        <span class="kv"><b>TIME</b>15 分</span>
+      </div>
+    </div>
+
+    <div class="scene-stage" aria-hidden="true">
+      <div class="assign">
+        <div class="assign-head">
+          <span class="ah-w">04 / 14 TUE</span>
+          <span class="ah-need">必要 &nbsp;<b>03</b></span>
+          <span class="ah-cand">希望 &nbsp;<b>05</b></span>
+        </div>
+        <div class="assign-grid">
+          <!-- left: shift slots -->
+          <div class="slots">
+            <div class="slot-title">枠</div>
+            <div class="slot filled"><span class="t">09:00 — 13:00</span><span class="who">佐藤</span></div>
+            <div class="slot filled"><span class="t">13:00 — 17:00</span><span class="who">高橋</span></div>
+            <div class="slot empty"><span class="t">17:00 — 22:00</span><span class="who">— 未配置 —</span></div>
+          </div>
+          <!-- middle: connections -->
+          <div class="links">
+            <svg viewBox="0 0 100 220" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M 0 36 C 50 36, 50 36, 100 36" stroke="#0A0A0A" stroke-width="1" fill="none"/>
+              <path d="M 0 110 C 50 110, 50 110, 100 110" stroke="#0A0A0A" stroke-width="1" fill="none"/>
+              <path d="M 0 184 C 50 184, 50 184, 100 110" stroke="#0A0A0A" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+              <path d="M 0 184 C 50 184, 50 184, 100 184" stroke="#9C9A8E" stroke-width="0.6" stroke-dasharray="2 3" fill="none"/>
+            </svg>
+          </div>
+          <!-- right: candidates -->
+          <div class="cands">
+            <div class="slot-title">希望</div>
+            <div class="cand assigned"><span class="who">佐藤 美咲</span><span class="want">09:00–13:00</span></div>
+            <div class="cand assigned"><span class="who">高橋 玲</span><span class="want">12:00–18:00</span></div>
+            <div class="cand free"><span class="who">渡辺 啓介</span><span class="want">17:00–22:00</span><span class="warn-tag">通院 18:30</span></div>
+            <div class="cand free"><span class="who">中村 葵</span><span class="want">17:00–22:00</span></div>
+            <div class="cand free"><span class="who">小林 真衣</span><span class="want">19:00–22:00</span></div>
+          </div>
+        </div>
+        <div class="assign-foot">
+          <span class="warn-cell"><span class="kv-fact">集めた希望が、必要枠の隣に並ぶ。</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 04 / 06</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; 05 · 確定 · カレンダーへ戻る</span>
+  </div>
+</section>
+
+<!-- ============ SCENE 05 · 確定 · カレンダー反映 ============ -->
+<section class="scene scene-5" id="scene5" aria-labelledby="sc5-title">
+  <div class="scene-rail">
+    <span class="rail-num">05</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">確定 · カレンダー反映</span>
+  </div>
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner scene-inner-2">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 05 &nbsp;·&nbsp; 確定の瞬間</div>
+      <h2 id="sc5-title" class="scene-h">
+        確定したシフトは、<br/>
+        各自の<em class="under">Google カレンダー</em>に<br/>
+        そのまま<b>戻る</b>。
+      </h2>
+      <p class="scene-lede">
+        シフト作成の最後に「公開」を押す。<br/>
+        その瞬間、Worker 全員のカレンダーに、自分の勤務だけが入る。
+      </p>
+      <p class="scene-body">
+        通知アプリは要らない。普段見ている<b>同じカレンダー</b>に、確定した予定として残る。月末の地形が、それぞれの一日に解けていく。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>WRITE</b>各自のカレンダーへ追加</span>
+        <span class="kv"><b>SCOPE</b>自分の勤務のみ</span>
+        <span class="kv"><b>RESULT</b>通知アプリ不要</span>
+      </div>
+    </div>
+
+    <div class="scene-stage" aria-hidden="true">
+      <div class="gcal">
+        <div class="gcal-head">
+          <span class="g-month">2026 年 4 月</span>
+          <span class="g-week">W16 &nbsp; 04/13 — 04/19</span>
+          <span class="g-tools"><span></span><span></span><span></span></span>
+        </div>
+        <div class="gcal-grid">
+          <div class="gc-times">
+            <span>09</span><span>11</span><span>13</span><span>15</span><span>17</span><span>19</span><span>21</span>
+          </div>
+          <div class="gc-days">
+            <div class="gc-day"><b class="gd">月<i>13</i></b><span class="ev personal" style="top:14%; height:18%">通院</span></div>
+            <div class="gc-day is-hinge"><b class="gd">火<i>14</i></b><span class="ev shift" style="top:32%; height:46%">シフト 13:00–22:00</span></div>
+            <div class="gc-day"><b class="gd">水<i>15</i></b><span class="ev shift" style="top:0%; height:30%">シフト 09:00–14:00</span></div>
+            <div class="gc-day"><b class="gd">木<i>16</i></b></div>
+            <div class="gc-day"><b class="gd">金<i>17</i></b><span class="ev shift" style="top:48%; height:34%">シフト 17:00–22:00</span></div>
+            <div class="gc-day"><b class="gd">土<i>18</i></b><span class="ev personal" style="top:6%; height:22%">家族</span></div>
+            <div class="gc-day"><b class="gd">日<i>19</i></b></div>
+          </div>
+        </div>
+        <div class="gcal-foot">
+          <span class="legend"><i class="lg shift"></i>シフト勤務</span>
+          <span class="legend"><i class="lg personal"></i>個人の予定</span>
+          <span class="legend-note">どちらも、同じ Google カレンダーに並ぶ。<br/><b>データはずっと、各自の Google アカウントの中。シフリーの中ではない。</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 05 / 06</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; 06 · 前日 · 欠員 · 交代通知</span>
+  </div>
+</section>
+
+<!-- ============ SCENE 06 · 前日 + 欠員 · 交代通知 ============ -->
+<section class="scene scene-6" id="scene6" aria-labelledby="sc6-title">
+  <div class="scene-rail">
+    <span class="rail-num">06</span>
+    <span class="rail-dot" aria-hidden="true"></span>
+    <span class="rail-label">前日 · 欠員 · 交代通知</span>
+  </div>
+  <div class="scene-reprise" aria-hidden="true">
+    <span class="reprise-label">HINGE · </span>
+    <span class="reprise-cell"><span class="rn">14</span></span>
+    <span class="reprise-date">04 / 14 TUE</span>
+  </div>
+
+  <div class="scene-inner">
+    <div class="scene-copy">
+      <div class="scene-eyebrow">SCENE 06 &nbsp;·&nbsp; 04 / 13 月曜 21:42</div>
+      <h2 id="sc6-title" class="scene-h">
+        体調不良。<br/>
+        欠員の連絡が、<em class="under">夜</em>に届く。
+      </h2>
+      <p class="scene-lede">
+        Admin が候補を絞って打診。希望提出済みの中から、<br/>
+        その日の<b>勤務時間が少ない人</b>を優先。
+      </p>
+      <p class="scene-body">
+        最初に応答した人で確定。残りの候補者には<b>「すでに補充済み」</b>と静かに切り替わる。全員に一斉通知して気まずくしない。
+      </p>
+      <div class="scene-tag-row">
+        <span class="kv"><b>TRIGGER</b>欠員 1 件</span>
+        <span class="kv"><b>SCOPE</b>希望提出者から週時間少ない順</span>
+        <span class="kv"><b>RESULT</b>翌朝に解消済</span>
+      </div>
+    </div>
+
+    <div class="scene-stage" aria-hidden="true">
+      <div class="phone">
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="ps-time">21:43</div>
+            <div class="ps-date">月曜日 04 / 13</div>
+            <div class="ps-stack">
+              <div class="ps-notif primary">
+                <div class="pn-head">
+                  <span class="pn-app"><i class="pn-icon"></i>シフリー</span>
+                  <span class="pn-when">いま</span>
+                </div>
+                <div class="pn-title">交代をお願いできますか？</div>
+                <div class="pn-body">04 / 14 火曜 13:00 — 22:00 のコマで欠員が出ました。引き受けていただけますか。</div>
+                <div class="pn-actions">
+                  <span class="pn-btn">引き受ける</span>
+                  <span class="pn-btn ghost">無理</span>
+                </div>
+              </div>
+              <div class="ps-notif quiet">
+                <div class="pn-head">
+                  <span class="pn-app"><i class="pn-icon dim"></i>Google カレンダー</span>
+                  <span class="pn-when">5 分前</span>
+                </div>
+                <div class="pn-title">明日 9:00 のミーティング</div>
+              </div>
+              <div class="ps-notif quiet">
+                <div class="pn-head">
+                  <span class="pn-app"><i class="pn-icon dim"></i>LINE</span>
+                  <span class="pn-when">12 分前</span>
+                </div>
+                <div class="pn-title">家族グループ</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">
+          最初に届いた人で確定。<b>週時間が少ない人</b>を優先して、Admin が候補を選ぶ。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene-foot">
+    <span class="sf-num">ACT · 06 / 06 &nbsp;· 1 ヶ月の地形、ここで一巡</span>
+    <span class="sf-rule"></span>
+    <span class="sf-next">NEXT &nbsp; &rarr; &nbsp; FUNCTIONAL · 機能深掘りへ</span>
+  </div>
+</section>
+
+<!-- ============ CONNECTOR B · 1 日が縦に積層 → 俯瞰 ============ -->
+<section class="connector-b" id="connector-b" aria-label="接続部 B · 1 日 → 1 ヶ月 → 機能">
+  <div class="cb-sticky" id="cbSticky">
+    <div class="cb-rail">
+      <span class="cb-mark">CONNECTOR · B</span>
+      <span class="cb-meta"><b id="cbDay">DAY 01</b> &nbsp; / &nbsp; <span id="cbView">SINGLE</span></span>
+    </div>
+
+    <!-- Stack of stratum slabs that grow upward -->
+    <div class="cb-stack" id="cbStack" aria-hidden="true">
+      <div class="cb-slab" data-i="0"><span class="lab">04 / 13 月</span><span class="bar shift" style="--w:46%"></span></div>
+      <div class="cb-slab" data-i="1"><span class="lab">04 / 14 火</span><span class="bar shift hinge" style="--w:62%"></span></div>
+      <div class="cb-slab" data-i="2"><span class="lab">04 / 15 水</span><span class="bar shift" style="--w:30%"></span></div>
+      <div class="cb-slab" data-i="3"><span class="lab">04 / 16 木</span></div>
+      <div class="cb-slab" data-i="4"><span class="lab">04 / 17 金</span><span class="bar shift" style="--w:38%"></span></div>
+      <div class="cb-slab" data-i="5"><span class="lab">04 / 18 土</span></div>
+      <div class="cb-slab" data-i="6"><span class="lab">04 / 19 日</span></div>
+      <div class="cb-slab week" data-i="7"><span class="lab">W16 &nbsp; 4 月 第 3 週</span><span class="bar wk" style="--w:54%"></span></div>
+      <div class="cb-slab week" data-i="8"><span class="lab">W17 &nbsp; 4 月 第 4 週</span><span class="bar wk" style="--w:48%"></span></div>
+      <div class="cb-slab week" data-i="9"><span class="lab">W18 &nbsp; 4 月 第 5 週</span><span class="bar wk" style="--w:36%"></span></div>
+      <div class="cb-slab month" data-i="10"><span class="lab">2026 / 04 &nbsp;APR</span><span class="bar mo" style="--w:72%"></span></div>
+    </div>
+
+    <div class="cb-copy">
+      <p class="cb-beat is-active" data-i="0"><span class="mark">B1 · 単日</span>1 日の記録は、<em class="under">1 本の帯</em>として残る。</p>
+      <p class="cb-beat" data-i="1"><span class="mark">B2 · 1 週</span>7 本が積み上がると、<em class="under">1 週間の手応え</em>になる。</p>
+      <p class="cb-beat" data-i="2"><span class="mark">B3 · 1 月</span>4 週が並ぶと、店の<em class="under">1 ヶ月の輪郭</em>が見える。</p>
+      <p class="cb-beat" data-i="3"><span class="mark">B4 · 機能へ</span>この俯瞰は、<em class="spark">機能</em>の入口になる。</p>
+    </div>
+  </div>
+</section>
+
+<!-- Functional deep-dive entry placeholder (Phase 2b) -->
+<section class="functional-stub" aria-label="機能深掘り · Phase 2b で実装">
+  <div class="fs-inner">
+    <div class="fs-num">FUNCTIONAL</div>
+    <div class="fs-list">
+      <span>· Google カレンダー連携 (読み取り / 書き戻しの設計)</span>
+      <span>· データ所在 &nbsp;—&nbsp; ベンダーロックなし</span>
+      <span>· Admin / Worker 権限</span>
+      <span>· 料金 &nbsp;—&nbsp; 無料</span>
+    </div>
+    <div class="fs-foot">機能深掘りセクション &nbsp;/&nbsp; Phase 2b で実装。Google-native セキュリティ訴求は本セクションに 1 枠。</div>
+  </div>
+</section>
+
+<footer class="endspace" role="contentinfo">
+  <div><b>PROJECT</b>シフリー LP v2</div>
+  <div><b>PHASE</b>01 + 02a — Hero + Connector A + Scene 01–06 + Connector B</div>
+  <div><b>DIRECTION</b>Paper × Ink × BRIGHTBLUE + YELLOW spark</div>
+  <div><b>NEXT</b>Phase 2b — 機能深掘り + Google-native 訴求 + Footer 仕上げ</div>
+</footer>
+</main>
+
+<script>
+/* ----- 1) Build hero field (35 cells) ----- */
+(function(){
+  var grid = document.getElementById('grid');
+  if (!grid) return;
+
+  // 2026 月曜始まり 5 週窓で 4/14 火曜を hinge に収める:
+  //   W14: 3/30(月) .. 4/5(日)      [前月 3/30–3/31 含む]
+  //   W15: 4/6 .. 4/12
+  //   W16: 4/13 .. 4/19              ← 4/14 (Tue) = hinge (r=2, c=1)
+  //   W17: 4/20 .. 4/26
+  //   W18: 4/27 .. 5/3                [月末っぽく 5/1–5/3 含む]
+  var layout = [
+    // r0: W14  3/30 .. 4/5
+    ['other','other','n','wish','n','wish','closed'],
+    // r1: W15  4/6 .. 4/12
+    ['n','wish','n','assign','wish','assign','closed'],
+    // r2: W16  4/13 .. 4/19  ← hinge at (2,1) = 4/14 Tue
+    ['n','hinge','wish','assign','n','wish','closed'],
+    // r3: W17  4/20 .. 4/26
+    ['wish','n','assign','wish','n','assign','closed'],
+    // r4: W18  4/27 .. 5/3
+    ['n','wish','n','assign','other','other','other']
+  ];
+
+  // 日付対応: (0,0) = 3/30。March は 31 日、April は 30 日。
+  function dayAt(r, c){
+    var offset = r*7 + c; // 0..34
+    if (offset <= 1) return { n: 30 + offset, other: true };   // 3/30, 3/31
+    if (offset <= 31) return { n: offset - 1, other: false };  // 4/1 .. 4/30
+    return { n: offset - 31, other: true };                    // 5/1 .. 5/3
+  }
+
+  var idx = 0;
+  layout.forEach(function(row, r){
+    row.forEach(function(type, c){
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.setProperty('--i', idx);
+
+      var info = dayAt(r, c);
+      var dayNum = info.n;
+      var n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = dayNum;
+      cell.appendChild(n);
+      if (info.other) cell.classList.add('other-month');
+
+      if (type === 'closed') cell.classList.add('closed');
+      if (type === 'other')  { /* visual-only */ }
+      if (type === 'wish')   {
+        cell.classList.add('wish');
+        var h = document.createElement('span');
+        h.className = 'hatch';
+        cell.appendChild(h);
+      }
+      if (type === 'assign'){
+        cell.classList.add('assign');
+        var ch = document.createElement('span');
+        ch.className = 'chip';
+        cell.appendChild(ch);
+      }
+      if (type === 'hinge'){
+        cell.classList.add('hinge');
+        cell.dataset.hinge = '1';
+        // hinge shows "14" in ink — reads on yellow knock-out fill
+        n.style.color = 'var(--ink)';
+        n.style.fontWeight = '700';
+      }
+      grid.appendChild(cell);
+      idx++;
+    });
+  });
+
+  /* Position zoom frame over hinge cell */
+  var hinge = grid.querySelector('.cell.hinge');
+  var zf = document.getElementById('zoom-frame');
+  function positionZoom(){
+    if (!hinge || !zf) return;
+    var gRect = grid.getBoundingClientRect();
+    var hRect = hinge.getBoundingClientRect();
+    var field = document.getElementById('field');
+    var fRect = field.getBoundingClientRect();
+    // account for field's padding offset — we want position relative to .field
+    zf.style.left   = (hRect.left - fRect.left - 6) + 'px';
+    zf.style.top    = (hRect.top  - fRect.top  - 6) + 'px';
+    zf.style.width  = (hRect.width + 12) + 'px';
+    zf.style.height = (hRect.height + 12) + 'px';
+  }
+  positionZoom();
+  window.addEventListener('resize', positionZoom);
+  // re-position after fonts load
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(positionZoom);
+  }
+  // a few staggered reflows
+  setTimeout(positionZoom, 200);
+  setTimeout(positionZoom, 800);
+})();
+
+/* ----- 2) Animation state: on / paused / reduced ----- */
+(function(){
+  var hero = document.getElementById('hero');
+  var field = document.getElementById('field');
+  var btn = document.getElementById('skip');
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  var state = mq.matches ? 'off' : 'on';
+  function apply(){
+    field.classList.remove('anim-on','anim-off','anim-paused');
+    if (state === 'on')     field.classList.add('anim-on');
+    else if (state === 'off') field.classList.add('anim-off');
+    else if (state === 'paused') field.classList.add('anim-on','anim-paused');
+    btn.setAttribute('aria-pressed', state !== 'on' ? 'true' : 'false');
+    btn.textContent = state === 'on' ? 'SKIP ANIMATION' : (state === 'paused' ? 'PLAY ANIMATION' : 'SHOW ANIMATION');
+  }
+  apply();
+
+  btn.addEventListener('click', function(){
+    if (state === 'on') state = 'paused';
+    else if (state === 'paused') state = 'off';
+    else state = 'on';
+    apply();
+  });
+
+  // pause when offscreen to save CPU
+  var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (state === 'off') return; // user disabled
+      if (e.isIntersecting) {
+        if (state === 'paused' && !btn.dataset.userPaused) { state = 'on'; apply(); }
+      } else {
+        if (state === 'on')  { btn.dataset.offscreen = '1'; state = 'paused'; apply(); btn.dataset.userPaused = ''; }
+      }
+    });
+  }, { threshold: 0.12 }) : null;
+  if (io) io.observe(hero);
+
+  btn.addEventListener('click', function(){ btn.dataset.userPaused = '1'; });
+})();
+
+/* ----- 3) Connector A progress: scroll-timeline where available, IO / rAF fallback ----- */
+(function(){
+  var conn = document.querySelector('.connector');
+  var sticky = document.getElementById('connector');
+  var scaleNum = document.getElementById('scaleNum');
+  var frameNum = document.getElementById('frameNum');
+  if (!conn || !sticky) return;
+
+  // ========== 4 dwells + 3 transits ==========
+  //   D1 (0.00 – 0.18)  scale 1
+  //   T1 (0.18 – 0.30)  scale 1 → 6      cubic-bezier(.3,0,.4,1)
+  //   D2 (0.30 – 0.42)  scale 6
+  //   T2 (0.42 – 0.56)  scale 6 → 28     cubic-bezier(.2,0,.1,1)
+  //   D3 (0.56 – 0.76)  scale 28
+  //   T3 (0.76 – 0.86)  scale 28 → 120   cubic-bezier(.7,0,.9,.5)
+  //   D4 (0.86 – 1.00)  scale 120
+  var macro = document.querySelector('.macro-field');
+  var beats = document.querySelectorAll('.dwell-copy .beat');
+  var rails = document.querySelectorAll('.dwell-copy .chapter-rail .r');
+  var frames = ['FRAME 01 · MACRO','FRAME 02 · APPROACH','FRAME 03 · CELL','FRAME 04 · HANDOFF'];
+  function bezier(t, x1, y1, x2, y2){
+    // cheap cubic-bezier y at t. Approximation: sample via iterative solve for x
+    var u = t, it;
+    for (it = 0; it < 5; it++){
+      var xt = 3*(1-u)*(1-u)*u*x1 + 3*(1-u)*u*u*x2 + u*u*u;
+      var dxt = 3*(1-u)*(1-u)*x1 + 6*(1-u)*u*(x2-x1) + 3*u*u*(1-x2);
+      if (dxt === 0) break;
+      u = Math.max(0, Math.min(1, u - (xt - t) / dxt));
+    }
+    return 3*(1-u)*(1-u)*u*y1 + 3*(1-u)*u*u*y2 + u*u*u;
+  }
+  function readoutFor(p){
+    var sc, active;
+    if (p < 0.18){ sc = 1; active = 0; }
+    else if (p < 0.30){ var k = bezier((p-0.18)/0.12, .3,0, .4,1); sc = 1 + k*(6-1); active = 0; }
+    else if (p < 0.42){ sc = 6; active = 1; }
+    else if (p < 0.56){ var k2 = bezier((p-0.42)/0.14, .2,0, .1,1); sc = 6 + k2*(28-6); active = 1; }
+    else if (p < 0.76){ sc = 28; active = 2; }
+    else if (p < 0.86){ var k3 = bezier((p-0.76)/0.10, .7,0, .9,.5); sc = 28 + k3*(120-28); active = 2; }
+    else { sc = 120; active = 3; }
+    if (macro) macro.style.setProperty('--s', sc.toFixed(2));
+    scaleNum.textContent = (sc < 10 ? sc.toFixed(1) : Math.round(sc)) + '×';
+    frameNum.textContent = frames[active];
+    beats.forEach(function(b){
+      var i = parseInt(b.dataset.i, 10);
+      b.classList.toggle('is-active', i === active);
+    });
+    rails.forEach(function(r){
+      var i = parseInt(r.dataset.i, 10);
+      r.classList.toggle('on', i === active);
+      r.classList.toggle('past', i < active);
+    });
+  }
+
+  // Try native scroll-timeline via CSS? We drive via JS for cross-browser consistency.
+  function update(){
+    var rect = conn.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var total = rect.height - vh; // scroll distance while sticky
+    if (total <= 0) { sticky.style.setProperty('--p', 0); return; }
+    var scrolled = -rect.top;
+    var p = scrolled / total;
+    if (p < 0) p = 0; if (p > 1) p = 1;
+    sticky.style.setProperty('--p', p.toFixed(4));
+    readoutFor(p);
+  }
+
+  var raf = null;
+  function onScroll(){
+    if (raf) return;
+    raf = requestAnimationFrame(function(){ raf = null; update(); });
+  }
+  // Don't animate when reduced motion — jump to a sensible midpoint (just hero end)
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.matches) {
+    sticky.style.setProperty('--p', 0);
+    readoutFor(0);
+  } else {
+    window.addEventListener('scroll', onScroll, { passive:true });
+    window.addEventListener('resize', onScroll);
+    update();
+  }
+})();
+
+/* ----- 4) Connector B progress: scroll-driven slab reveal + beat crossfade ----- */
+(function(){
+  var conn = document.querySelector('.connector-b');
+  var sticky = document.getElementById('cbSticky');
+  var dayEl = document.getElementById('cbDay');
+  var viewEl = document.getElementById('cbView');
+  if (!conn || !sticky) return;
+  var slabs = sticky.querySelectorAll('.cb-slab');
+  var beats = sticky.querySelectorAll('.cb-beat');
+  var totalSlabs = slabs.length; // 11
+  function setProgress(p){
+    sticky.style.setProperty('--p', p.toFixed(4));
+    // reveal slabs progressively across [0, 0.85]
+    var revealUpTo = Math.floor(p * totalSlabs / 0.85);
+    if (revealUpTo > totalSlabs) revealUpTo = totalSlabs;
+    slabs.forEach(function(sl, i){
+      sl.classList.toggle('is-on', i < revealUpTo);
+      sl.classList.toggle('is-current', i === revealUpTo - 1);
+    });
+    // 4 beats: B1 0-0.30 (single), B2 0.30-0.55 (week), B3 0.55-0.82 (month), B4 0.82-1.0 (handoff)
+    var active;
+    if (p < 0.30){ active = 0; dayEl.textContent = 'DAY ' + String(Math.min(7, Math.max(1, revealUpTo))).padStart(2,'0'); viewEl.textContent = 'SINGLE'; }
+    else if (p < 0.55){ active = 1; dayEl.textContent = 'W' + Math.min(18, 16 + Math.max(0, revealUpTo - 8)); viewEl.textContent = 'WEEK'; }
+    else if (p < 0.82){ active = 2; dayEl.textContent = 'APR'; viewEl.textContent = 'MONTH'; }
+    else { active = 3; dayEl.textContent = 'APR'; viewEl.textContent = 'HANDOFF'; }
+    beats.forEach(function(b){
+      var i = parseInt(b.dataset.i, 10);
+      b.classList.toggle('is-active', i === active);
+    });
+  }
+  function update(){
+    var rect = conn.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var total = rect.height - vh;
+    if (total <= 0) { setProgress(0); return; }
+    var scrolled = -rect.top;
+    var p = scrolled / total;
+    if (p < 0) p = 0; if (p > 1) p = 1;
+    setProgress(p);
+  }
+  var raf = null;
+  function onScroll(){
+    if (raf) return;
+    raf = requestAnimationFrame(function(){ raf = null; update(); });
+  }
+  var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (mq.matches){
+    // Show fully composed end state
+    setProgress(1);
+  } else {
+    window.addEventListener('scroll', onScroll, { passive:true });
+    window.addEventListener('resize', onScroll);
+    update();
+  }
+})();
+</script>
+</body>
+</html>
