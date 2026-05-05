@@ -166,6 +166,30 @@ select.form-control-sm {
     color: var(--color-primary-600);
 }
 
+/* --- Required count badge (Phase 2a-3 D) --- */
+
+.admin-day-required-badge {
+    font-size: 0.7em;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-top: 2px;
+    margin-left: 4px;
+    border: 1px solid transparent;
+}
+
+.admin-day-required-short {
+    background: rgba(239,68,68,0.08);
+    color: var(--color-danger-600, #dc2626);
+    border-color: rgba(239,68,68,0.25);
+}
+
+.admin-day-required-met {
+    background: rgba(34,197,94,0.08);
+    color: var(--color-success-600);
+    border-color: rgba(34,197,94,0.25);
+}
+
 /* --- Cell opening hours text --- */
 
 .admin-day-hours {

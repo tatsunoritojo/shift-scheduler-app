@@ -61,6 +61,7 @@ function initDirtyTrackers() {
         ['levels',            null,                      'btn-save-level-settings'],
         ['overlap-check',     null,                      'btn-save-overlap-check'],
         ['min-attendance',    null,                      'btn-save-min-attendance'],
+        ['staffing',          null,                      'btn-save-staffing'],
         ['workflow',          null,                      'btn-save-workflow'],
         ['opening-hours',     'section-opening-hours',   'btn-save-opening-hours'],
         ['schedule',          'builder-content',         'btn-save-schedule'],
@@ -597,6 +598,9 @@ function setupDelegatedHandlers() {
             case 'saveAnnouncement': saveAnnouncement(); break;
             case 'closeAnnouncementEditor': closeAnnouncementEditor(); break;
             case 'publishPeriod': publishPeriod(Number(target.dataset.periodId)); break;
+            case 'addStaffingRow': addStaffingRow(); break;
+            case 'removeStaffingRow': removeStaffingRow(Number(target.dataset.index)); break;
+            case 'saveStaffingRequirements': saveStaffingRequirements(); break;
         }
     });
 
@@ -606,6 +610,13 @@ function setupDelegatedHandlers() {
         if (!target) return;
         if (target.dataset.action === 'applyWorkerTime') {
             applyWorkerTime(Number(target.dataset.userId), target.dataset.date);
+        }
+        if (target.dataset.action === 'updateStaffingField') {
+            updateStaffingField(
+                Number(target.dataset.index),
+                target.dataset.field,
+                target.value,
+            );
         }
         if (target.dataset.action === 'changeMemberRole') {
             changeMemberRole(Number(target.dataset.memberId), target.value);
@@ -1134,6 +1145,7 @@ async function init() {
             loadLevelSettings(),
             loadOverlapCheckSettings(),
             loadMinAttendanceSettings(),
+            loadStaffingRequirements(),
             loadWorkflowSettings(),
             loadInvitations(),
         ]);
@@ -2122,12 +2134,22 @@ function buildDayAggregatedData() {
         const availableCount = workers.filter(w => w.is_available).length;
         const assignedCount = workers.filter(w => w.is_assigned).length;
 
+        // 必要人数: その日の曜日に該当する staffingDraft の合計
+        // (時間帯ごとに違う場合は延べ人数として扱う。MVP では単一値で集約)
+        const dayOfWeek = d.getDay();
+        const requiredCount = staffingDraft
+            .filter(r => r.day_of_week === dayOfWeek)
+            .reduce((sum, r) => sum + (r.required_count || 0), 0);
+        const hasRequirement = staffingDraft.some(r => r.day_of_week === dayOfWeek);
+
         dayAggregatedData[dateStr] = {
             closed,
             openingHours: oh,
             workers,
             availableCount,
             assignedCount,
+            requiredCount,
+            hasRequirement,
         };
     }
 }
@@ -2175,12 +2197,26 @@ function renderBuilderCalendar() {
                 cell.classList.add('admin-day-full');
             }
 
-            // Badge: assigned/available
+            // Badge: assigned/available [/必要]
             if (!data.closed) {
                 const badge = document.createElement('div');
                 badge.className = 'admin-day-badge';
                 badge.textContent = `${data.assignedCount}/${data.availableCount}`;
                 cell.appendChild(badge);
+
+                // 必要人数バッジ（設定済の曜日のみ表示）
+                if (data.hasRequirement) {
+                    const reqBadge = document.createElement('div');
+                    reqBadge.className = 'admin-day-required-badge';
+                    reqBadge.textContent = `必要 ${data.requiredCount}`;
+                    reqBadge.title = `この曜日の必要人数（時間帯合計）: ${data.requiredCount} 名`;
+                    if (data.assignedCount < data.requiredCount) {
+                        reqBadge.classList.add('admin-day-required-short');
+                    } else {
+                        reqBadge.classList.add('admin-day-required-met');
+                    }
+                    cell.appendChild(reqBadge);
+                }
             }
 
             // Opening hours text
@@ -3047,6 +3083,102 @@ async function updateMemberAttributes(memberId, updates) {
     } catch (e) {
         showToast(`メンバー属性の更新に失敗しました: ${e.message}`, 'error');
         throw e;
+    }
+}
+
+// --- Staffing Requirements (曜日 × 時間帯ごとの必要人数) — Phase 2a-3 D ---
+
+const STAFFING_DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+let staffingDraft = []; // クライアント側の編集中状態 ([{day_of_week, start_time, end_time, required_count}])
+
+async function loadStaffingRequirements() {
+    try {
+        const data = await api.get('/api/admin/staffing-requirements');
+        staffingDraft = (data || []).map(d => ({...d}));
+        renderStaffingList();
+        setClean('staffing');
+    } catch (e) {
+        const container = document.getElementById('staffing-list');
+        if (container) {
+            container.innerHTML = `<p style="color:var(--color-danger-600);font-size:0.9em;">読み込みに失敗しました: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+}
+
+function renderStaffingList() {
+    const container = document.getElementById('staffing-list');
+    if (!container) return;
+    if (staffingDraft.length === 0) {
+        container.innerHTML = '<p style="color:var(--color-neutral-500);font-size:0.9em;">未設定です。「+ 時間帯を追加」から設定を始めてください。</p>';
+        return;
+    }
+    container.innerHTML = staffingDraft.map((row, i) => `
+        <div class="staffing-row" style="display:grid;grid-template-columns:110px 1fr 1fr 100px auto;gap:8px;align-items:center;margin-bottom:6px;">
+            <select class="form-control form-control-sm" data-action="updateStaffingField" data-index="${i}" data-field="day_of_week" aria-label="${i+1}行目 曜日">
+                ${STAFFING_DAY_LABELS.map((label, dow) => `<option value="${dow}"${row.day_of_week === dow ? ' selected' : ''}>${label}曜日</option>`).join('')}
+            </select>
+            <input type="time" class="form-control form-control-sm" value="${row.start_time}" data-action="updateStaffingField" data-index="${i}" data-field="start_time" aria-label="${i+1}行目 開始時刻">
+            <input type="time" class="form-control form-control-sm" value="${row.end_time}" data-action="updateStaffingField" data-index="${i}" data-field="end_time" aria-label="${i+1}行目 終了時刻">
+            <input type="number" min="0" max="999" class="form-control form-control-sm" value="${row.required_count}" data-action="updateStaffingField" data-index="${i}" data-field="required_count" aria-label="${i+1}行目 必要人数">
+            <button class="btn btn-outline" data-action="removeStaffingRow" data-index="${i}" title="この時間帯を削除" aria-label="${i+1}行目を削除" style="padding:4px 8px;"><i data-lucide="x" style="width:13px;height:13px;"></i></button>
+        </div>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function addStaffingRow() {
+    staffingDraft.push({
+        day_of_week: 1,
+        start_time: '09:00',
+        end_time: '17:00',
+        required_count: 1,
+    });
+    renderStaffingList();
+    setDirty('staffing');
+}
+
+function removeStaffingRow(index) {
+    if (index < 0 || index >= staffingDraft.length) return;
+    staffingDraft.splice(index, 1);
+    renderStaffingList();
+    setDirty('staffing');
+}
+
+function updateStaffingField(index, field, value) {
+    if (!staffingDraft[index]) return;
+    if (field === 'day_of_week' || field === 'required_count') {
+        staffingDraft[index][field] = Number(value);
+    } else {
+        staffingDraft[index][field] = value;
+    }
+    setDirty('staffing');
+}
+
+async function saveStaffingRequirements() {
+    // クライアント側で軽くバリデーション（API 側でも検証されるが、UX 改善）
+    for (let i = 0; i < staffingDraft.length; i++) {
+        const r = staffingDraft[i];
+        if (!r.start_time || !r.end_time) {
+            showToast(`${i + 1} 行目: 時刻を入力してください`, 'warning');
+            return;
+        }
+        if (r.start_time >= r.end_time) {
+            showToast(`${i + 1} 行目: 開始時刻は終了時刻より前にしてください`, 'warning');
+            return;
+        }
+        if (r.required_count < 0 || r.required_count > 999) {
+            showToast(`${i + 1} 行目: 必要人数は 0〜999 の範囲で指定してください`, 'warning');
+            return;
+        }
+    }
+    try {
+        const data = await api.put('/api/admin/staffing-requirements', { items: staffingDraft });
+        staffingDraft = (data || []).map(d => ({...d}));
+        renderStaffingList();
+        setClean('staffing');
+        showToast('必要人数設定を保存しました', 'success');
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
 }
 
