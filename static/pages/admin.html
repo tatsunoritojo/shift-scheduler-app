@@ -382,6 +382,11 @@
                             <div class="field-hint">この日時を過ぎると提出できなくなります（任意）</div>
                         </div>
                     </div>
+                    <div class="form-group mb-16">
+                        <label for="period-announcement">募集文面（任意）</label>
+                        <textarea id="period-announcement" class="form-control" rows="4" maxlength="4000" placeholder="例: 5月のシフト募集を開始します。よろしくお願いします。"></textarea>
+                        <div class="field-hint">「募集中」に切り替えたタイミングで、Worker 宛のメール本文に含まれます（4000 文字まで）</div>
+                    </div>
                     <button class="btn btn-primary" id="btn-create-period"><i data-lucide="plus" style="width:15px;height:15px;"></i> 作成</button>
                 </div>
 
@@ -579,6 +584,32 @@
                 <div class="share-template-section">
                     <h4>貼り付け用メッセージ</h4>
                     <pre class="share-template-text" id="share-template-text"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Period announcement editor modal -->
+    <div id="period-announcement-modal" class="share-modal" hidden>
+        <div class="share-modal-backdrop" data-action="closeAnnouncementEditor"></div>
+        <div class="share-modal-content" style="max-width:600px;">
+            <div class="share-modal-header">
+                <h2>募集文面を編集</h2>
+                <button class="share-modal-close" type="button" data-action="closeAnnouncementEditor" aria-label="閉じる">&times;</button>
+            </div>
+            <div class="share-modal-body">
+                <p class="share-modal-hint">
+                    「募集中」に切り替えたタイミングで、Worker 宛のメール本文に含まれます。<br>
+                    既に「募集中」になっている期間の文面を変更しても、再送信はされません。
+                </p>
+                <p style="margin:0 0 8px;font-size:0.9em;color:var(--color-neutral-600);">対象期間: <strong id="announcement-target-name"></strong></p>
+                <div class="form-group">
+                    <textarea id="announcement-textarea" class="form-control" rows="8" maxlength="4000" placeholder="例: 5月のシフト募集を開始します。よろしくお願いします。"></textarea>
+                    <div class="field-hint" id="announcement-charcount">0 / 4000 文字</div>
+                </div>
+                <div class="share-modal-actions">
+                    <button class="btn btn-primary" type="button" data-action="saveAnnouncement">保存</button>
+                    <button class="btn btn-outline" type="button" data-action="closeAnnouncementEditor">キャンセル</button>
                 </div>
             </div>
         </div>

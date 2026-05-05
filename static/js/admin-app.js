@@ -15,6 +15,7 @@ let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
 let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
 let periodsIncludeArchived = false; // シフト期間タブのアーカイブ表示トグル状態
+let cachedPeriods = []; // 期間一覧の最新スナップショット (announcement 編集モーダル等で参照)
 
 // --- Dirty tracking for save buttons ---
 // A save button starts as btn-outline (white with blue border). When the user
@@ -588,6 +589,10 @@ function setupDelegatedHandlers() {
             case 'shareDownloadPng': shareDownloadPng(); break;
             case 'shareDownloadPdf': shareDownloadPdf(); break;
             case 'shareCopyMessage': shareCopyMessage(); break;
+            case 'editPeriodAnnouncement': editPeriodAnnouncement(Number(target.dataset.periodId)); break;
+            case 'saveAnnouncement': saveAnnouncement(); break;
+            case 'closeAnnouncementEditor': closeAnnouncementEditor(); break;
+            case 'publishPeriod': publishPeriod(Number(target.dataset.periodId)); break;
         }
     });
 
@@ -1409,10 +1414,11 @@ async function loadPeriods() {
         ? '/api/admin/periods?include_archived=true'
         : '/api/admin/periods';
     const data = await api.get(url);
+    cachedPeriods = data || [];
     const container = document.getElementById('periods-table-container');
 
     // バッジ ⑤ は閉鎖中（status=closed）かつ未アーカイブの期間数を表示
-    const buildPending = (data || []).filter(
+    const buildPending = cachedPeriods.filter(
         p => p.status === 'closed' && !p.is_archived
     ).length;
     setTabBadge('builder', buildPending);
@@ -1468,7 +1474,8 @@ function renderPeriodRow(p, statusLabels) {
             <td>${p.start_date} 〜 ${p.end_date}</td>
             <td>${statusBadge}</td>
             <td>
-                ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="open">募集開始</button>` : ''}
+                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="editPeriodAnnouncement" data-period-id="${p.id}" title="募集文面を編集（メールに含まれる本文）"><i data-lucide="message-square" style="width:13px;height:13px;"></i> 文面</button>
+                ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="publishPeriod" data-period-id="${p.id}">募集開始</button>` : ''}
                 ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
                 ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
                 <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
@@ -1597,12 +1604,14 @@ async function promptArchiveAfterConfirm(period) {
 }
 
 async function createPeriod() {
+    const announcement = document.getElementById('period-announcement').value.trim();
     const data = {
         name: document.getElementById('period-name').value,
         start_date: document.getElementById('period-start').value,
         end_date: document.getElementById('period-end').value,
         status: document.getElementById('period-status').value,
         submission_deadline: document.getElementById('period-deadline').value || null,
+        announcement_text: announcement || null,
     };
     if (!data.name || !data.start_date || !data.end_date) {
         showToast('名前と期間を入力してください', 'warning');
@@ -1611,6 +1620,8 @@ async function createPeriod() {
     try {
         const created = await api.post('/api/admin/periods', data);
         showToast('シフト期間を作成しました', 'success');
+        // 入力欄をリセット
+        document.getElementById('period-announcement').value = '';
         await loadPeriods();
         // Auto-open share modal so the admin can download the recruitment
         // calendar immediately after creation.
@@ -1906,6 +1917,92 @@ async function updatePeriodStatus(id, status) {
     } catch (e) {
         showToast(`更新に失敗しました: ${e.message}`, 'error');
     }
+}
+
+// ======================================================================
+// Period announcement editor
+// ======================================================================
+
+let editingAnnouncementPeriodId = null;
+
+function editPeriodAnnouncement(periodId) {
+    const period = cachedPeriods.find(p => p.id === periodId);
+    if (!period) {
+        showToast('対象の期間が見つかりません', 'error');
+        return;
+    }
+    editingAnnouncementPeriodId = periodId;
+    document.getElementById('announcement-target-name').textContent = period.name;
+    const textarea = document.getElementById('announcement-textarea');
+    textarea.value = period.announcement_text || '';
+    updateAnnouncementCharCount();
+    textarea.oninput = updateAnnouncementCharCount;
+    const modal = document.getElementById('period-announcement-modal');
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    if (window.lucide) lucide.createIcons();
+    textarea.focus();
+}
+
+function updateAnnouncementCharCount() {
+    const len = document.getElementById('announcement-textarea').value.length;
+    document.getElementById('announcement-charcount').textContent = `${len} / 4000 文字`;
+}
+
+function closeAnnouncementEditor() {
+    const modal = document.getElementById('period-announcement-modal');
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    const textarea = document.getElementById('announcement-textarea');
+    if (textarea) textarea.oninput = null;
+    editingAnnouncementPeriodId = null;
+}
+
+async function saveAnnouncement() {
+    if (editingAnnouncementPeriodId == null) return;
+    const value = document.getElementById('announcement-textarea').value.trim();
+    if (value.length > 4000) {
+        showToast('募集文面は 4000 文字までです', 'warning');
+        return;
+    }
+    try {
+        await api.put(`/api/admin/periods/${editingAnnouncementPeriodId}`, {
+            announcement_text: value || null,
+        });
+        showToast('募集文面を保存しました', 'success');
+        closeAnnouncementEditor();
+        await loadPeriods();
+    } catch (e) {
+        showToast(`保存に失敗しました: ${e.message}`, 'error');
+    }
+}
+
+async function publishPeriod(periodId) {
+    const period = cachedPeriods.find(p => p.id === periodId);
+    if (!period) {
+        showToast('対象の期間が見つかりません', 'error');
+        return;
+    }
+    const hasAnnouncement = !!(period.announcement_text && period.announcement_text.trim());
+    const announceHint = hasAnnouncement
+        ? '募集文面が設定されているので、メール本文に含まれます。'
+        : '募集文面は未設定です。先に「文面」ボタンから入力できます。';
+    showConfirmDialog(
+        `「${escapeHtml(period.name)}」を募集中にしますか？`,
+        `組織内の Worker 全員にシフト募集開始のメールが自動送信されます。${announceHint}`,
+        'btn-primary',
+        '募集を開始する',
+        async () => {
+            try {
+                const result = await api.put(`/api/admin/periods/${periodId}`, { status: 'open' });
+                const count = (result && typeof result.notified_count === 'number') ? result.notified_count : 0;
+                showToast(`募集を開始しました（${count} 名にメール送信）`, 'success');
+                await loadPeriods();
+            } catch (e) {
+                showToast(`公開に失敗しました: ${e.message}`, 'error');
+            }
+        }
+    );
 }
 
 // --- Builder ---
