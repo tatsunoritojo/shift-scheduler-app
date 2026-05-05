@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>シフリー LP v2 — Phase 0 提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&family=Fraunces:opsz,wght,SOFT@9..144,300..700,0..100&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* color system — direction B-custom */
+  --paper:        #F2EEE4;  /* warm off-white, base */
+  --paper-2:      #E9E3D3;  /* card shade */
+  --paper-3:      #DCD4BE;  /* edge / ruled line tint */
+  --ink:          #121211;  /* near-black, slight warm */
+  --ink-2:        #2A2A26;
+  --ink-mute:     #6B685E;  /* secondary text */
+  --ink-quiet:    #9E998A;  /* tertiary */
+  --rule:         #C8C1AC;
+  --accent:       #8B2E13;  /* deep vermilion / 朱 — the single accent */
+  --accent-dim:   #6A230E;
+  --signal:       #1C3A2E;  /* rare signal green, only for data */
+  --danger:       #9B2F23;
+  --warn-paper:   #F6F1E2;
+
+  /* type */
+  --mincho: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans:   "Zen Kaku Gothic New", "Hiragino Sans", system-ui, sans-serif;
+  --mono:   "JetBrains Mono", ui-monospace, monospace;
+  --disp:   "Fraunces", "Shippori Mincho", serif;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-feature-settings: "palt";
+  font-size:15px;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* page frame */
+.page{
+  max-width:1280px;
+  margin:0 auto;
+  padding:64px 80px 140px;
+}
+
+/* printed header */
+.masthead{
+  border-top:2px solid var(--ink);
+  border-bottom:1px solid var(--ink);
+  padding:18px 0 16px;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:end;
+  gap:24px;
+}
+.masthead .left{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-mute)}
+.masthead .mid{font-family:var(--mincho); font-size:13px; letter-spacing:.4em; text-align:center}
+.masthead .right{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-align:right; color:var(--ink-mute)}
+
+/* volume / issue line */
+.issue{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-mute);
+  padding:8px 0 32px;
+  letter-spacing:.08em;
+}
+.issue .dot{width:5px;height:5px;background:var(--accent);border-radius:50%;display:inline-block;vertical-align:middle;margin:0 10px 2px}
+
+/* hero cover */
+.cover{
+  padding:56px 0 64px;
+  display:grid;
+  grid-template-columns: 7fr 5fr;
+  gap:64px;
+  align-items:end;
+  border-bottom:1px solid var(--rule);
+}
+.kicker{
+  font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:28px; display:flex; align-items:center; gap:12px;
+}
+.kicker::before{content:""; display:inline-block; width:36px; height:1px; background:var(--accent)}
+
+h1.title{
+  font-family:var(--mincho);
+  font-weight:600;
+  font-size:96px;
+  line-height:1.04;
+  letter-spacing:-0.01em;
+  margin:0 0 28px;
+  color:var(--ink);
+}
+h1.title .en{
+  display:block;
+  font-family:var(--disp);
+  font-weight:300;
+  font-style:italic;
+  font-size:38px;
+  letter-spacing:-0.01em;
+  color:var(--ink-mute);
+  margin-top:18px;
+}
+.cover .lede{
+  font-family:var(--mincho);
+  font-size:17px; line-height:1.95;
+  color:var(--ink-2);
+  max-width:460px;
+}
+.cover .meta{
+  font-family:var(--mono); font-size:11px;
+  color:var(--ink-mute);
+  margin-top:28px;
+  border-top:1px solid var(--rule);
+  padding-top:16px;
+  display:grid; grid-template-columns: auto 1fr; gap:6px 18px;
+}
+.cover .meta b{color:var(--ink); font-weight:500}
+
+/* section heading */
+.sec-head{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:40px;
+  align-items:baseline;
+  margin:96px 0 28px;
+  padding-top:18px;
+  border-top:1px solid var(--ink);
+}
+.sec-head .num{
+  font-family:var(--mono);
+  font-size:12px; letter-spacing:.15em;
+  color:var(--ink-mute);
+}
+.sec-head .num .big{
+  display:block; font-family:var(--disp); font-style:italic; font-weight:300;
+  font-size:52px; color:var(--ink); letter-spacing:-0.02em; line-height:1; margin-bottom:8px;
+}
+.sec-head h2{
+  font-family:var(--mincho);
+  font-weight:600;
+  font-size:42px;
+  letter-spacing:-0.005em;
+  margin:0 0 8px;
+  line-height:1.2;
+}
+.sec-head h2 .jp-small{font-size:20px; color:var(--ink-mute); margin-left:14px; font-weight:400; letter-spacing:.05em}
+.sec-head .sub{
+  font-family:var(--mincho);
+  font-size:15.5px; color:var(--ink-2);
+  max-width:760px; line-height:1.9;
+}
+
+/* body columns */
+.cols-2{display:grid; grid-template-columns: 1fr 1fr; gap:48px}
+.cols-3{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:32px}
+.cols-asym{display:grid; grid-template-columns: 5fr 7fr; gap:56px}
+
+/* prose */
+p, .prose{font-family:var(--mincho); font-size:15px; line-height:1.95; color:var(--ink-2)}
+p + p{margin-top:14px}
+.small{font-size:13px}
+
+/* moodboard */
+.moodgrid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows:90px;
+  gap:12px;
+  margin-top:8px;
+}
+.mood{
+  position:relative;
+  border:1px solid var(--rule);
+  background:var(--paper-2);
+  overflow:hidden;
+  padding:18px;
+  display:flex; flex-direction:column; justify-content:flex-end;
+}
+.mood .tag{
+  position:absolute; top:10px; left:12px;
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.15em; color:var(--ink-mute);
+}
+.mood .name{
+  font-family:var(--mincho); font-size:14px; color:var(--ink); line-height:1.35;
+}
+.mood .note{
+  font-family:var(--mono); font-size:10px; color:var(--ink-mute); margin-top:4px; letter-spacing:.05em
+}
+
+/* individual mood cells — each is a distinct vibe sketch */
+.m1{grid-column:span 5; grid-row:span 3; background:#0c0c0b; color:#E9E3D3}
+.m1 .name,.m1 .tag{color:#E9E3D3}.m1 .note{color:#bbb3a0}
+.m1::before{content:""; position:absolute; inset:0; background:
+  radial-gradient(1200px 300px at 80% 20%, rgba(233,227,211,0.08), transparent 60%),
+  repeating-linear-gradient(0deg, transparent 0 28px, rgba(233,227,211,0.06) 28px 29px);
+}
+.m1 .huge{position:absolute; left:18px; top:44px; font-family:var(--disp); font-style:italic; font-weight:300; font-size:88px; line-height:.9; color:#E9E3D3}
+.m1 .huge .accent{color:#E0553D}
+
+.m2{grid-column:span 4; grid-row:span 3; background:var(--paper-2)}
+.m2::before{content:""; position:absolute; inset:14px; border:1px solid var(--rule)}
+.m2 .ghost{
+  position:absolute; inset:14px; display:grid; grid-template-columns:repeat(14,1fr); grid-template-rows:repeat(10,1fr);
+}
+.m2 .ghost span{border-right:1px solid #d6cdb3; border-bottom:1px solid #d6cdb3}
+.m2 .ghost span.fill{background:rgba(139,46,19,0.75)}
+.m2 .ghost span.soft{background:rgba(139,46,19,0.15)}
+
+.m3{grid-column:span 3; grid-row:span 3; background:var(--paper)}
+.m3 .type{
+  position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:2px;
+  font-family:var(--mincho);
+}
+.m3 .type .a{font-size:60px; font-weight:600; color:var(--ink); letter-spacing:-0.04em}
+.m3 .type .b{font-family:var(--disp); font-style:italic; font-weight:300; font-size:28px; color:var(--accent); margin-top:-4px}
+.m3 .type .c{font-family:var(--mono); font-size:10px; color:var(--ink-mute); letter-spacing:.2em; margin-top:8px}
+
+.m4{grid-column:span 4; grid-row:span 2; background:var(--paper-2)}
+.m4 .rule-demo{position:absolute; inset:16px; display:flex; flex-direction:column; justify-content:center; gap:8px}
+.m4 .rule-demo .line{height:1px; background:var(--ink)}
+.m4 .rule-demo .line.thin{background:var(--rule)}
+.m4 .rule-demo .lbl{font-family:var(--mono); font-size:10px; color:var(--ink-mute); letter-spacing:.1em}
+
+.m5{grid-column:span 4; grid-row:span 2; background:#F2EEE4}
+.m5 .swatches{position:absolute; inset:18px 18px 34px; display:grid; grid-template-columns: repeat(6,1fr); gap:6px}
+.m5 .swatches div{border:1px solid rgba(0,0,0,0.06)}
+
+.m6{grid-column:span 4; grid-row:span 2; background:#E9E3D3}
+.m6 svg{position:absolute; inset:14px; width:calc(100% - 28px); height:calc(100% - 28px)}
+
+.m7{grid-column:span 6; grid-row:span 2; background:var(--paper-2)}
+.m7 .scene{position:absolute; inset:16px; display:flex; align-items:center; gap:14px}
+.m7 .mini-cal{
+  flex:0 0 60%;
+  display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:16px; gap:2px;
+}
+.m7 .mini-cal span{background:#dcd4be}
+.m7 .mini-cal span.on{background:var(--ink)}
+.m7 .mini-cal span.ink{background:var(--accent)}
+.m7 .scene p{
+  margin:0; font-family:var(--mincho); font-size:13px; line-height:1.7; color:var(--ink-2)
+}
+
+.m8{grid-column:span 6; grid-row:span 2; background:var(--ink); color:var(--paper)}
+.m8 .name,.m8 .tag{color:var(--paper)}
+.m8 .ts{
+  position:absolute; inset:18px; display:grid; grid-template-rows:repeat(6,1fr);
+}
+.m8 .ts .row{border-top:1px solid rgba(242,238,228,0.18); display:flex; align-items:center; gap:14px; padding:0 6px;
+  font-family:var(--mono); font-size:10px; color:rgba(242,238,228,0.5); letter-spacing:.08em}
+.m8 .ts .row .bar{height:6px; background:#E9E3D3; flex:0 0 auto}
+.m8 .ts .row .bar.a{width:22%; background:var(--accent)}
+.m8 .ts .row .bar.b{width:40%}
+.m8 .ts .row .bar.c{width:10%; background:#9E998A}
+
+/* spec cards */
+.spec{
+  border:1px solid var(--rule);
+  background:var(--paper);
+  padding:22px 22px 20px;
+}
+.spec h4{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink-mute); margin:0 0 14px; font-weight:500;
+}
+.spec h3{
+  font-family:var(--mincho); font-weight:600; font-size:20px; margin:0 0 10px; letter-spacing:-0.005em;
+}
+.spec p{font-family:var(--mincho); font-size:14px; line-height:1.85; margin:0}
+
+/* hero concept sketch */
+.hero-sketch{
+  margin-top:12px;
+  border:1px solid var(--ink);
+  background:var(--paper);
+  position:relative;
+}
+.hero-sketch .stage{
+  aspect-ratio: 16/9;
+  position:relative;
+  overflow:hidden;
+  background:var(--paper-2);
+}
+.hero-sketch .bar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-mute); letter-spacing:.1em;
+}
+.hero-sketch .bar .left{display:flex; gap:16px}
+.hero-sketch .bar button{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
+  background:var(--ink); color:var(--paper); border:0; padding:6px 12px; cursor:pointer;
+}
+.hero-sketch .bar button.ghost{background:transparent; color:var(--ink); border:1px solid var(--ink)}
+
+/* ---- hero anim stage internals (live sketch) ---- */
+.stage .copy{
+  position:absolute; left:48px; top:44px; max-width:46%;
+  z-index:4;
+}
+.stage .copy .eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.22em; color:var(--accent); text-transform:uppercase;
+}
+.stage .copy h3{
+  margin:14px 0 18px; font-family:var(--mincho); font-weight:600; font-size:52px;
+  line-height:1.1; letter-spacing:-0.01em;
+}
+.stage .copy h3 em{font-style:normal; color:var(--accent)}
+.stage .copy .sub{
+  font-family:var(--mincho); font-size:14px; line-height:1.9; color:var(--ink-2); margin:0; max-width:380px;
+}
+.stage .copy .tick{
+  margin-top:18px; font-family:var(--mono); font-size:10.5px; letter-spacing:.15em; color:var(--ink-mute);
+  display:flex; gap:14px; align-items:center;
+}
+.stage .copy .tick .t{padding:3px 8px; border:1px solid var(--ink); color:var(--ink)}
+
+.calendar-field{
+  position:absolute; right:44px; top:50%; transform:translateY(-50%);
+  width:46%; aspect-ratio: 7/5;
+}
+.cf-grid{
+  position:absolute; inset:0;
+  display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(5,1fr);
+  gap:6px;
+}
+.cf-grid .cell{
+  border:1px solid var(--rule);
+  background:var(--paper);
+  position:relative;
+  overflow:hidden;
+  animation: cellBreathe 9s infinite;
+  animation-delay: calc(var(--i) * 0.09s);
+}
+.cf-grid .cell::after{
+  content:""; position:absolute; left:5px; top:5px; width:10px; height:2px; background:var(--paper-3);
+}
+.cf-grid .cell.wish{
+  background: var(--paper);
+  animation: wishIn 9s infinite;
+  animation-delay: calc(0.4s + var(--i) * 0.07s);
+}
+.cf-grid .cell.wish::before{
+  content:""; position:absolute; inset:3px;
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 6px, rgba(139,46,19,0.35) 6px 7px);
+  opacity:0;
+  animation: wishHatch 9s infinite;
+  animation-delay: calc(0.4s + var(--i) * 0.07s);
+}
+.cf-grid .cell.assigned{
+  animation: assignIn 9s infinite;
+  animation-delay: calc(3.4s + var(--i) * 0.05s);
+}
+.cf-grid .cell .chip{
+  position:absolute; left:4px; right:4px; bottom:4px;
+  height:7px; background:var(--ink); transform:scaleX(0); transform-origin:left;
+  animation: chip 9s infinite;
+  animation-delay: calc(3.4s + var(--i) * 0.05s);
+}
+.cf-grid .cell.assigned.accent .chip{background:var(--accent)}
+
+.cf-rule-top, .cf-rule-side{
+  position:absolute; font-family:var(--mono); font-size:9px; letter-spacing:.15em; color:var(--ink-quiet);
+}
+.cf-rule-top{left:0; right:0; top:-16px; display:grid; grid-template-columns:repeat(7,1fr); gap:6px; text-align:center}
+.cf-rule-side{left:-22px; top:0; bottom:0; display:grid; grid-template-rows:repeat(5,1fr); gap:6px; align-items:center}
+
+@keyframes cellBreathe{
+  0%,14%{background:var(--paper); border-color:var(--rule)}
+  20%,100%{background:var(--paper); border-color:var(--rule)}
+}
+@keyframes wishIn{
+  0%,10%{background:var(--paper)}
+  14%,40%{background:#F6EFE0}
+  44%,100%{background:var(--paper)}
+}
+@keyframes wishHatch{
+  0%,10%{opacity:0}
+  14%,40%{opacity:1}
+  44%,100%{opacity:0}
+}
+@keyframes assignIn{
+  0%,38%{background:var(--paper)}
+  42%,72%{background:var(--ink); border-color:var(--ink)}
+  75%,100%{background:var(--paper)}
+}
+@keyframes chip{
+  0%,38%{transform:scaleX(0)}
+  44%,72%{transform:scaleX(1)}
+  76%,100%{transform:scaleX(0)}
+}
+
+.zoom-frame{
+  position:absolute;
+  border:1px solid var(--accent);
+  left:calc(50% + 80px); top:28%;
+  width:120px; height:80px;
+  pointer-events:none;
+  animation: zoomFrame 9s infinite;
+}
+.zoom-frame::before, .zoom-frame::after{
+  content:""; position:absolute; background:var(--accent);
+}
+.zoom-frame::before{left:-1px; top:-1px; width:10px; height:1px}
+.zoom-frame::after{left:-1px; top:-1px; width:1px; height:10px}
+.zoom-frame .lbl{
+  position:absolute; left:0; bottom:-18px; font-family:var(--mono); font-size:9px; color:var(--accent); letter-spacing:.15em;
+}
+@keyframes zoomFrame{
+  0%,70%{opacity:0; transform:scale(1)}
+  75%,86%{opacity:1; transform:scale(1)}
+  92%,100%{opacity:0; transform:scale(4.2); border-width:0.4px}
+}
+
+.timeline{
+  margin-top:24px;
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:0;
+  border-top:1px solid var(--ink); border-bottom:1px solid var(--ink);
+}
+.timeline .step{
+  padding:16px 18px; border-right:1px solid var(--rule); position:relative;
+}
+.timeline .step:last-child{border-right:0}
+.timeline .step .t{
+  font-family:var(--mono); font-size:10px; letter-spacing:.15em; color:var(--ink-mute); margin-bottom:8px;
+}
+.timeline .step .h{font-family:var(--mincho); font-weight:600; font-size:15px; margin-bottom:4px}
+.timeline .step .d{font-family:var(--mincho); font-size:12.5px; color:var(--ink-mute); line-height:1.7}
+.timeline .step .bar{
+  position:absolute; left:0; bottom:-1px; height:2px; background:var(--accent); transform-origin:left;
+  width:100%; animation: step 9s infinite;
+}
+.timeline .step:nth-child(1) .bar{animation-delay:0s}
+.timeline .step:nth-child(2) .bar{animation-delay:2.25s}
+.timeline .step:nth-child(3) .bar{animation-delay:4.5s}
+.timeline .step:nth-child(4) .bar{animation-delay:6.75s}
+@keyframes step{
+  0%,2%{transform:scaleX(0)}
+  3%,22%{transform:scaleX(1)}
+  25%,100%{transform:scaleX(0)}
+}
+
+/* connector diagram */
+.connector{
+  border:1px solid var(--ink);
+  background:var(--paper-2);
+  padding:28px;
+  margin-top:12px;
+  position:relative;
+}
+.connector .stages{
+  display:grid; grid-template-columns:repeat(5, 1fr); gap:0; align-items:stretch;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+}
+.connector .stages .s{
+  border-right:1px dashed var(--rule); padding:14px 12px; min-height:180px; position:relative;
+  display:flex; flex-direction:column; gap:10px;
+}
+.connector .stages .s:last-child{border-right:0}
+.connector .stages .s .n{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ink-mute)}
+.connector .stages .s .h{font-family:var(--mincho); font-size:15px; font-weight:600; line-height:1.4}
+.connector .stages .s .vis{flex:1; background:var(--paper); border:1px solid var(--rule); position:relative; overflow:hidden}
+
+/* tiny re-used grid inside connector */
+.grid-mini{
+  position:absolute; inset:6px;
+  display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(5,1fr); gap:2px;
+}
+.grid-mini span{background:var(--paper-3)}
+.grid-mini span.on{background:var(--ink)}
+.grid-mini span.acc{background:var(--accent)}
+
+/* focus views inside connector */
+.s .vis .zoomframe{position:absolute; left:40%; top:30%; width:30%; height:35%; border:1px solid var(--accent)}
+.s .vis .modal-mini{position:absolute; inset:18% 18%; background:var(--paper); border:1px solid var(--ink); padding:8px;}
+.s .vis .modal-mini .mline{height:4px; background:var(--paper-3); margin-bottom:5px}
+.s .vis .modal-mini .mline.dark{background:var(--ink); width:40%}
+.s .vis .modal-mini .mline.acc{background:var(--accent); width:30%}
+.s .vis .modal-mini .mbar{height:6px; background:var(--accent); width:60%; margin-top:4px}
+
+.connector .arrow-row{
+  display:grid; grid-template-columns:repeat(5,1fr); gap:0;
+  margin-top:6px;
+  font-family:var(--mono); font-size:9.5px; color:var(--ink-mute); letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.connector .arrow-row span{padding:8px 12px; border-right:1px dashed var(--rule); text-align:left}
+.connector .arrow-row span:last-child{border-right:0}
+
+.zoom-scale{
+  position:absolute; right:28px; top:22px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--accent);
+  display:flex; align-items:center; gap:8px;
+}
+.zoom-scale .line{width:80px; height:1px; background:var(--accent); position:relative}
+.zoom-scale .line::before{content:""; position:absolute; left:0; top:-3px; width:1px; height:7px; background:var(--accent)}
+.zoom-scale .line::after{content:""; position:absolute; right:0; top:-3px; width:1px; height:7px; background:var(--accent)}
+
+/* token displays */
+.tokens{display:grid; grid-template-columns:repeat(7, 1fr); gap:10px; margin-top:8px}
+.token{border:1px solid var(--rule); padding:14px 12px; background:var(--paper); position:relative; min-height:130px; display:flex; flex-direction:column; justify-content:space-between}
+.token .sw{height:52px; border:1px solid rgba(0,0,0,0.04)}
+.token .name{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--ink); margin-top:10px}
+.token .hex{font-family:var(--mono); font-size:10px; color:var(--ink-mute)}
+.token .role{font-family:var(--mincho); font-size:11.5px; color:var(--ink-mute); margin-top:6px; line-height:1.55}
+
+/* type spec */
+.type-spec{display:grid; grid-template-columns: 1fr 1fr; gap:32px}
+.type-card{border:1px solid var(--rule); padding:28px; background:var(--paper); position:relative}
+.type-card .lab{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--ink-mute); margin-bottom:16px}
+.type-card .lg{font-size:72px; line-height:1; letter-spacing:-0.01em; margin:0 0 6px}
+.type-card .md{font-size:22px; line-height:1.4; margin:14px 0 0}
+.type-card .sm{font-size:12px; color:var(--ink-mute); letter-spacing:.1em; margin-top:18px}
+.type-card.mincho{font-family:var(--mincho)}
+.type-card.mincho .lg{font-weight:600}
+.type-card.sans{font-family:var(--sans)}
+.type-card.sans .lg{font-weight:500; letter-spacing:-0.01em}
+.type-card.mono{font-family:var(--mono)}
+.type-card.mono .lg{font-size:52px; font-weight:400}
+.type-card.disp{font-family:var(--disp)}
+.type-card.disp .lg{font-weight:300; font-style:italic}
+
+.pair-row{
+  display:grid; grid-template-columns: 2fr 3fr; gap:24px; padding:18px 0; border-bottom:1px solid var(--rule);
+  align-items:baseline;
+}
+.pair-row:last-child{border-bottom:0}
+.pair-row .a{font-family:var(--mono); font-size:11px; color:var(--ink-mute); letter-spacing:.1em}
+.pair-row .b{font-family:inherit}
+
+/* question / next */
+.asks{display:grid; grid-template-columns: repeat(2,1fr); gap:0; border-top:1px solid var(--ink); margin-top:24px}
+.ask{padding:22px 24px 22px 0; border-bottom:1px solid var(--rule); border-right:1px solid var(--rule); }
+.ask:nth-child(2n){padding-right:0; padding-left:24px; border-right:0}
+.ask .q{font-family:var(--mincho); font-size:17px; font-weight:600; line-height:1.5; margin-bottom:8px}
+.ask .why{font-family:var(--mincho); font-size:13.5px; color:var(--ink-mute); line-height:1.8}
+
+/* footer */
+.colophon{
+  margin-top:120px; padding-top:22px; border-top:2px solid var(--ink);
+  display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:18px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--ink-mute);
+}
+.colophon b{color:var(--ink); font-weight:500; display:block; margin-bottom:6px; font-size:10px}
+
+/* anti-pattern crossed list */
+.dont{
+  border:1px solid var(--rule); padding:20px 22px; background:var(--warn-paper);
+}
+.dont h4{font-family:var(--mono); font-size:10.5px; letter-spacing:.18em; color:var(--accent); margin:0 0 10px}
+.dont ul{margin:0; padding-left:18px; font-family:var(--mincho); font-size:13.5px; color:var(--ink-2); line-height:1.9}
+.dont li{position:relative}
+.dont li s{text-decoration-color:var(--accent); text-decoration-thickness:1.5px}
+
+/* a tag as annotation */
+.annot{
+  position:absolute; font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--accent-dim);
+  display:flex; align-items:center; gap:6px;
+}
+.annot::before{content:""; width:14px; height:1px; background:var(--accent-dim)}
+
+/* logo lockup */
+.lock{display:inline-flex; align-items:center; gap:10px}
+.lock .gl{width:22px; height:22px; border-radius:5px; background:var(--ink); display:inline-block; position:relative}
+.lock .gl::after{
+  content:"シ"; position:absolute; inset:0; color:var(--paper); font-family:var(--mincho); font-weight:600;
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+}
+.lock .nm{font-family:var(--mincho); font-weight:600; font-size:17px; letter-spacing:.05em}
+
+@media (prefers-reduced-motion: reduce){
+  .cf-grid .cell, .cf-grid .cell.wish, .cf-grid .cell.wish::before, .cf-grid .cell.assigned, .cf-grid .cell .chip,
+  .zoom-frame, .timeline .step .bar{ animation:none !important }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- masthead -->
+  <div class="masthead">
+    <div class="left">Shifree — LP v2 · Phase 0</div>
+    <div class="mid">設 計 提 案 書</div>
+    <div class="right">2026 · 04 · 23 &nbsp;/&nbsp; Rev. 0</div>
+  </div>
+  <div class="issue">
+    <span>No. 00<span class="dot"></span>Concept Deck<span class="dot"></span>For Review</span>
+    <span>Direction — B (Warm off-white / Deep ink) × 明朝 Typography</span>
+    <span>Prepared for: 東城 × Claude (PM)</span>
+  </div>
+
+  <!-- cover -->
+  <section class="cover">
+    <div>
+      <div class="kicker">Phase 0 · Concept Proposal</div>
+      <h1 class="title">
+        月末が、<br/>少しだけ<br/>早く終わる。
+        <span class="en">A quieter end of the month.</span>
+      </h1>
+    </div>
+    <div>
+      <p class="lede">
+        既存 LP は、テンプレートの語彙で出来ている。Tailwind blue、3 カラム、挑発ヘッドライン。これらを 1 秒で読み取られた瞬間、プロダクトの信頼は目減りする。<br/><br/>
+        本提案では <b>紙面的な静けさ</b> と <b>動きの精度</b> を交換レートにする。明朝の骨格、朱の一点、スクロール連動の組成アニメ。色ではなく、手数で信頼を立ち上げる。
+      </p>
+      <div class="meta">
+        <b>Direction</b><span>B-custom — Warm paper × Deep ink × 朱 (vermilion)</span>
+        <b>Typeface</b><span>Shippori Mincho / Fraunces Italic / JetBrains Mono</span>
+        <b>Craft anchor</b><span>組成アニメ + ズームアウト接続</span>
+        <b>Risk</b><span>明朝 + 紙面 = 古く見える可能性 → 動きと余白で現代化</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- §01 Position -->
+  <div class="sec-head">
+    <div class="num"><span class="big">01</span>Position</div>
+    <div>
+      <h2>立ち位置の宣言<span class="jp-small">— Why this direction.</span></h2>
+      <div class="sub">既存 LP のアンチパターンを避けるだけでは不十分。<b>「明朝 × 紙 × 朱 × 精密な動き」</b>という、SaaS 界隈で誰もやっていない組み合わせに賭ける。craft signal は「珍しさ」ではなく「一貫性」から生まれる。このセクションはその賭けの地図。</div>
+    </div>
+  </div>
+
+  <div class="cols-asym">
+    <div>
+      <p>シフリーのコア差別化は「データが Google に残る」。これは静かで、主張の弱い事実だが、誠実な態度の象徴でもある。派手な SaaS 語彙（インディゴ、グラデ、3D イラスト、絵文字）はこの態度と相性が悪い。</p>
+      <p>代替として選んだのが <b>編集的 (editorial)</b> な語彙。雑誌の扉、設計図面の余白、活版の朱の入り方。ターゲットである個人経営事業者・塾・美容室オーナーは、派手なテック文脈よりも、<b>落ち着いた誌面の品</b>に反応する層が一定数いる。</p>
+      <p>そして編集的な紙面は、スクロール連動の動きと結合したとき、急に現代化する。止まっていれば古いが、精密に動けば「作り込んだ」になる。これが本提案の骨子。</p>
+    </div>
+    <div class="dont">
+      <h4>AVOID — 既存 LP のアンチパターン</h4>
+      <ul>
+        <li><s>#3B82F6 Tailwind blue プライマリ</s></li>
+        <li><s>青 → 紫のグラデーション背景</s></li>
+        <li><s>lucide 線画アイコン 3 カラム並び</s></li>
+        <li><s>「まだ手作業ですか？」型の挑発ヘッドライン</s></li>
+        <li><s>中央寄せ Hero（見出し＋サブ＋CTA の定型）</s></li>
+        <li><s>Pain → Solution の二項対立</s></li>
+        <li><s>ストック系スマホ mockup</s></li>
+        <li><s>星 5 つの偽レビュー</s></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- §02 Moodboard -->
+  <div class="sec-head">
+    <div class="num"><span class="big">02</span>Moodboard</div>
+    <div>
+      <h2>参照の地平<span class="jp-small">— Not to copy, to calibrate.</span></h2>
+      <div class="sub">意匠を真似るためではなく、<b>方向の共通言語</b>を作るための 8 枚。カテゴリは「編集」「テック硬質」「日本語タイポ」「図面」の 4 系列。各枠の下に参照の短いメモを添える。</div>
+    </div>
+  </div>
+
+  <div class="moodgrid">
+    <div class="mood m1">
+      <span class="tag">01 · EDITORIAL DARK</span>
+      <div class="huge">Quiet<span class="accent">,</span><br/>then<br/><i>precise.</i></div>
+      <div class="name">誌面の闇と、一点の朱</div>
+      <div class="note">Ref: Mundial Mag, Apartamento covers</div>
+    </div>
+    <div class="mood m2">
+      <span class="tag">02 · GRID AS CANVAS</span>
+      <div class="ghost">
+        <!-- 14*10 -->
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span class="soft"></span><span class="soft"></span><span></span><span></span><span class="fill"></span><span></span><span></span><span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span></span>
+        <span></span><span class="fill"></span><span></span><span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span class="soft"></span><span></span><span></span><span></span><span class="fill"></span><span></span>
+        <span></span><span></span><span class="fill"></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span></span><span></span><span></span>
+        <span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span></span><span></span><span class="fill"></span><span></span><span></span><span class="soft"></span><span class="fill"></span><span></span><span></span>
+        <span></span><span class="fill"></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span></span><span></span><span class="soft"></span><span></span>
+        <span></span><span></span><span></span><span class="fill"></span><span></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span class="soft"></span><span class="fill"></span><span></span><span></span><span></span>
+        <span></span><span class="soft"></span><span class="fill"></span><span></span><span></span><span class="fill"></span><span></span><span></span><span class="soft"></span><span></span><span></span><span class="fill"></span><span></span><span></span>
+        <span></span><span></span><span></span><span class="fill"></span><span class="soft"></span><span></span><span class="fill"></span><span></span><span></span><span class="fill"></span><span></span><span></span><span class="soft"></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <span class="name" style="position:relative; z-index:2; background:var(--paper-2); padding:4px 6px; align-self:flex-start">カレンダーは、LP の壁紙にもなる</span>
+      <span class="note" style="position:relative; z-index:2; background:var(--paper-2); padding:0 6px 2px; align-self:flex-start">同じ 7×n グリッドを Hero→中→終で再利用</span>
+    </div>
+    <div class="mood m3">
+      <span class="tag">03 · MINCHO × ITALIC</span>
+      <div class="type">
+        <div class="a">明朝</div>
+        <div class="b">&amp; italic latin</div>
+        <div class="c">SHIPPORI × FRAUNCES</div>
+      </div>
+    </div>
+    <div class="mood m4">
+      <span class="tag">04 · RULES AS STRUCTURE</span>
+      <div class="rule-demo">
+        <div class="lbl">A — MASTHEAD</div>
+        <div class="line"></div>
+        <div class="line thin"></div>
+        <div class="lbl">B — SECTION</div>
+        <div class="line"></div>
+        <div class="line thin"></div>
+        <div class="line thin"></div>
+        <div class="lbl">C — FOOT</div>
+        <div class="line"></div>
+      </div>
+    </div>
+    <div class="mood m5">
+      <span class="tag">05 · PALETTE</span>
+      <div class="swatches">
+        <div style="background:#F2EEE4"></div>
+        <div style="background:#E9E3D3"></div>
+        <div style="background:#DCD4BE"></div>
+        <div style="background:#9E998A"></div>
+        <div style="background:#2A2A26"></div>
+        <div style="background:#8B2E13"></div>
+      </div>
+      <div class="name" style="position:relative; z-index:2; margin-top:auto">Paper · Ink · 朱</div>
+    </div>
+    <div class="mood m6">
+      <span class="tag">06 · TECHNICAL DRAWING</span>
+      <svg viewBox="0 0 220 80" preserveAspectRatio="none">
+        <defs>
+          <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#c8c1ac" stroke-width="0.3"/>
+          </pattern>
+        </defs>
+        <rect width="220" height="80" fill="url(#grid)"/>
+        <rect x="20" y="16" width="60" height="48" fill="none" stroke="#121211" stroke-width="0.8"/>
+        <rect x="90" y="16" width="110" height="22" fill="none" stroke="#121211" stroke-width="0.8"/>
+        <rect x="90" y="42" width="110" height="22" fill="#8B2E13" opacity="0.85"/>
+        <line x1="20" y1="70" x2="200" y2="70" stroke="#121211" stroke-dasharray="2 2" stroke-width="0.4"/>
+        <text x="20" y="76" font-family="JetBrains Mono" font-size="5" fill="#6B685E" letter-spacing="1">1200MM — 4 COL</text>
+      </svg>
+      <div class="name" style="position:relative">図面の余白、寸法線の語彙</div>
+      <div class="note">Ref: 建築事務所 portfolio, 10X LP</div>
+    </div>
+    <div class="mood m7">
+      <span class="tag">07 · CALENDAR ANCHOR</span>
+      <div class="scene">
+        <div class="mini-cal">
+          <!-- 7*6 = 42 -->
+          <span></span><span class="on"></span><span></span><span></span><span class="on"></span><span></span><span></span>
+          <span class="ink"></span><span></span><span class="on"></span><span class="on"></span><span></span><span class="ink"></span><span></span>
+          <span></span><span class="on"></span><span></span><span class="ink"></span><span></span><span class="on"></span><span></span>
+          <span class="on"></span><span></span><span class="ink"></span><span></span><span class="on"></span><span></span><span class="on"></span>
+          <span></span><span class="ink"></span><span></span><span class="on"></span><span></span><span class="ink"></span><span></span>
+          <span></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span></span>
+        </div>
+        <p><b style="font-weight:600; color:var(--ink)">共通要素：7×n のグリッド</b>。Hero の Field と、機能深掘りの画面、接続部のズーム先、全部このグリッドを下敷きに共有する。</p>
+      </div>
+    </div>
+    <div class="mood m8">
+      <span class="tag">08 · TIMESHEET AS NARRATIVE</span>
+      <div class="ts">
+        <div class="row"><span>06/01 MON</span><span class="bar a"></span><span>OPEN</span></div>
+        <div class="row"><span>06/02 TUE</span><span class="bar b"></span><span>FILLED</span></div>
+        <div class="row"><span>06/03 WED</span><span class="bar c"></span><span>SHORT</span></div>
+        <div class="row"><span>06/04 THU</span><span class="bar b"></span><span>FILLED</span></div>
+        <div class="row"><span>06/05 FRI</span><span class="bar a"></span><span>OPEN</span></div>
+        <div class="row"><span>06/06 SAT</span><span class="bar b"></span><span>FILLED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:22px" class="cols-3">
+    <div class="spec">
+      <h4>REF · EDITORIAL</h4>
+      <h3>誌面的な静けさ</h3>
+      <p>雑誌の扉や目次が持つ、読み手に呼吸を要求する組版。Hero は画面を喋らせない。余白と罫線で場面を作る。</p>
+    </div>
+    <div class="spec">
+      <h4>REF · TECH CRAFT</h4>
+      <h3>動きの精度</h3>
+      <p>Linear / Vercel / Raycast 的な「動きが 1px ずれない」態度。ただし彼らの color を借りず、紙面側に持ち込む。</p>
+    </div>
+    <div class="spec">
+      <h4>REF · JP TYPOGRAPHY</h4>
+      <h3>和文の骨格</h3>
+      <p>STUDIO / 10X / cotra の和文組版。ゴシックではなく明朝を主にし、句読点・約物まわりで差が出る組み方を採る。</p>
+    </div>
+  </div>
+
+  <!-- §03 Hero Concept -->
+  <div class="sec-head">
+    <div class="num"><span class="big">03</span>Hero Concept</div>
+    <div>
+      <h2>組成アニメ・スケッチ<span class="jp-small">— "A month, composed in 9 seconds."</span></h2>
+      <div class="sub">空の 7×5 グリッドに、希望（朱のハッチ）が入り、自動配置（黒のチップ）が打たれ、最後に <b>そのうちの 1 セルにズームイン</b>して次のセクションへ引き渡す。色は朱 1 色、黒 1 色、紙 1 枚。動きだけでストーリーを閉じる。下は実動スケッチ（ループ中）。</div>
+    </div>
+  </div>
+
+  <div class="hero-sketch">
+    <div class="stage">
+      <!-- copy side -->
+      <div class="copy">
+        <div class="eyebrow">Shift, free. — ver. 2</div>
+        <h3>月末が、<br/>少しだけ<em>早く</em><br/>終わる。</h3>
+        <p class="sub">希望を集める。希望が配置される。配置が Google カレンダーに戻る。<br/>そのすべてを、あなたが見ている間に。</p>
+        <div class="tick">
+          <span class="t">FREE</span>
+          <span>GOOGLE CALENDAR · NATIVE</span>
+        </div>
+      </div>
+
+      <!-- field side -->
+      <div class="calendar-field">
+        <div class="cf-rule-top">
+          <span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span><span>日</span>
+        </div>
+        <div class="cf-grid" id="cf">
+          <!-- 35 cells generated -->
+        </div>
+        <div class="zoom-frame">
+          <span class="lbl">ZOOM · 05/14 TUE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- timeline -->
+    <div class="timeline">
+      <div class="step">
+        <div class="t">00:00 — 02:00</div>
+        <div class="h">Field opens</div>
+        <div class="d">空のグリッド。罫線だけが呼吸する。copy が静かに現れる。</div>
+        <div class="bar"></div>
+      </div>
+      <div class="step">
+        <div class="t">02:00 — 04:30</div>
+        <div class="h">Wishes arrive</div>
+        <div class="d">朱のハッチがセルに滲むように入る。スタッフの希望が集まる瞬間。</div>
+        <div class="bar"></div>
+      </div>
+      <div class="step">
+        <div class="t">04:30 — 07:00</div>
+        <div class="h">Auto-placement</div>
+        <div class="d">黒のチップが短い波で下から埋まる。ランダムではなく、左→右へ秩序ある進行。</div>
+        <div class="bar"></div>
+      </div>
+      <div class="step">
+        <div class="t">07:00 — 09:00</div>
+        <div class="h">Zoom handoff</div>
+        <div class="d">1 セルに寄り、そのまま次のセクション（1ヶ月体験）に引き継ぐ。ループせず接続。</div>
+        <div class="bar"></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <div class="left">
+        <span>STAGE · 1440 × 810</span>
+        <span>LOOP · 9.0s</span>
+        <span>REDUCED-MOTION · static field</span>
+        <span>WEIGHT · ~38KB (CSS only)</span>
+      </div>
+      <div>
+        <button class="ghost">SKIP ANIMATION</button>
+        <button>無料ではじめる</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols-2" style="margin-top:28px">
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">CRAFT ANCHOR — 選択理由</h4>
+      <p>3 つの candidate のうち採用したのは <b>"Field"（7×n グリッドそのものを Hero の主役にする）</b>。理由は 3 つ。</p>
+      <p><b>① 再利用できる</b>：同じグリッドが接続部・1ヶ月体験・機能深掘りに持ち越せるため、LP 全体を 1 つの構造物として閉じられる。</p>
+      <p><b>② 「プロダクト = シフト表」を 1 秒で伝える</b>：言語に頼らず、形状で製品カテゴリを示せる。SEO 流入（「シフト管理 無料」）でも誤解が起きない。</p>
+      <p><b>③ 色を抑えても動きで解ける</b>：朱と黒だけで意味を分けられ、アンチパターン色（Tailwind blue）を使わずに済む。</p>
+    </div>
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">REJECTED — 検討したが採らなかった候補</h4>
+      <p><b>① 文字組成型</b>：「月末が少しだけ早く終わる」の文字がタイプライター風に立ち上がる。craft は出るが、シフト管理と関係がない文字遊びになる。却下。</p>
+      <p><b>② 実画面のマウスカーソル誘導型</b>：既存 LP も似た方向。差別化が弱い。却下。</p>
+      <p><b>③ 動画（MP4）Hero</b>：重量増・サーバ依存・CLS リスク。LCP 2.5s を守れない。却下。採用する Field は全体 ~38KB、CSS アニメのみで完結。</p>
+    </div>
+  </div>
+
+  <!-- §04 Connector -->
+  <div class="sec-head">
+    <div class="num"><span class="big">04</span>Connector</div>
+    <div>
+      <h2>ズームアウト接続の設計<span class="jp-small">— From macro to micro, across one cell.</span></h2>
+      <div class="sub">接続部 A（Hero → 1ヶ月体験）は <b>ズームイン</b>、接続部 B（1ヶ月体験 → 機能深掘り）は <b>ズームアウト</b>。どちらも「7×n グリッドの同じ 1 セル」を hinge として使う。スクロールで倍率が連続的に変化するため、ユーザは「章が変わった」ではなく「倍率が変わった」と感じる。</div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="zoom-scale"><span>SCALE · 1×</span><span class="line"></span><span>120×</span></div>
+    <div class="stages">
+      <div class="s">
+        <div class="n">FRAME 01 · 1×</div>
+        <div class="h">1ヶ月 の地形<br/><span style="color:var(--ink-mute); font-size:12px; font-weight:400">希望・配置・確定の全景</span></div>
+        <div class="vis">
+          <div class="grid-mini">
+            <!-- 7*5 -->
+            <span></span><span class="on"></span><span></span><span></span><span class="acc"></span><span></span><span></span>
+            <span class="on"></span><span></span><span class="acc"></span><span class="on"></span><span></span><span></span><span class="on"></span>
+            <span></span><span class="on"></span><span></span><span class="on"></span><span></span><span class="acc"></span><span></span>
+            <span class="acc"></span><span></span><span class="on"></span><span></span><span class="on"></span><span></span><span class="acc"></span>
+            <span></span><span></span><span></span><span class="on"></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+      <div class="s">
+        <div class="n">FRAME 02 · 3×</div>
+        <div class="h">週の一列<br/><span style="color:var(--ink-mute); font-size:12px; font-weight:400">スクロールで 1 列が立ち上がる</span></div>
+        <div class="vis">
+          <div class="grid-mini" style="grid-template-columns:repeat(7,1fr)">
+            <span></span><span></span><span class="on" style="grid-column:span 1; grid-row:span 5"></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="zoomframe" style="left:28%; top:6%; width:14%; height:88%"></div>
+        </div>
+      </div>
+      <div class="s">
+        <div class="n">FRAME 03 · 10×</div>
+        <div class="h">1 日の骨格<br/><span style="color:var(--ink-mute); font-size:12px; font-weight:400">05/14 火曜 · 営業 10–15</span></div>
+        <div class="vis">
+          <div class="modal-mini">
+            <div class="mline dark"></div>
+            <div class="mline"></div>
+            <div class="mline" style="width:70%"></div>
+            <div class="mline acc"></div>
+            <div class="mbar"></div>
+            <div class="mline" style="width:45%; margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="s">
+        <div class="n">FRAME 04 · 40×</div>
+        <div class="h">勤務可否 ON<br/><span style="color:var(--ink-mute); font-size:12px; font-weight:400">トグル、営業時間、自動計算の内訳</span></div>
+        <div class="vis">
+          <div class="modal-mini" style="inset:10% 14%">
+            <div style="display:flex; gap:6px; align-items:center">
+              <div style="width:14px; height:8px; background:var(--accent); border-radius:4px"></div>
+              <div class="mline" style="flex:1; height:4px; background:var(--ink)"></div>
+            </div>
+            <div class="mline" style="margin-top:10px"></div>
+            <div class="mbar" style="width:90%"></div>
+            <div style="display:flex; gap:3px; margin-top:4px">
+              <span style="width:10px; height:4px; background:var(--danger)"></span>
+              <span style="width:16px; height:4px; background:#D9C88B"></span>
+              <span style="width:30px; height:4px; background:var(--signal)"></span>
+              <span style="width:8px; height:4px; background:#D1A884"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="s">
+        <div class="n">FRAME 05 · 120×</div>
+        <div class="h">機能の深部<br/><span style="color:var(--ink-mute); font-size:12px; font-weight:400">機能深掘りセクションへ</span></div>
+        <div class="vis" style="background:var(--ink)">
+          <div style="position:absolute; inset:20%; border:1px solid var(--paper); background:var(--paper)">
+            <div class="mline" style="height:4px; background:var(--accent); width:30%; margin:8px"></div>
+            <div class="mline" style="height:3px; background:var(--ink); width:60%; margin:0 8px 4px"></div>
+            <div class="mline" style="height:3px; background:var(--ink); width:45%; margin:0 8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-row">
+      <span>Scroll · 0–20%</span>
+      <span>Scroll · 20–40% → 1ヶ月体験 入口</span>
+      <span>Scroll · 40–65% → 体験の終盤</span>
+      <span>Scroll · 65–80% → 接続 B 開始</span>
+      <span>Scroll · 80–100% → 機能深掘り</span>
+    </div>
+  </div>
+
+  <div class="cols-2" style="margin-top:28px">
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">MECHANIC — どう作るか</h4>
+      <p>実装は <b>scroll-timeline（CSS）+ position: sticky</b> が本命。5 フレームを 1 つの sticky container に重ね、scroll の進捗 t ∈ [0,1] を CSS 変数に流し込み、<code style="font-family:var(--mono); font-size:12px">transform: scale(var(--s)) translate(var(--x),var(--y))</code> を各フレームに適用する。</p>
+      <p>フォールバック：scroll-timeline 非対応ブラウザでは IntersectionObserver で段階切り替えに退行。「動きが無くても読める」を基準に組む。</p>
+      <p>接続 B（Section1 → Section2）はこの逆再生。最終フレームの「1 セル」から再度 1× に引いた瞬間、視点が機能深掘りの UI の上で止まる。</p>
+    </div>
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">SIGNATURE — 共通する hinge セル</h4>
+      <p>全フレームで同じ <b>「05/14 火曜」</b>のセルを hinge にする。Hero で初登場し、接続部 A の着地点になり、1ヶ月体験 6 場面の中で何度か言及され、接続部 B で同じセルから機能画面へ抜ける。</p>
+      <p>繰り返しの小ネタではなく、<b>「LP 全体が 05/14 火曜を扱った 1 本の物語」</b>として設計する。ユーザが明示的に気付く必要はない。印象の一貫性だけが残ればよい。</p>
+    </div>
+  </div>
+
+  <!-- §05 System -->
+  <div class="sec-head">
+    <div class="num"><span class="big">05</span>System</div>
+    <div>
+      <h2>色・タイポ<span class="jp-small">— Locked for Phase 1.</span></h2>
+      <div class="sub">Phase 1 着手に向けた確定版。色は 6 トーン + 機能色 2、タイプは和文 1・欧文 2・等幅 1 の 4 本柱。明朝をディスプレイに、Zen Kaku Gothic を本文下位に置くハイブリッド。</div>
+    </div>
+  </div>
+
+  <div class="tokens">
+    <div class="token">
+      <div class="sw" style="background:var(--paper)"></div>
+      <div><div class="name">paper</div><div class="hex">#F2EEE4</div><div class="role">画面全体の地。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--paper-2)"></div>
+      <div><div class="name">paper-2</div><div class="hex">#E9E3D3</div><div class="role">カード地／領域分け。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--paper-3)"></div>
+      <div><div class="name">paper-3</div><div class="hex">#DCD4BE</div><div class="role">枠線の地色バージョン。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--ink)"></div>
+      <div><div class="name" style="color:var(--ink)">ink</div><div class="hex">#121211</div><div class="role">見出し・主要文字・反転面。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--ink-mute)"></div>
+      <div><div class="name">ink-mute</div><div class="hex">#6B685E</div><div class="role">副次テキスト／注釈。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--accent)"></div>
+      <div><div class="name" style="color:var(--accent)">朱 · accent</div><div class="hex">#8B2E13</div><div class="role">唯一のアクセント。リンク／強調／アニメのキー。</div></div>
+    </div>
+    <div class="token">
+      <div class="sw" style="background:var(--signal)"></div>
+      <div><div class="name" style="color:var(--signal)">signal</div><div class="hex">#1C3A2E</div><div class="role">データ可視化のみ（例: 自動計算 = 勤務可能）。</div></div>
+    </div>
+  </div>
+
+  <p style="margin:18px 0 0; font-family:var(--mono); font-size:11px; color:var(--ink-mute); letter-spacing:.1em">
+    ※ 既存 UI の濃紺ヘッダー／青アクセントは LP 内では採用しない。LP 上のスクショは <b style="color:var(--ink)">Phase 2 着手時に朱系で再塗装</b>して提示する（ブランド色のズレは意図の範囲内）。
+  </p>
+
+  <div class="type-spec" style="margin-top:28px">
+    <div class="type-card mincho">
+      <div class="lab">DISPLAY · JP — Shippori Mincho 600</div>
+      <div class="lg">月末が、早く。</div>
+      <div class="md">Hero および章扉の H1 / H2。字間はマイナスに振り、約物は半角。</div>
+      <div class="sm">FALLBACK: Hiragino Mincho ProN, Yu Mincho</div>
+    </div>
+    <div class="type-card disp">
+      <div class="lab">DISPLAY · EN — Fraunces Italic 300</div>
+      <div class="lg">Shift, free.</div>
+      <div class="md">英語の副題・引用・クレジットに。明朝の曲線と拮抗する可変イタリック。</div>
+      <div class="sm">FALLBACK: Garamond Italic</div>
+    </div>
+    <div class="type-card sans">
+      <div class="lab">BODY · JP — Zen Kaku Gothic New 400</div>
+      <div class="lg">本文は落ち着いて読ませる。</div>
+      <div class="md">本文と UI ラベル。明朝は見出し専用、本文はゴシックに下ろしてリーダビリティを確保。</div>
+      <div class="sm">FALLBACK: Hiragino Sans, system-ui</div>
+    </div>
+    <div class="type-card mono">
+      <div class="lab">UTILITY — JetBrains Mono 400</div>
+      <div class="lg">FEATURE · 07 / TIME 04:30</div>
+      <div class="md">タイムコード、タグ、セクション番号。機能名を「ラベル」として扱う語彙。</div>
+      <div class="sm">FALLBACK: ui-monospace</div>
+    </div>
+  </div>
+
+  <div class="cols-2" style="margin-top:28px">
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">COPY VOICE — 言葉のトーン</h4>
+      <div class="pair-row"><div class="a">HEAD</div><div class="b" style="font-family:var(--mincho); font-weight:600; font-size:19px">月末が、少しだけ早く終わる。</div></div>
+      <div class="pair-row"><div class="a">SUB</div><div class="b" style="font-family:var(--mincho); font-size:14px; color:var(--ink-2)">希望を集める。希望が配置される。配置が Google カレンダーに戻る。</div></div>
+      <div class="pair-row"><div class="a">CTA</div><div class="b" style="font-family:var(--mincho); font-size:15px">無料ではじめる &nbsp;·&nbsp; <span style="color:var(--ink-mute); font-size:12px">条件なし、そのまま</span></div></div>
+      <div class="pair-row"><div class="a">TONE</div><div class="b" style="font-family:var(--mincho); font-size:13px; color:var(--ink-mute)">観察的・短文・断定。形容詞は少なく、動詞で終わる。</div></div>
+    </div>
+    <div>
+      <h4 style="font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--ink-mute); margin:0 0 10px">VERTICAL RHYTHM — 余白の系</h4>
+      <div class="pair-row"><div class="a">Section gap</div><div class="b" style="font-family:var(--mono); font-size:13px">120px · top · always</div></div>
+      <div class="pair-row"><div class="a">Column gutter</div><div class="b" style="font-family:var(--mono); font-size:13px">48px / 32px / 24px — 3 tiers</div></div>
+      <div class="pair-row"><div class="a">Rule weight</div><div class="b" style="font-family:var(--mono); font-size:13px">2px masthead · 1px section · 1px thin</div></div>
+      <div class="pair-row"><div class="a">Max width</div><div class="b" style="font-family:var(--mono); font-size:13px">1280px (desktop) · 誌面の片面組</div></div>
+    </div>
+  </div>
+
+  <!-- §06 Open questions -->
+  <div class="sec-head">
+    <div class="num"><span class="big">06</span>Open</div>
+    <div>
+      <h2>Phase 1 前に決めたい 6 点<span class="jp-small">— Your calls.</span></h2>
+      <div class="sub">下記は ClaudeDesign 判断で決めず、発注側の合意が欲しい点。それぞれ「放置時の私の既定値」も添える。合意が取れなければ既定値で Phase 1 に着手する。</div>
+    </div>
+  </div>
+
+  <div class="asks">
+    <div class="ask">
+      <div class="q">1 — 既存 UI の濃紺ヘッダー／青アクセントを LP 内では捨てて良いか？</div>
+      <div class="why">提案では LP 上のスクショも朱系に再塗装する前提。プロダクト実機と LP のブランド色がズレるが、craft signal を優先した判断。<b>既定値: 捨てる（再塗装）</b>。</div>
+    </div>
+    <div class="ask">
+      <div class="q">2 — ロゴの「シ」モチーフを LP 上でどこまで出すか？</div>
+      <div class="why">masthead 左にだけ小さく置き、Hero には出さない方向。現行ロゴは青（#1266D3）だが LP 上では黒 or 朱のバージョンに置き換えたい。<b>既定値: 黒に置き換え、alt ロゴを 1 本提案</b>。</div>
+    </div>
+    <div class="ask">
+      <div class="q">3 — Hero コピー「月末が、少しだけ早く終わる。」で進めてよいか？</div>
+      <div class="why">観察型短文。ネガを言わず、具体の量感を出す。代替候補: 「希望を置く。配置が戻る。」／「Shift, free.（主コピーを英語に）」。<b>既定値: 「月末が、少しだけ早く終わる。」</b>。</div>
+    </div>
+    <div class="ask">
+      <div class="q">4 — 使い方動画（MP4）を LP に埋める？</div>
+      <div class="why">Hero は CSS のみで組むため、動画は「機能深掘り」末尾で任意再生に置く案。重量／CLS リスクあり、遅延ロード前提。<b>既定値: Section 2 内に lazy 埋め込み、Hero には使わない</b>。</div>
+    </div>
+    <div class="ask">
+      <div class="q">5 — Admin / Owner 画面の追加スクショ、撮ってもらえるか？</div>
+      <div class="why">機能深掘り 8 項目中 3–4 項目（承認プロセス、欠員募集、確定→同期の結果画面）は Admin 側。Worker だけだと主役が偏る。<b>既定値: Phase 2 着手前までに 3 枚依頼</b>。</div>
+    </div>
+    <div class="ask">
+      <div class="q">6 — 公開前の架空データ差し替え、誰がやるか？</div>
+      <div class="why">「Onedrop」「久保田彩未」を「晴ヶ丘塾」「佐藤陽菜」等に差し替える作業。LP 側で配置して、原稿は発注側で固定、の分担が速い。<b>既定値: ClaudeDesign が叩き台配置、発注側で最終確定</b>。</div>
+    </div>
+  </div>
+
+  <!-- Next -->
+  <div class="sec-head">
+    <div class="num"><span class="big">07</span>Next</div>
+    <div>
+      <h2>Phase 1 の成果物<span class="jp-small">— Two deliverables.</span></h2>
+      <div class="sub">Phase 0 合意が取れたら、以下の 2 本を 1 HTML で提出する。<b>Hero（組成アニメ）</b>と <b>接続部 A（ズームイン hinge）</b>を動く状態で提示し、残り章はワイヤのまま。craft signal の核を先に叩く。</div>
+    </div>
+  </div>
+
+  <div class="cols-2" style="margin-top:8px">
+    <div class="spec">
+      <h4>DELIVERABLE · 01</h4>
+      <h3>Hero（9秒ループ・動作版）</h3>
+      <p>7×5 の Field、朱のハッチ、黒のチップ、zoom 枠。CSS アニメのみ。prefers-reduced-motion 対応。SKIP ボタン付き。</p>
+    </div>
+    <div class="spec">
+      <h4>DELIVERABLE · 02</h4>
+      <h3>接続部 A（scroll-timeline）</h3>
+      <p>Hero → 1ヶ月体験・Scene 1 の scroll 連動遷移。hinge セル「05/14 火」からの scale 進行。IntersectionObserver フォールバック込み。</p>
+    </div>
+  </div>
+
+  <!-- Colophon -->
+  <div class="colophon">
+    <div><b>ISSUE</b>Phase 0 Concept Deck</div>
+    <div><b>AUTHOR</b>ClaudeDesign</div>
+    <div><b>FOR</b>東城 · Claude (PM)</div>
+    <div><b>DATE</b>2026 — 04 — 23</div>
+  </div>
+
+</div>
+
+<script>
+// build 35 cells with staggered index
+(function(){
+  const grid = document.getElementById('cf');
+  if(!grid) return;
+  // layout story: a subset receives wish hatch, another subset becomes assigned (with chip)
+  // we want some cells to be "day-off" (gray borders stay), some wishes, some final assignments
+  const patterns = [
+    /* row 1 */ ['','wish','','','wish','',''],
+    /* row 2 */ ['assigned accent','','wish','wish','','assigned',''],
+    /* row 3 */ ['','wish','','assigned','','wish',''],
+    /* row 4 */ ['assigned','','wish','','assigned','','wish'],
+    /* row 5 */ ['','assigned','','wish','','',''],
+  ];
+  let i=0;
+  patterns.forEach((row)=>{
+    row.forEach((cls)=>{
+      const d=document.createElement('div');
+      d.className='cell '+cls;
+      d.style.setProperty('--i', i++);
+      if(cls.includes('assigned')){
+        const chip=document.createElement('div');
+        chip.className='chip';
+        d.appendChild(chip);
+      }
+      grid.appendChild(d);
+    });
+  });
+})();
+</script>
+</body>
+</html>
