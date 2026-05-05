@@ -15,7 +15,11 @@ let currentUser = null;
 let scheduleEntries = [];  // Current schedule being built
 let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
 let periodsIncludeArchived = false; // シフト期間タブのアーカイブ表示トグル状態
-let cachedPeriods = []; // 期間一覧の最新スナップショット (announcement 編集モーダル等で参照)
+// 期間一覧の最新スナップショット (announcement 編集モーダル等で参照)。
+// 注意: 単一 admin 運用前提。複数 admin で同一期間を同時編集すると
+// 後勝ちで上書きが発生しうる。将来的には PUT 時に expected_version
+// (Phase A'-1 の SCHEDULE_VERSION_MISMATCH と同じパターン) を導入予定。
+let cachedPeriods = [];
 
 // --- Dirty tracking for save buttons ---
 // A save button starts as btn-outline (white with blue border). When the user

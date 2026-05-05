@@ -105,12 +105,19 @@ def notify_period_open(to_email, worker_name, org_name, period_name,
                        *, organization_id=None, created_by=None):
     """Notify a worker that a shift period has been opened for submission (async)."""
     subject = f"[シフリー] シフト募集開始: {period_name}"
+    # 改行を <br> に置換した Markup を渡す。一部メールクライアント
+    # (Outlook 等) では CSS の white-space:pre-wrap が無視されるため、
+    # HTML レベルで改行を表現する。escape を先に通すことで XSS 対策を維持。
+    announcement_html = None
+    if announcement_text:
+        from markupsafe import Markup, escape as _escape
+        announcement_html = Markup(str(_escape(announcement_text)).replace('\n', '<br>'))
     body = render_template('emails/period_open.html',
                            worker_name=worker_name, org_name=org_name,
                            period_name=period_name,
                            start_date=start_date, end_date=end_date,
                            deadline_str=deadline_str, submit_url=submit_url,
-                           announcement_text=announcement_text)
+                           announcement_text=announcement_html)
     return _enqueue_or_send(to_email, subject, body,
                             organization_id=organization_id, created_by=created_by)
 

@@ -432,6 +432,11 @@ def update_period(period_id):
     if data.get('name'):
         period.name = data['name']
     if data.get('status'):
+        # 許可遷移は draft / open / closed のみ。finalized は確定済シフトの状態として
+        # ShiftSchedule 側で管理するので、ここでは触らない設計（既存挙動踏襲）。
+        # closed → open の「再公開」は許容するが、_notify_period_opened は
+        # previous_status == 'draft' のときだけ通知を発火する。再通知すると
+        # Worker が混乱するため、初回公開のみメールを打つ仕様。
         allowed_statuses = ['draft', 'open', 'closed']
         if data['status'] not in allowed_statuses:
             return error_response(f"Invalid status. Allowed: {allowed_statuses}", 400)
