@@ -23,6 +23,7 @@ sequenceDiagram
     actor Worker
     participant App as worker.html / worker-app.js
     participant API as /api/worker/*
+    participant Google as Google Calendar
     participant DB as DB
 
     Worker->>App: /worker を開く
@@ -39,11 +40,18 @@ sequenceDiagram
     DB-->>API: 日別の営業時間
     API-->>App: 営業時間グリッド
 
+    Note over App,Google: ★ Free/Busy 連動 — Google Cal の予定を計算に組み込む
+    App->>API: GET /api/worker/calendar/events?startDate=...&endDate=...
+    API->>Google: events.list (calendar.readonly スコープ)
+    Google-->>API: 期間内の予定一覧
+    API-->>App: events[]
+
     App->>API: GET /api/worker/periods/{id}/availability
     API->>DB: ShiftSubmission (既存あれば)
     API-->>App: 既存入力（下書きの復元）
 
-    App-->>Worker: カレンダーグリッド表示<br/>（日付×時間のスロット選択 UI）
+    Note over App: shift-calculator.js の calculateAvailableSlots() で<br/>Google Cal events を除外した勤務可能時間を計算
+    App-->>Worker: タイムライン表示<br/>緑=勤務可能 / 赤=既存予定 / 橙ハッチ=バッファ
 
     Worker->>App: 出勤可能スロットを選択 + メモ入力
     Worker->>App: 「提出する」をクリック
@@ -55,6 +63,19 @@ sequenceDiagram
     API-->>App: 201 Created + submission JSON
     App-->>Worker: 「提出しました」トースト
 ```
+
+### Free/Busy 連動の実装位置
+
+シーケンス上「カレンダー予定の取得」は API 呼び出しとして見えにくいので明示しておく:
+
+- **取得**: `worker-app.js` の `fetchAndCacheEvents()` が `/api/worker/calendar/events` を叩いて期間全体分の events を一括取得 → クライアント側で `eventsCache` に保持
+- **計算**: `static/js/modules/shift-calculator.js`
+  - `calculateAvailableSlots(startTime, endTime, events, settings)` — events を除外した勤務可能時間帯を返す（提出 UI のスロット候補に使う）
+  - `calculateDetailedSlots(...)` — 4 種類の time slab（available / excluded / buffer / event）をタイムライン描画用に返す
+- **設定**: `getCalcSettings()` で bufferTime（前後余白）と minGapTime（採用する隙間の下限）が UI から調整可能
+- **権限**: 既存の `GOOGLE_SCOPES_WRITE` に `calendar.readonly` が含まれており、Worker の OAuth 同意で読み取りが許可されている
+
+LP の Scene 2「Google カレンダーにもう予定が入っている時間は最初から出てこない」は、この `calculateAvailableSlots` の出力を提出 UI の選択候補に使うことで成立している。
 
 ### 主な分岐
 
