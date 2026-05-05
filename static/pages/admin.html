@@ -286,6 +286,30 @@
                     <button class="btn btn-outline" id="btn-save-min-attendance" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
                 </div>
 
+                <!-- Staffing Requirements Settings Card -->
+                <div class="card mb-24">
+                    <h3><i data-lucide="users-round" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 必要人数設定</h3>
+                    <p class="help-text mb-16">曜日 × 時間帯ごとに必要な人数を設定します。シフト構築画面で「希望者 / 必要人数」の充足度として表示されます。</p>
+                    <details class="help-accordion mb-16">
+                        <summary><i data-lucide="help-circle" style="width:14px;height:14px;vertical-align:text-bottom;"></i> 使い方</summary>
+                        <div class="help-accordion-body">
+                            <p class="mb-8"><strong>同じ曜日に複数の時間帯を登録できます：</strong></p>
+                            <ul class="mb-8" style="margin-left:20px;">
+                                <li>例: 月曜 09:00-13:00 = 2 名、月曜 13:00-22:00 = 3 名 のような時間帯分割</li>
+                                <li>ピーク時と閑散時で必要人数が変わる運用に対応</li>
+                            </ul>
+                            <p class="mb-0" style="color:var(--color-neutral-500);font-size:0.85em;">未設定の曜日・時間帯は「必要人数なし」として扱われ、シフト構築画面で過不足判定の対象外になります。</p>
+                        </div>
+                    </details>
+                    <div id="staffing-list" class="mb-16">
+                        <p style="color:var(--color-neutral-500);font-size:0.9em;">読み込み中...</p>
+                    </div>
+                    <div class="flex gap-8" style="flex-wrap:wrap;">
+                        <button class="btn btn-outline" data-action="addStaffingRow"><i data-lucide="plus" style="width:14px;height:14px;"></i> 時間帯を追加</button>
+                        <button class="btn btn-outline" id="btn-save-staffing" data-dirty-save data-action="saveStaffingRequirements"><i data-lucide="save" style="width:15px;height:15px;"></i> 必要人数設定を保存</button>
+                    </div>
+                </div>
+
                 <!-- Workflow (Approval Process) Settings Card -->
                 <div class="card mb-24">
                     <h3><i data-lucide="shield-check" style="width:18px;height:18px;vertical-align:text-bottom;"></i> 管理者の承認プロセスを設定する</h3>

@@ -166,6 +166,22 @@ select.form-control-sm {
     color: var(--color-primary-600);
 }
 
+/* --- Required count badge (Phase 2a-3 D) --- */
+/* 情報のみ表示。時間帯別の充足判定は次フェーズで対応するため、
+   現段階では neutral カラーで色分けは行わない。 */
+
+.admin-day-required-badge {
+    font-size: 0.7em;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-top: 2px;
+    margin-left: 4px;
+    background: rgba(0,0,0,0.04);
+    color: var(--color-neutral-600, #475569);
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
 /* --- Cell opening hours text --- */
 
 .admin-day-hours {

@@ -30,6 +30,7 @@ from app.utils.errors import error_response
 from app.models.membership import OrganizationMember, InvitationToken
 from app.services.audit_service import log_audit
 from app.services import organization_settings as org_settings
+from app.services import staffing_service
 
 api_admin_bp = Blueprint('api_admin', __name__, url_prefix='/api/admin')
 
@@ -1704,6 +1705,59 @@ def update_min_attendance_settings():
         organization_id=org.id,
         old_values=old_cfg,
         new_values=normalized,
+    )
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return error_response("Database error", 500, code="INTERNAL_ERROR")
+    return jsonify(normalized)
+
+
+# --- Staffing Requirements (曜日 × 時間帯ごとの必要人数) ---
+
+@api_admin_bp.route('/staffing-requirements', methods=['GET'])
+@require_role('admin')
+def get_staffing_requirements():
+    """組織の必要人数設定を曜日 × 時間帯ごとに返す。"""
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    return jsonify(staffing_service.get_requirements(org))
+
+
+@api_admin_bp.route('/staffing-requirements', methods=['PUT'])
+@require_role('admin')
+def update_staffing_requirements():
+    """必要人数設定を一括更新（既存全削除 → 新規 insert）。
+
+    リクエスト形式: {"items": [{day_of_week, start_time, end_time, required_count}, ...]}
+    """
+    user = get_current_user()
+    org = _get_or_create_org(user)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    items = data.get('items')
+    if items is None:
+        return error_response("items is required", 400, code="VALIDATION_ERROR")
+
+    old_cfg = staffing_service.get_requirements(org)
+    try:
+        normalized = staffing_service.set_requirements(org, items)
+    except ValueError as e:
+        db.session.rollback()
+        return error_response(str(e), 400, code="VALIDATION_ERROR")
+
+    log_audit(
+        action='STAFFING_REQUIREMENTS_UPDATED',
+        resource_type='Organization',
+        resource_id=org.id,
+        actor_id=user.id,
+        organization_id=org.id,
+        old_values={'items': old_cfg},
+        new_values={'items': normalized},
     )
 
     try:
