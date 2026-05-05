@@ -76,3 +76,12 @@ yarn-error.log*
 # Vercel
 .vercel
 .env*.local
+
+# Media (リポジトリに含めない大容量ファイル)
+*.mp4
+*.mov
+*.avi
+
+# Claude Code ローカル状態
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

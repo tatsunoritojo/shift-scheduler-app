@@ -1,7 +1,10 @@
+import logging
 import secrets
 
 from flask import Blueprint, request, jsonify, session, current_app
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from app.extensions import db, limiter
 from app.middleware.auth_middleware import require_role, get_current_user
@@ -17,6 +20,7 @@ from app.services.shift_service import (
 from app.services.approval_service import submit_for_approval, confirm_schedule, confirm_schedule_direct
 from app.services.auth_service import get_credentials_for_user, CredentialsExpiredError
 from app.services.calendar_service import create_event, classify_calendar_error
+from app.services.notification_service import notify_period_open
 from app.services.opening_hours_sync_service import (
     export_opening_hours_to_calendar,
     import_opening_hours_from_calendar,
@@ -380,6 +384,10 @@ def create_period():
     except ValueError as e:
         return error_response(str(e), 400, code="VALIDATION_ERROR")
 
+    announcement_text = (data.get('announcement_text') or '').strip() or None
+    if announcement_text and len(announcement_text) > 4000:
+        return error_response("announcement_text too long (max 4000)", 400, code="VALIDATION_ERROR")
+
     deadline = None
     if data.get('submission_deadline'):
         try:
@@ -393,6 +401,7 @@ def create_period():
         start_date=start,
         end_date=end,
         submission_deadline=deadline,
+        announcement_text=announcement_text,
         status='draft',
         created_by=user.id,
     )
@@ -417,9 +426,17 @@ def update_period(period_id):
     data = request.get_json(silent=True)
     if not data:
         return error_response("Request body is required", 400, code="BAD_REQUEST")
+
+    previous_status = period.status
+
     if data.get('name'):
         period.name = data['name']
     if data.get('status'):
+        # 許可遷移は draft / open / closed のみ。finalized は確定済シフトの状態として
+        # ShiftSchedule 側で管理するので、ここでは触らない設計（既存挙動踏襲）。
+        # closed → open の「再公開」は許容するが、_notify_period_opened は
+        # previous_status == 'draft' のときだけ通知を発火する。再通知すると
+        # Worker が混乱するため、初回公開のみメールを打つ仕様。
         allowed_statuses = ['draft', 'open', 'closed']
         if data['status'] not in allowed_statuses:
             return error_response(f"Invalid status. Allowed: {allowed_statuses}", 400)
@@ -429,6 +446,11 @@ def update_period(period_id):
             period.submission_deadline = datetime.fromisoformat(data['submission_deadline'])
         except ValueError:
             pass
+    if 'announcement_text' in data:
+        announcement = (data.get('announcement_text') or '').strip() or None
+        if announcement and len(announcement) > 4000:
+            return error_response("announcement_text too long (max 4000)", 400, code="VALIDATION_ERROR")
+        period.announcement_text = announcement
 
     if data.get('name'):
         try:
@@ -455,7 +477,56 @@ def update_period(period_id):
     except Exception:
         db.session.rollback()
         return error_response("Database error", 500, code="INTERNAL_ERROR")
-    return jsonify(period.to_dict())
+
+    # status が draft → open に遷移したタイミングで Worker 全員に募集開始通知
+    notified_count = 0
+    if previous_status == 'draft' and period.status == 'open':
+        notified_count = _notify_period_opened(period, org, user)
+    response_body = period.to_dict()
+    response_body['notified_count'] = notified_count
+    return jsonify(response_body)
+
+
+def _notify_period_opened(period, org, admin_user):
+    """期間が公開されたとき、組織のアクティブな Worker 全員に通知を発火する。
+
+    部分失敗（一部 Worker への enqueue 失敗）は許容し、成功件数のみ返す。
+    Period status の変更自体は既にコミット済なので、通知の失敗で巻き戻さない。
+    """
+
+    workers = (db.session.query(User)
+               .join(OrganizationMember, OrganizationMember.user_id == User.id)
+               .filter(OrganizationMember.organization_id == org.id,
+                       OrganizationMember.role == 'worker',
+                       OrganizationMember.is_active.is_(True),
+                       User.is_active.is_(True))
+               .all())
+
+    submit_url = request.host_url.rstrip('/') + '/worker'
+    deadline_str = (period.submission_deadline.strftime('%Y/%m/%d %H:%M')
+                    if period.submission_deadline else None)
+
+    sent = 0
+    for worker in workers:
+        try:
+            notify_period_open(
+                worker.email,
+                worker.display_name or worker.email,
+                org.name,
+                period.name,
+                period.start_date.isoformat(),
+                period.end_date.isoformat(),
+                deadline_str,
+                submit_url,
+                announcement_text=period.announcement_text,
+                organization_id=org.id,
+                created_by=admin_user.id,
+            )
+            sent += 1
+        except Exception:
+            logger.warning("Failed to enqueue period_open notification for worker_id=%s",
+                           worker.id, exc_info=True)
+    return sent
 
 
 @api_admin_bp.route('/periods/<int:period_id>/archive', methods=['POST'])

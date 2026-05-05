@@ -1,0 +1,14 @@
+{% extends "emails/base.html" %}
+{% block content %}
+    <h3>シフト募集を開始します</h3>
+    <p>{{ worker_name }} さん、{{ org_name }} のシフト募集が開始されました。</p>
+    <p>
+        対象期間: <strong>{{ start_date }} 〜 {{ end_date }}</strong><br>
+        {% if deadline_str %}提出期限: <strong>{{ deadline_str }}</strong>{% endif %}
+    </p>
+    {% if announcement_text %}
+    <div style="margin:16px 0;padding:12px 16px;background:#f5f7fa;border-left:3px solid #3b82f6;">{{ announcement_text }}</div>
+    {% endif %}
+    <p>下記から、勤務可能な時間帯を登録してください。</p>
+    <p><a href="{{ submit_url }}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">シフト希望を提出する</a></p>
+{% endblock %}
