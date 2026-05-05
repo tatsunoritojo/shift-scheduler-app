@@ -11,3 +11,4 @@ from app.models.async_task import AsyncTask
 from app.models.audit_log import AuditLog
 from app.models.reminder import Reminder
 from app.models.vacancy import VacancyRequest, VacancyCandidate, ShiftChangeLog
+from app.models.staffing import StaffingRequirement
