@@ -3,6 +3,19 @@
 マルチテナント対応シフト管理システム（Flask + Vanilla JS）
 デプロイ先: Vercel (サーバーレス)
 
+## LP Phase 2a 実装乖離対応
+
+**最終更新: 2026-05-05**
+
+LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳細は `docs/lp-redesign-v2/phase-2a-fix-request.md`、判定の根拠は `docs/sequence-diagrams/`。
+
+- ~~**B: 期間公開メール通知 + 募集文面**~~ — 完了。branch `feature/period-announcement`（コミット c5a0e41 backend / 4bca151 frontend）
+- 🔜 **A: Worker 提出 UI に Google Cal Free/Busy 連動** — Scene 2 の核。`GOOGLE_SCOPES_WRITE` に `calendar.readonly` 含まれており追加同意不要
+- 🔜 **D: 必要人数管理 (StaffingRequirement)** — Scene 4 の「VIEW 必要枠 × 希望者」対応。新テーブル設計、Phase A 設定とは独立
+- ⊘ **C: PNG/PDF 期間カレンダー書き出し** — 既に実装済 (`openShareModal` + html2canvas/jsPDF)、追加実装不要
+
+完了後 ClaudeDesign に Phase 2a-3 修正依頼を投げる予定（A 完了で Scene 2 解禁、D 完了で Scene 4 必要枠表示解禁）。
+
 ## アクティブな対応事項（次セッション着手用）
 
 **最終更新: 2026-04-26**
