@@ -213,6 +213,44 @@ class TestStaffingRequirementsValidation:
         })
         assert resp.status_code == 400
 
+    def test_overlapping_slots_same_day_rejected(self, client, auth, admin_user, db_session):
+        """同一曜日内の時間帯重複は弾く。データ整合性確保のため。"""
+        db_session.commit()
+        auth.login_as(admin_user)
+        resp = client.put('/api/admin/staffing-requirements', json={
+            'items': [
+                {'day_of_week': 1, 'start_time': '09:00', 'end_time': '13:00', 'required_count': 2},
+                {'day_of_week': 1, 'start_time': '11:00', 'end_time': '15:00', 'required_count': 3},
+            ]
+        })
+        assert resp.status_code == 400
+        assert 'overlap' in resp.get_json().get('error', '').lower()
+
+    def test_adjacent_slots_same_day_allowed(self, client, auth, admin_user, db_session):
+        """時刻が隣接（end == start）するスロットは重複ではないので許可。"""
+        db_session.commit()
+        auth.login_as(admin_user)
+        resp = client.put('/api/admin/staffing-requirements', json={
+            'items': [
+                {'day_of_week': 1, 'start_time': '09:00', 'end_time': '13:00', 'required_count': 2},
+                {'day_of_week': 1, 'start_time': '13:00', 'end_time': '17:00', 'required_count': 3},
+            ]
+        })
+        assert resp.status_code == 200
+        assert len(resp.get_json()) == 2
+
+    def test_overlapping_slots_different_days_allowed(self, client, auth, admin_user, db_session):
+        """別の曜日であれば時刻が同じでも重複ではない。"""
+        db_session.commit()
+        auth.login_as(admin_user)
+        resp = client.put('/api/admin/staffing-requirements', json={
+            'items': [
+                {'day_of_week': 1, 'start_time': '09:00', 'end_time': '13:00', 'required_count': 2},
+                {'day_of_week': 2, 'start_time': '09:00', 'end_time': '13:00', 'required_count': 3},
+            ]
+        })
+        assert resp.status_code == 200
+
 
 # ---------------------------------------------------------------------------
 # マルチテナント分離

@@ -2204,17 +2204,17 @@ function renderBuilderCalendar() {
                 badge.textContent = `${data.assignedCount}/${data.availableCount}`;
                 cell.appendChild(badge);
 
-                // 必要人数バッジ（設定済の曜日のみ表示）
+                // 必要人数バッジ（設定済の曜日のみ表示、情報のみ）
+                // 注意: requiredCount は時間帯合計のため「のべ人数」相当。assignedCount は
+                // 1人=1カウントなので、両者を直接比較すると誤判定になる
+                // (例: 09-13=2名 + 13-22=3名 を 1人が通しで担当しても assigned=1)。
+                // 時間帯別の精緻な充足判定は次フェーズで対応するため、現段階では
+                // バッジは情報表示のみとし、不足/充足の色分けは行わない。
                 if (data.hasRequirement) {
                     const reqBadge = document.createElement('div');
                     reqBadge.className = 'admin-day-required-badge';
                     reqBadge.textContent = `必要 ${data.requiredCount}`;
-                    reqBadge.title = `この曜日の必要人数（時間帯合計）: ${data.requiredCount} 名`;
-                    if (data.assignedCount < data.requiredCount) {
-                        reqBadge.classList.add('admin-day-required-short');
-                    } else {
-                        reqBadge.classList.add('admin-day-required-met');
-                    }
+                    reqBadge.title = `この曜日の必要人数（時間帯合計のべ）: ${data.requiredCount} 名`;
                     cell.appendChild(reqBadge);
                 }
             }

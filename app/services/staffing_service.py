@@ -96,4 +96,24 @@ def _validate_items(items) -> list[dict]:
             'end_time': end,
             'required_count': count,
         })
+
+    # 同一曜日内のスロット重複を検出（OpeningHours 単一スロットと違い時間帯
+    # 分割を許可するため、編集ミスで [09-13] と [11-15] のような重なりが
+    # 入りうる。データ整合性のため弾く。HH:MM 文字列は左ゼロ埋めなので
+    # lexicographic 比較で時刻順序判定が安全に成立する）
+    by_day: dict[int, list[tuple[int, dict]]] = {}
+    for idx, item in enumerate(normalized):
+        by_day.setdefault(item['day_of_week'], []).append((idx, item))
+    for day, slots in by_day.items():
+        if len(slots) < 2:
+            continue
+        slots_sorted = sorted(slots, key=lambda pair: pair[1]['start_time'])
+        for k in range(len(slots_sorted) - 1):
+            a_idx, a = slots_sorted[k]
+            b_idx, b = slots_sorted[k + 1]
+            if a['end_time'] > b['start_time']:
+                raise ValueError(
+                    f"items[{b_idx}] overlaps with items[{a_idx}] on day_of_week={day}"
+                )
+
     return normalized
