@@ -18,19 +18,14 @@ import {
     goToOpeningHours,
     generatePeriodName,
 } from './admin/tabs.js';
+import { state } from './admin/state.js';
 
 /** Format a local Date to YYYY-MM-DD without UTC conversion. */
 const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-let currentUser = null;
-let scheduleEntries = [];  // Current schedule being built
-let scheduleVersion = null; // Optimistic locking: updated_at of last fetched schedule
-let periodsIncludeArchived = false; // シフト期間タブのアーカイブ表示トグル状態
-// 期間一覧の最新スナップショット (announcement 編集モーダル等で参照)。
-// 注意: 単一 admin 運用前提。複数 admin で同一期間を同時編集すると
-// 後勝ちで上書きが発生しうる。将来的には PUT 時に expected_version
+// state.cachedPeriods に関する注意: 単一 admin 運用前提。複数 admin で同一期間を同時
+// 編集すると後勝ちで上書きが発生しうる。将来的には PUT 時に expected_version
 // (Phase A'-1 の SCHEDULE_VERSION_MISMATCH と同じパターン) を導入予定。
-let cachedPeriods = [];
 
 // --- Dirty tracking for save buttons ---
 // A save button starts as btn-outline (white with blue border). When the user
@@ -85,14 +80,6 @@ function initDirtyTrackers() {
         registerDirtyTracker(name, scope, btn);
     }
 }
-let submissionsData = [];  // period submissions
-let openingHoursData = {}; // dateStr -> { start_time, end_time } | null
-let currentPeriod = null;  // Selected period object
-let dayAggregatedData = {}; // dateStr -> aggregated day info
-let workersData = []; // workers list
-let builderLoadGeneration = 0; // Guard against stale async responses
-let adminCalendarEvents = []; // Google Calendar events for the admin
-let syncKeyword = '営業時間'; // Calendar sync keyword (loaded from settings)
 
 // Worker colors for timeline
 const WORKER_COLORS = [
@@ -191,17 +178,16 @@ async function showSyncLogs() {
 
 // --- Import Preview Calendar ---
 
-let exceptionsData = [];
 
 function renderImportPreview(startDateStr, endDateStr) {
     const container = document.getElementById('import-preview');
     const actionsEl = document.getElementById('import-preview-actions');
     if (!container) return;
 
-    lastPreviewRange = { start: startDateStr, end: endDateStr };
+    state.lastPreviewRange = { start: startDateStr, end: endDateStr };
 
     const excMap = {};
-    (exceptionsData || []).forEach(e => { excMap[e.exception_date] = e; });
+    (state.exceptionsData || []).forEach(e => { excMap[e.exception_date] = e; });
 
     const start = new Date(startDateStr);
     const end = new Date(endDateStr);
@@ -279,25 +265,24 @@ function renderImportPreview(startDateStr, endDateStr) {
     if (window.lucide) lucide.createIcons();
 }
 
-let lastPreviewRange = null;
 
 function refreshPreviewIfVisible() {
-    if (lastPreviewRange) {
-        renderImportPreview(lastPreviewRange.start, lastPreviewRange.end);
+    if (state.lastPreviewRange) {
+        renderImportPreview(state.lastPreviewRange.start, state.lastPreviewRange.end);
     }
 }
 
 function goToCreatePeriod() {
     // Pre-fill period form from preview range
-    if (lastPreviewRange) {
+    if (state.lastPreviewRange) {
         const nameField = document.getElementById('period-name');
         const startField = document.getElementById('period-start');
         const endField = document.getElementById('period-end');
         if (nameField && !nameField.value) {
-            nameField.value = generatePeriodName(lastPreviewRange.start, lastPreviewRange.end);
+            nameField.value = generatePeriodName(state.lastPreviewRange.start, state.lastPreviewRange.end);
         }
-        if (startField && !startField.value) startField.value = lastPreviewRange.start;
-        if (endField && !endField.value) endField.value = lastPreviewRange.end;
+        if (startField && !startField.value) startField.value = state.lastPreviewRange.start;
+        if (endField && !endField.value) endField.value = state.lastPreviewRange.end;
     }
     switchTab('periods');
 }
@@ -316,7 +301,7 @@ function initSyncDateRange() {
 function showSettingsDayPopup(dateStr) {
     closeSettingsDayPopup();
 
-    const exc = exceptionsData.find(e => e.exception_date === dateStr);
+    const exc = state.exceptionsData.find(e => e.exception_date === dateStr);
     const d = new Date(dateStr);
     const dayLabel = `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAY_NAMES[d.getDay()]})`;
 
@@ -468,7 +453,7 @@ function setupStaticHandlers() {
     const includeArchivedToggle = document.getElementById('periods-include-archived');
     if (includeArchivedToggle) {
         includeArchivedToggle.addEventListener('change', (e) => {
-            periodsIncludeArchived = e.target.checked;
+            state.periodsIncludeArchived = e.target.checked;
             loadPeriods();
         });
     }
@@ -503,7 +488,7 @@ function setupStaticHandlers() {
     // Level settings
     const levelEnabled = document.getElementById('level-system-enabled');
     if (levelEnabled) levelEnabled.addEventListener('change', (e) => {
-        levelSystemState.enabled = e.target.checked;
+        state.levelSystemState.enabled = e.target.checked;
         renderLevelSettings();
     });
     const btnAddLevelTier = document.getElementById('btn-add-level-tier');
@@ -518,12 +503,12 @@ function setupStaticHandlers() {
     // Min attendance settings
     const minMode = document.getElementById('min-attendance-mode');
     if (minMode) minMode.addEventListener('change', (e) => {
-        minAttendanceState.mode = e.target.value;
+        state.minAttendanceState.mode = e.target.value;
         renderMinAttendanceSettings();
     });
     const minUnit = document.getElementById('min-attendance-unit');
     if (minUnit) minUnit.addEventListener('change', (e) => {
-        minAttendanceState.unit = e.target.value;
+        state.minAttendanceState.unit = e.target.value;
         renderMinAttendanceSettings();
     });
     const btnSaveMinAtt = document.getElementById('btn-save-min-attendance');
@@ -639,21 +624,19 @@ function setupDelegatedHandlers() {
 
 // --- Members Tab ---
 
-let membersTabLoaded = false;
 
 async function loadMembersTab() {
-    if (membersTabLoaded) return;
-    membersTabLoaded = true;
+    if (state.membersTabLoaded) return;
+    state.membersTabLoaded = true;
     await Promise.all([loadInviteCode(), loadInvitations(), loadMembers()]);
     if (window.lucide) lucide.createIcons();
 }
 
-let currentOrgName = '';
 
 async function loadInviteCode() {
     try {
         const data = await api.get('/api/admin/invite-code');
-        if (data.organization_name) currentOrgName = data.organization_name;
+        if (data.organization_name) state.currentOrgName = data.organization_name;
         if (data.invite_code) {
             const baseUrl = window.location.origin;
             const url = `${baseUrl}/invite?code=${data.invite_code}`;
@@ -688,7 +671,7 @@ function renderQRCode(url) {
 
 function showQRCodeFullscreen(url) {
     if (typeof qrcode === 'undefined') return;
-    const orgName = currentOrgName || 'シフリー';
+    const orgName = state.currentOrgName || 'シフリー';
     const overlay = document.createElement('div');
     Object.assign(overlay.style, {
         position: 'fixed', inset: '0', zIndex: '9999',
@@ -721,7 +704,7 @@ async function generateInviteCode() {
         await withLoading(btn, async () => {
             await api.post('/api/admin/invite-code');
             showToast('招待コードを生成しました', 'success');
-            membersTabLoaded = false;
+            state.membersTabLoaded = false;
             await loadMembersTab();
         });
     };
@@ -868,17 +851,17 @@ async function loadMembers() {
             return;
         }
         const ROLE_LABELS = { admin: '管理者', owner: '事業主', worker: 'アルバイト' };
-        const showLevel = levelSystemState.enabled && levelSystemState.tiers.length > 0;
-        const showPerMemberAttendance = minAttendanceState.mode === 'per_member';
-        const showCount = showPerMemberAttendance && (minAttendanceState.unit === 'count' || minAttendanceState.unit === 'both');
-        const showHours = showPerMemberAttendance && (minAttendanceState.unit === 'hours' || minAttendanceState.unit === 'both');
+        const showLevel = state.levelSystemState.enabled && state.levelSystemState.tiers.length > 0;
+        const showPerMemberAttendance = state.minAttendanceState.mode === 'per_member';
+        const showCount = showPerMemberAttendance && (state.minAttendanceState.unit === 'count' || state.minAttendanceState.unit === 'both');
+        const showHours = showPerMemberAttendance && (state.minAttendanceState.unit === 'hours' || state.minAttendanceState.unit === 'both');
         const rows = data.map(m => {
-            const isSelf = currentUser && m.user_id === currentUser.id;
+            const isSelf = state.currentUser && m.user_id === state.currentUser.id;
             const joined = m.joined_at ? new Date(m.joined_at).toLocaleDateString('ja-JP') : '-';
             const levelCell = showLevel ? `<td>
                 <select class="form-control form-control-sm" data-action="changeMemberLevel" data-member-id="${m.id}">
                     <option value="">—</option>
-                    ${levelSystemState.tiers.map(t => `<option value="${escapeHtml(t.key)}" ${m.level_key === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
+                    ${state.levelSystemState.tiers.map(t => `<option value="${escapeHtml(t.key)}" ${m.level_key === t.key ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
                 </select>
             </td>` : '';
             const countCell = showCount ? `<td>
@@ -999,12 +982,12 @@ async function removeMember(id, name) {
 async function loadSyncSettings() {
     try {
         const data = await api.get('/api/admin/sync-settings');
-        syncKeyword = data.calendar_sync_keyword || '営業時間';
+        state.syncKeyword = data.calendar_sync_keyword || '営業時間';
         // Update keyword display in UI
         const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
         const keywordInput = document.getElementById('sync-keyword-input');
-        if (keywordInput) keywordInput.value = syncKeyword;
+        if (keywordInput) keywordInput.value = state.syncKeyword;
         setClean('sync-keyword');
         return data;
     } catch (e) {
@@ -1023,9 +1006,9 @@ async function saveSyncKeyword() {
     }
     try {
         await api.put('/api/admin/sync-settings', { calendar_sync_keyword: keyword });
-        syncKeyword = keyword;
+        state.syncKeyword = keyword;
         const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
         setClean('sync-keyword');
         showToast('同期キーワードを保存しました', 'success');
     } catch (e) {
@@ -1090,11 +1073,11 @@ async function wizardSave() {
             calendar_sync_keyword: keyword,
             calendar_setup_dismissed: true,
         });
-        syncKeyword = keyword;
+        state.syncKeyword = keyword;
         const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = syncKeyword;
+        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
         const keywordInput = document.getElementById('sync-keyword-input');
-        if (keywordInput) keywordInput.value = syncKeyword;
+        if (keywordInput) keywordInput.value = state.syncKeyword;
         hideSetupWizard();
         showSyncKeywordCard();
         showToast('カレンダー連携を設定しました。インポートを開始します。', 'success');
@@ -1131,8 +1114,8 @@ async function init() {
     });
     registerTabHook('members', () => loadMembersTab());
     try {
-        currentUser = await getCurrentUser();
-        document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
+        state.currentUser = await getCurrentUser();
+        document.getElementById('user-name').textContent = state.currentUser.display_name || state.currentUser.email;
         initSyncDateRange();
         const results = await Promise.allSettled([
             loadSyncStatus(),
@@ -1226,7 +1209,7 @@ async function saveOpeningHours() {
 // --- Exceptions ---
 async function loadExceptions(highlightRange) {
     const data = await api.get('/api/admin/opening-hours/exceptions');
-    exceptionsData = data || [];
+    state.exceptionsData = data || [];
     const container = document.getElementById('exceptions-list');
 
     if (!data || data.length === 0) {
@@ -1339,7 +1322,7 @@ async function exportOpeningHours() {
     }
     showConfirmDialog(
         'エクスポート確認',
-        `${startDate} 〜 ${endDate} の営業時間をGoogleカレンダーに書き出します。カレンダー上の既存「${syncKeyword}」イベントは更新されます。`,
+        `${startDate} 〜 ${endDate} の営業時間をGoogleカレンダーに書き出します。カレンダー上の既存「${state.syncKeyword}」イベントは更新されます。`,
         'btn-primary', 'エクスポート',
         async () => {
             try {
@@ -1367,7 +1350,7 @@ async function importOpeningHours() {
     }
     showConfirmDialog(
         'インポート確認',
-        `${startDate} 〜 ${endDate} の「${syncKeyword}」イベントをGoogleカレンダーから取込み、例外リストに<strong>保存</strong>します。手動設定済みの日は上書きされません。`,
+        `${startDate} 〜 ${endDate} の「${state.syncKeyword}」イベントをGoogleカレンダーから取込み、例外リストに<strong>保存</strong>します。手動設定済みの日は上書きされません。`,
         'btn-primary', 'インポート',
         async () => {
             try {
@@ -1390,21 +1373,21 @@ async function importOpeningHours() {
 
 // --- Periods ---
 async function loadPeriods() {
-    const url = periodsIncludeArchived
+    const url = state.periodsIncludeArchived
         ? '/api/admin/periods?include_archived=true'
         : '/api/admin/periods';
     const data = await api.get(url);
-    cachedPeriods = data || [];
+    state.cachedPeriods = data || [];
     const container = document.getElementById('periods-table-container');
 
     // バッジ ⑤ は閉鎖中（status=closed）かつ未アーカイブの期間数を表示
-    const buildPending = cachedPeriods.filter(
+    const buildPending = state.cachedPeriods.filter(
         p => p.status === 'closed' && !p.is_archived
     ).length;
     setTabBadge('builder', buildPending);
 
     if (!data || data.length === 0) {
-        const msg = periodsIncludeArchived
+        const msg = state.periodsIncludeArchived
             ? '<p>シフト期間はまだありません</p><p class="empty-state-hint">上のフォームから新しいシフト期間を作成してください</p>'
             : '<p>表示できるシフト期間はありません</p><p class="empty-state-hint">「アーカイブ済を表示」を有効にするとアーカイブ済みも見られます</p>';
         container.innerHTML = `<div class="empty-state">${msg}</div>`;
@@ -1556,7 +1539,7 @@ async function deletePeriod(periodId, periodName) {
 
 function gotoArchivedPeriods() {
     // シフト期間タブへ遷移し、アーカイブ済を表示する
-    periodsIncludeArchived = true;
+    state.periodsIncludeArchived = true;
     const cb = document.getElementById('periods-include-archived');
     if (cb) cb.checked = true;
     switchTab('periods');
@@ -1618,13 +1601,12 @@ async function createPeriod() {
 // ======================================================================
 
 const SHARE_WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-let shareModalData = null; // { period, openingHours, exceptions }
 
 async function openShareModal(periodId) {
     try {
         // Ensure org name is available for the card header
-        const orgPromise = currentOrgName
-            ? Promise.resolve({ organization_name: currentOrgName })
+        const orgPromise = state.currentOrgName
+            ? Promise.resolve({ organization_name: state.currentOrgName })
             : api.get('/api/admin/invite-code').catch(() => ({}));
         const [periods, openingHours, exceptions, orgData] = await Promise.all([
             api.get('/api/admin/periods'),
@@ -1633,14 +1615,14 @@ async function openShareModal(periodId) {
             orgPromise,
         ]);
         if (orgData && orgData.organization_name) {
-            currentOrgName = orgData.organization_name;
+            state.currentOrgName = orgData.organization_name;
         }
         const period = periods.find(p => p.id === periodId);
         if (!period) {
             showToast('期間が見つかりません', 'error');
             return;
         }
-        shareModalData = { period, openingHours, exceptions };
+        state.shareModalData = { period, openingHours, exceptions };
         renderShareModal();
         const modal = document.getElementById('period-share-modal');
         modal.hidden = false;
@@ -1655,11 +1637,11 @@ function closeShareModal() {
     const modal = document.getElementById('period-share-modal');
     modal.hidden = true;
     document.body.style.overflow = '';
-    shareModalData = null;
+    state.shareModalData = null;
 }
 
 function renderShareModal() {
-    const { period, openingHours, exceptions } = shareModalData;
+    const { period, openingHours, exceptions } = state.shareModalData;
     const target = document.getElementById('share-export-target');
     target.innerHTML = buildShareCardHtml(period, openingHours, exceptions);
     document.getElementById('share-template-text').textContent = buildShareTemplate(period);
@@ -1679,7 +1661,7 @@ function buildShareCardHtml(period, openingHours, exceptions) {
     const monthsHtml = months.map(m => buildShareMonthHtml(m, start, end, hoursByDow, excByDate)).join('');
 
     const titleHtml = escapeHtml(period.name) + ' シフト希望提出のご案内';
-    const orgHtml = currentOrgName ? `<p class="shcard-org">${escapeHtml(currentOrgName)}</p>` : '';
+    const orgHtml = state.currentOrgName ? `<p class="shcard-org">${escapeHtml(state.currentOrgName)}</p>` : '';
     const rangeLabel = `対象期間: ${formatJpDate(start)} 〜 ${formatJpDate(end)}`;
     let deadlineLabel = '';
     if (period.submission_deadline) {
@@ -1799,7 +1781,7 @@ ${loginUrl}
 }
 
 async function shareDownloadPng() {
-    if (!shareModalData || !window.html2canvas) {
+    if (!state.shareModalData || !window.html2canvas) {
         showToast('ダウンロードライブラリの読み込み中です', 'warning');
         return;
     }
@@ -1807,7 +1789,7 @@ async function shareDownloadPng() {
         const target = document.getElementById('share-export-target');
         const canvas = await window.html2canvas(target, { scale: 2, backgroundColor: '#ffffff' });
         const link = document.createElement('a');
-        link.download = sharedFileName(shareModalData.period.name, 'png');
+        link.download = sharedFileName(state.shareModalData.period.name, 'png');
         link.href = canvas.toDataURL('image/png');
         link.click();
         showToast('PNGを保存しました', 'success');
@@ -1817,7 +1799,7 @@ async function shareDownloadPng() {
 }
 
 async function shareDownloadPdf() {
-    if (!shareModalData || !window.html2canvas || !window.jspdf) {
+    if (!state.shareModalData || !window.html2canvas || !window.jspdf) {
         showToast('ダウンロードライブラリの読み込み中です', 'warning');
         return;
     }
@@ -1832,7 +1814,7 @@ async function shareDownloadPdf() {
         const imgWidth = pageWidth - 20;
         const imgHeight = canvas.height * imgWidth / canvas.width;
         pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, Math.min(imgHeight, pageHeight - 20));
-        pdf.save(sharedFileName(shareModalData.period.name, 'pdf'));
+        pdf.save(sharedFileName(state.shareModalData.period.name, 'pdf'));
         showToast('PDFを保存しました', 'success');
     } catch (e) {
         showToast(`PDF保存に失敗: ${e.message || e}`, 'error');
@@ -1903,15 +1885,14 @@ async function updatePeriodStatus(id, status) {
 // Period announcement editor
 // ======================================================================
 
-let editingAnnouncementPeriodId = null;
 
 function editPeriodAnnouncement(periodId) {
-    const period = cachedPeriods.find(p => p.id === periodId);
+    const period = state.cachedPeriods.find(p => p.id === periodId);
     if (!period) {
         showToast('対象の期間が見つかりません', 'error');
         return;
     }
-    editingAnnouncementPeriodId = periodId;
+    state.editingAnnouncementPeriodId = periodId;
     document.getElementById('announcement-target-name').textContent = period.name;
     const textarea = document.getElementById('announcement-textarea');
     textarea.value = period.announcement_text || '';
@@ -1935,18 +1916,18 @@ function closeAnnouncementEditor() {
     document.body.style.overflow = '';
     const textarea = document.getElementById('announcement-textarea');
     if (textarea) textarea.oninput = null;
-    editingAnnouncementPeriodId = null;
+    state.editingAnnouncementPeriodId = null;
 }
 
 async function saveAnnouncement() {
-    if (editingAnnouncementPeriodId == null) return;
+    if (state.editingAnnouncementPeriodId == null) return;
     const value = document.getElementById('announcement-textarea').value.trim();
     if (value.length > 4000) {
         showToast('募集文面は 4000 文字までです', 'warning');
         return;
     }
     try {
-        await api.put(`/api/admin/periods/${editingAnnouncementPeriodId}`, {
+        await api.put(`/api/admin/periods/${state.editingAnnouncementPeriodId}`, {
             announcement_text: value || null,
         });
         showToast('募集文面を保存しました', 'success');
@@ -1958,7 +1939,7 @@ async function saveAnnouncement() {
 }
 
 async function publishPeriod(periodId) {
-    const period = cachedPeriods.find(p => p.id === periodId);
+    const period = state.cachedPeriods.find(p => p.id === periodId);
     if (!period) {
         showToast('対象の期間が見つかりません', 'error');
         return;
@@ -2010,7 +1991,7 @@ async function loadBuilderData() {
     // Close any open popup before switching
     closeAdminDayPopup();
 
-    const thisGeneration = ++builderLoadGeneration;
+    const thisGeneration = ++state.builderLoadGeneration;
 
     document.getElementById('builder-content').style.display = 'block';
 
@@ -2020,13 +2001,13 @@ async function loadBuilderData() {
     // Parse dates from option text: "name (YYYY-MM-DD 〜 YYYY-MM-DD)"
     const match = opt.textContent.match(/(\d{4}-\d{2}-\d{2})\s*〜\s*(\d{4}-\d{2}-\d{2})/);
     const periodName = opt.textContent.replace(/\s*\(.*$/, '');
-    currentPeriod = match ? { id: periodId, name: periodName, start_date: match[1], end_date: match[2] } : null;
+    state.currentPeriod = match ? { id: periodId, name: periodName, start_date: match[1], end_date: match[2] } : null;
 
-    updateBuilderPeriodTitle(currentPeriod);
+    updateBuilderPeriodTitle(state.currentPeriod);
 
     try {
         // Fetch calendar events in parallel with other data
-        const calEventsPromise = api.get(`/api/calendar/events?startDate=${currentPeriod.start_date}&endDate=${currentPeriod.end_date}&calendarId=primary`)
+        const calEventsPromise = api.get(`/api/calendar/events?startDate=${state.currentPeriod.start_date}&endDate=${state.currentPeriod.end_date}&calendarId=primary`)
             .catch(err => { console.warn('カレンダーイベント取得失敗:', err); return []; });
 
         const [submissions, schedule, workers, openingHours, calEvents] = await Promise.all([
@@ -2038,14 +2019,14 @@ async function loadBuilderData() {
         ]);
 
         // Guard: discard stale response if user switched periods during fetch
-        if (thisGeneration !== builderLoadGeneration) return;
+        if (thisGeneration !== state.builderLoadGeneration) return;
 
-        submissionsData = submissions || [];
-        workersData = workers || [];
-        scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
-        scheduleVersion = schedule && schedule.schedule_version ? schedule.schedule_version : null;
-        openingHoursData = openingHours || {};
-        adminCalendarEvents = calEvents || [];
+        state.submissionsData = submissions || [];
+        state.workersData = workers || [];
+        state.scheduleEntries = schedule && schedule.entries ? schedule.entries : [];
+        state.scheduleVersion = schedule && schedule.schedule_version ? schedule.schedule_version : null;
+        state.openingHoursData = openingHours || {};
+        state.adminCalendarEvents = calEvents || [];
 
         renderScheduleProgress(schedule);
         updateScheduleButtons(schedule);
@@ -2057,7 +2038,7 @@ async function loadBuilderData() {
         renderSyncStatusSummary(schedule);
         setClean('schedule');
     } catch (e) {
-        if (thisGeneration !== builderLoadGeneration) return;
+        if (thisGeneration !== state.builderLoadGeneration) return;
         showToast('データの読み込みに失敗しました', 'error');
     }
 }
@@ -2065,23 +2046,23 @@ async function loadBuilderData() {
 // --- Aggregation ---
 
 function buildDayAggregatedData() {
-    dayAggregatedData = {};
-    if (!currentPeriod) return;
+    state.dayAggregatedData = {};
+    if (!state.currentPeriod) return;
 
-    const start = new Date(currentPeriod.start_date);
-    const end = new Date(currentPeriod.end_date);
+    const start = new Date(state.currentPeriod.start_date);
+    const end = new Date(state.currentPeriod.end_date);
 
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dateStr = toLocalDateStr(d);
-        const oh = openingHoursData[dateStr];
+        const oh = state.openingHoursData[dateStr];
         const closed = !oh || oh.is_closed;
 
         // Build per-worker info for this date
         const workers = [];
-        (submissionsData || []).forEach(sub => {
+        (state.submissionsData || []).forEach(sub => {
             const slot = (sub.slots || []).find(s => s.slot_date === dateStr);
             const isAvailable = slot && slot.is_available;
-            const entry = scheduleEntries.find(e => e.user_id === sub.user_id && e.shift_date === dateStr);
+            const entry = state.scheduleEntries.find(e => e.user_id === sub.user_id && e.shift_date === dateStr);
             workers.push({
                 user_id: sub.user_id,
                 user_name: sub.user_name || sub.user_email || `User ${sub.user_id}`,
@@ -2098,15 +2079,15 @@ function buildDayAggregatedData() {
         const availableCount = workers.filter(w => w.is_available).length;
         const assignedCount = workers.filter(w => w.is_assigned).length;
 
-        // 必要人数: その日の曜日に該当する staffingDraft の合計
+        // 必要人数: その日の曜日に該当する state.staffingDraft の合計
         // (時間帯ごとに違う場合は延べ人数として扱う。MVP では単一値で集約)
         const dayOfWeek = d.getDay();
-        const requiredCount = staffingDraft
+        const requiredCount = state.staffingDraft
             .filter(r => r.day_of_week === dayOfWeek)
             .reduce((sum, r) => sum + (r.required_count || 0), 0);
-        const hasRequirement = staffingDraft.some(r => r.day_of_week === dayOfWeek);
+        const hasRequirement = state.staffingDraft.some(r => r.day_of_week === dayOfWeek);
 
-        dayAggregatedData[dateStr] = {
+        state.dayAggregatedData[dateStr] = {
             closed,
             openingHours: oh,
             workers,
@@ -2140,12 +2121,12 @@ function updateBuilderPeriodTitle(period) {
 
 function renderBuilderCalendar() {
     const container = document.getElementById('calendar-container');
-    if (!currentPeriod) {
+    if (!state.currentPeriod) {
         container.innerHTML = '<p style="color:#999;">期間が選択されていません</p>';
         return;
     }
 
-    renderCalendar(container, currentPeriod.start_date, currentPeriod.end_date, dayAggregatedData, {
+    renderCalendar(container, state.currentPeriod.start_date, state.currentPeriod.end_date, state.dayAggregatedData, {
         renderDayContent(cell, dateStr, data) {
             // Remove default styles, add admin-specific class
             cell.classList.add('admin-calendar-day');
@@ -2210,7 +2191,7 @@ function renderBuilderCalendar() {
 // --- Calendar Event Helpers ---
 
 function getEventsForDate(dateStr) {
-    return _getEventsForDate(adminCalendarEvents, dateStr);
+    return _getEventsForDate(state.adminCalendarEvents, dateStr);
 }
 
 function renderAdminEventsSection(dateStr) {
@@ -2459,14 +2440,14 @@ function renderAdminCoverageTimeline(dateStr, data, container) {
 // --- Worker Assignment Toggle ---
 
 function toggleWorkerAssignment(userId, dateStr) {
-    const idx = scheduleEntries.findIndex(e => e.user_id === userId && e.shift_date === dateStr);
+    const idx = state.scheduleEntries.findIndex(e => e.user_id === userId && e.shift_date === dateStr);
     if (idx >= 0) {
-        scheduleEntries.splice(idx, 1);
+        state.scheduleEntries.splice(idx, 1);
     } else {
         // Find worker's available time from submissions
-        const dayData = dayAggregatedData[dateStr];
+        const dayData = state.dayAggregatedData[dateStr];
         const worker = dayData ? dayData.workers.find(w => w.user_id === userId) : null;
-        scheduleEntries.push({
+        state.scheduleEntries.push({
             user_id: userId,
             shift_date: dateStr,
             start_time: (worker && worker.start_time) || '09:00',
@@ -2481,7 +2462,7 @@ function toggleWorkerAssignment(userId, dateStr) {
     setDirty('schedule');
 
     // Re-open popup for this date
-    const newData = dayAggregatedData[dateStr];
+    const newData = state.dayAggregatedData[dateStr];
     if (newData) showAdminDayPopup(dateStr, newData);
 }
 
@@ -2492,7 +2473,7 @@ function applyWorkerTime(userId, dateStr) {
     const endInput = document.getElementById(`assigned-end-${userId}`);
     if (!startInput || !endInput) return;
 
-    const entry = scheduleEntries.find(e => e.user_id === userId && e.shift_date === dateStr);
+    const entry = state.scheduleEntries.find(e => e.user_id === userId && e.shift_date === dateStr);
     if (entry) {
         entry.start_time = startInput.value;
         entry.end_time = endInput.value;
@@ -2506,7 +2487,7 @@ function applyWorkerTime(userId, dateStr) {
 
     // Refresh timeline in popup without full re-open
     const tlContainer = document.getElementById('admin-coverage-timeline');
-    const newData = dayAggregatedData[dateStr];
+    const newData = state.dayAggregatedData[dateStr];
     if (tlContainer && newData) {
         renderAdminCoverageTimeline(dateStr, newData, tlContainer);
     }
@@ -2537,10 +2518,10 @@ function renderSubmissionsSummary(submissions) {
 function renderHoursSummary() {
     const container = document.getElementById('hours-summary');
     const summary = {};
-    scheduleEntries.forEach(e => {
+    state.scheduleEntries.forEach(e => {
         const uid = e.user_id;
         if (!summary[uid]) {
-            const sub = (submissionsData || []).find(s => s.user_id === uid);
+            const sub = (state.submissionsData || []).find(s => s.user_id === uid);
             summary[uid] = {
                 name: sub ? (sub.user_name || sub.user_email) : `User ${uid}`,
                 hours: 0,
@@ -2611,7 +2592,7 @@ function renderScheduleProgress(schedule) {
 
     const status = schedule?.status || null;
     const isRejected = status === 'rejected';
-    const steps = workflowState.approval_required ? SCHEDULE_STEPS_FULL : SCHEDULE_STEPS_SIMPLE;
+    const steps = state.workflowState.approval_required ? SCHEDULE_STEPS_FULL : SCHEDULE_STEPS_SIMPLE;
 
     if (!status) {
         container.innerHTML = '<div class="progress-hint" style="margin:0;width:100%;text-align:center;">シフトを作成して保存すると、進捗が表示されます</div>';
@@ -2627,7 +2608,7 @@ function renderScheduleProgress(schedule) {
         let cls = '';
         let icon = step.icon;
 
-        if (isRejected && i === 1 && workflowState.approval_required) {
+        if (isRejected && i === 1 && state.workflowState.approval_required) {
             cls = 'rejected';
             icon = '!';
         } else if (i < activeIndex) {
@@ -2655,7 +2636,7 @@ function renderScheduleProgress(schedule) {
         draft: '「シフトを確定」でカレンダーに反映',
         confirmed: 'カレンダーに同期済み',
     };
-    const hints = workflowState.approval_required ? hintsFull : hintsSimple;
+    const hints = state.workflowState.approval_required ? hintsFull : hintsSimple;
     html += `<span class="progress-hint">${hints[status] || ''}</span>`;
 
     container.innerHTML = html;
@@ -2670,7 +2651,7 @@ function updateScheduleButtons(schedule) {
     // Save: available for draft, rejected, or no schedule
     saveBtn.style.display = (!status || status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
 
-    if (workflowState.approval_required) {
+    if (state.workflowState.approval_required) {
         // Full flow: submit for approval, confirm only when approved
         submitBtn.style.display = (status === 'draft' || status === 'rejected') ? 'inline-flex' : 'none';
         confirmBtn.style.display = (status === 'approved') ? 'inline-flex' : 'none';
@@ -2693,12 +2674,12 @@ async function saveSchedule() {
     if (!periodId) return;
     try {
         const result = await api.post(`/api/admin/periods/${periodId}/schedule`, {
-            entries: scheduleEntries,
-            expected_version: scheduleVersion,
+            entries: state.scheduleEntries,
+            expected_version: state.scheduleVersion,
         });
         // Update version so subsequent saves stay in sync
         if (result && result.schedule_version) {
-            scheduleVersion = result.schedule_version;
+            state.scheduleVersion = result.schedule_version;
         }
         setClean('schedule');
         showToast('スケジュールを保存しました', 'success');
@@ -2711,7 +2692,7 @@ async function saveSchedule() {
                 'btn-primary',
                 '再読込',
                 () => {
-                    if (currentPeriod) loadScheduleForPeriod(currentPeriod.id);
+                    if (state.currentPeriod) loadScheduleForPeriod(state.currentPeriod.id);
                 },
             );
             return;
@@ -2724,19 +2705,19 @@ async function submitForApproval() {
     const periodId = document.getElementById('builder-period-select').value;
     if (!periodId) return;
 
-    if (scheduleEntries.length === 0) {
+    if (state.scheduleEntries.length === 0) {
         showToast('スタッフが割り当てられていません。カレンダーから割当を行ってください。', 'warning');
         return;
     }
 
     showConfirmDialog(
         '承認申請を送信しますか？',
-        `現在のスケジュール（${scheduleEntries.length}件のシフト）を事業主に承認申請します。申請後も事業主が差戻した場合は再編集できます。`,
+        `現在のスケジュール（${state.scheduleEntries.length}件のシフト）を事業主に承認申請します。申請後も事業主が差戻した場合は再編集できます。`,
         'btn-warning',
         '承認申請を送信',
         async () => {
             try {
-                await api.post(`/api/admin/periods/${periodId}/schedule`, { entries: scheduleEntries });
+                await api.post(`/api/admin/periods/${periodId}/schedule`, { entries: state.scheduleEntries });
                 await api.post(`/api/admin/periods/${periodId}/schedule/submit`);
                 showToast('承認申請を送信しました', 'success');
             } catch (e) {
@@ -2819,18 +2800,11 @@ async function saveReminderSettings() {
 
 // --- Level / Overlap / Min-Attendance Settings (Phase A) ---
 
-let levelSystemState = { enabled: false, tiers: [] };
-let overlapCheckState = { enabled: false, scope: 'same_tier' };
-let minAttendanceState = {
-    mode: 'disabled', unit: 'count',
-    org_wide_count_per_week: 1, org_wide_hours_per_week: 8.0,
-    count_drafts: true, lookback_periods: 1,
-};
 
 async function loadLevelSettings() {
     try {
         const data = await api.get('/api/admin/settings/levels');
-        levelSystemState = {
+        state.levelSystemState = {
             enabled: !!data.enabled,
             tiers: (data.tiers || []).map(t => ({
                 key: t.key, label: t.label, order: t.order,
@@ -2850,18 +2824,18 @@ function renderLevelSettings() {
     const list = document.getElementById('level-tiers-list');
     if (!enabledToggle || !tiersSection || !list) return;
 
-    enabledToggle.checked = levelSystemState.enabled;
-    tiersSection.style.display = levelSystemState.enabled ? '' : 'none';
+    enabledToggle.checked = state.levelSystemState.enabled;
+    tiersSection.style.display = state.levelSystemState.enabled ? '' : 'none';
 
-    if (!levelSystemState.tiers.length) {
+    if (!state.levelSystemState.tiers.length) {
         list.innerHTML = '<p class="help-text" style="color:var(--color-neutral-400);">レベルがまだ設定されていません</p>';
     } else {
-        list.innerHTML = levelSystemState.tiers.map((t, i) => `
+        list.innerHTML = state.levelSystemState.tiers.map((t, i) => `
             <div class="level-tier-row">
                 <span class="tier-label"><strong>${escapeHtml(t.label)}</strong> <span style="color:var(--color-neutral-400);font-size:0.85em;">(${escapeHtml(t.key)})</span></span>
                 <span class="tier-count">${t.member_count}名</span>
                 <button class="btn btn-outline btn-sm" data-action="moveLevelTierUp" data-key="${escapeHtml(t.key)}" ${i === 0 ? 'disabled' : ''} title="上へ"><i data-lucide="chevron-up" style="width:12px;height:12px;"></i></button>
-                <button class="btn btn-outline btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-outline btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === state.levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
                 <button class="btn btn-outline btn-sm" data-action="removeLevelTier" data-key="${escapeHtml(t.key)}" data-label="${escapeHtml(t.label)}" data-count="${t.member_count}" title="削除"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
             </div>
         `).join('');
@@ -2882,12 +2856,12 @@ function addLevelTier() {
         showToast('キーは半角英小文字・数字・アンダースコアのみ（先頭は英字）', 'warning');
         return;
     }
-    if (levelSystemState.tiers.some(t => t.key === key)) {
+    if (state.levelSystemState.tiers.some(t => t.key === key)) {
         showToast('同じキーが既に存在します', 'warning');
         return;
     }
-    levelSystemState.tiers.push({
-        key, label, order: levelSystemState.tiers.length + 1, member_count: 0,
+    state.levelSystemState.tiers.push({
+        key, label, order: state.levelSystemState.tiers.length + 1, member_count: 0,
     });
     keyInput.value = '';
     labelInput.value = '';
@@ -2897,7 +2871,7 @@ function addLevelTier() {
 
 function removeLevelTier(key, label, memberCount) {
     const proceed = () => {
-        levelSystemState.tiers = levelSystemState.tiers.filter(t => t.key !== key);
+        state.levelSystemState.tiers = state.levelSystemState.tiers.filter(t => t.key !== key);
         renderLevelSettings();
         setDirty('levels');
     };
@@ -2913,11 +2887,11 @@ function removeLevelTier(key, label, memberCount) {
 }
 
 function moveLevelTier(key, direction) {
-    const idx = levelSystemState.tiers.findIndex(t => t.key === key);
+    const idx = state.levelSystemState.tiers.findIndex(t => t.key === key);
     if (idx < 0) return;
     const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= levelSystemState.tiers.length) return;
-    const tiers = levelSystemState.tiers;
+    if (newIdx < 0 || newIdx >= state.levelSystemState.tiers.length) return;
+    const tiers = state.levelSystemState.tiers;
     [tiers[idx], tiers[newIdx]] = [tiers[newIdx], tiers[idx]];
     tiers.forEach((t, i) => { t.order = i + 1; });
     renderLevelSettings();
@@ -2926,7 +2900,7 @@ function moveLevelTier(key, direction) {
 
 async function saveLevelSettings() {
     const enabled = document.getElementById('level-system-enabled').checked;
-    const currentKeys = new Set(levelSystemState.tiers.map(t => t.key));
+    const currentKeys = new Set(state.levelSystemState.tiers.map(t => t.key));
 
     try {
         const serverCfg = await api.get('/api/admin/settings/levels');
@@ -2935,13 +2909,13 @@ async function saveLevelSettings() {
 
         await api.put('/api/admin/settings/levels', {
             enabled,
-            tiers: levelSystemState.tiers.map(t => ({ key: t.key, label: t.label, order: t.order })),
+            tiers: state.levelSystemState.tiers.map(t => ({ key: t.key, label: t.label, order: t.order })),
             removed_tier_keys: removedTierKeys,
         });
-        levelSystemState.enabled = enabled;
+        state.levelSystemState.enabled = enabled;
         showToast('レベル設定を保存しました', 'success');
         await loadLevelSettings();  // resets setClean('levels')
-        membersTabLoaded = false;
+        state.membersTabLoaded = false;
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
@@ -2950,12 +2924,12 @@ async function saveLevelSettings() {
 async function loadOverlapCheckSettings() {
     try {
         const data = await api.get('/api/admin/settings/overlap-check');
-        overlapCheckState = {
+        state.overlapCheckState = {
             enabled: !!data.enabled,
             scope: data.scope || 'same_tier',
         };
         const el = document.getElementById('overlap-check-enabled');
-        if (el) el.checked = overlapCheckState.enabled;
+        if (el) el.checked = state.overlapCheckState.enabled;
         setClean('overlap-check');
     } catch (e) {
         console.warn('Failed to load overlap check settings:', e);
@@ -2966,7 +2940,7 @@ async function saveOverlapCheckSettings() {
     const enabled = document.getElementById('overlap-check-enabled').checked;
     try {
         await api.put('/api/admin/settings/overlap-check', { enabled, scope: 'same_tier' });
-        overlapCheckState.enabled = enabled;
+        state.overlapCheckState.enabled = enabled;
         setClean('overlap-check');
         showToast('重複チェック設定を保存しました', 'success');
     } catch (e) {
@@ -2977,7 +2951,7 @@ async function saveOverlapCheckSettings() {
 async function loadMinAttendanceSettings() {
     try {
         const data = await api.get('/api/admin/settings/min-attendance');
-        minAttendanceState = {
+        state.minAttendanceState = {
             mode: data.mode || 'disabled',
             unit: data.unit || 'count',
             org_wide_count_per_week: data.org_wide_count_per_week ?? 1,
@@ -3005,18 +2979,18 @@ function renderMinAttendanceSettings() {
     const lookbackEl = document.getElementById('min-attendance-lookback');
 
     if (!modeEl) return;
-    modeEl.value = minAttendanceState.mode;
-    unitEl.value = minAttendanceState.unit;
-    countEl.value = minAttendanceState.org_wide_count_per_week;
-    hoursEl.value = minAttendanceState.org_wide_hours_per_week;
-    countDraftsEl.checked = minAttendanceState.count_drafts;
-    lookbackEl.value = minAttendanceState.lookback_periods;
+    modeEl.value = state.minAttendanceState.mode;
+    unitEl.value = state.minAttendanceState.unit;
+    countEl.value = state.minAttendanceState.org_wide_count_per_week;
+    hoursEl.value = state.minAttendanceState.org_wide_hours_per_week;
+    countDraftsEl.checked = state.minAttendanceState.count_drafts;
+    lookbackEl.value = state.minAttendanceState.lookback_periods;
 
-    configEl.style.display = minAttendanceState.mode === 'disabled' ? 'none' : '';
-    orgWideEl.style.display = minAttendanceState.mode === 'org_wide' ? '' : 'none';
+    configEl.style.display = state.minAttendanceState.mode === 'disabled' ? 'none' : '';
+    orgWideEl.style.display = state.minAttendanceState.mode === 'org_wide' ? '' : 'none';
 
-    const showCount = minAttendanceState.unit === 'count' || minAttendanceState.unit === 'both';
-    const showHours = minAttendanceState.unit === 'hours' || minAttendanceState.unit === 'both';
+    const showCount = state.minAttendanceState.unit === 'count' || state.minAttendanceState.unit === 'both';
+    const showHours = state.minAttendanceState.unit === 'hours' || state.minAttendanceState.unit === 'both';
     countFieldEl.style.display = showCount ? '' : 'none';
     hoursFieldEl.style.display = showHours ? '' : 'none';
 }
@@ -3032,10 +3006,10 @@ async function saveMinAttendanceSettings() {
     };
     try {
         await api.put('/api/admin/settings/min-attendance', payload);
-        minAttendanceState = payload;
+        state.minAttendanceState = payload;
         setClean('min-attendance');
         showToast('最低出勤設定を保存しました', 'success');
-        membersTabLoaded = false;
+        state.membersTabLoaded = false;
     } catch (e) {
         showToast(`保存に失敗しました: ${e.message}`, 'error');
     }
@@ -3053,12 +3027,11 @@ async function updateMemberAttributes(memberId, updates) {
 // --- Staffing Requirements (曜日 × 時間帯ごとの必要人数) — Phase 2a-3 D ---
 
 const STAFFING_DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
-let staffingDraft = []; // クライアント側の編集中状態 ([{day_of_week, start_time, end_time, required_count}])
 
 async function loadStaffingRequirements() {
     try {
         const data = await api.get('/api/admin/staffing-requirements');
-        staffingDraft = (data || []).map(d => ({...d}));
+        state.staffingDraft = (data || []).map(d => ({...d}));
         renderStaffingList();
         setClean('staffing');
     } catch (e) {
@@ -3072,11 +3045,11 @@ async function loadStaffingRequirements() {
 function renderStaffingList() {
     const container = document.getElementById('staffing-list');
     if (!container) return;
-    if (staffingDraft.length === 0) {
+    if (state.staffingDraft.length === 0) {
         container.innerHTML = '<p style="color:var(--color-neutral-500);font-size:0.9em;">未設定です。「+ 時間帯を追加」から設定を始めてください。</p>';
         return;
     }
-    container.innerHTML = staffingDraft.map((row, i) => `
+    container.innerHTML = state.staffingDraft.map((row, i) => `
         <div class="staffing-row" style="display:grid;grid-template-columns:110px 1fr 1fr 100px auto;gap:8px;align-items:center;margin-bottom:6px;">
             <select class="form-control form-control-sm" data-action="updateStaffingField" data-index="${i}" data-field="day_of_week" aria-label="${i+1}行目 曜日">
                 ${STAFFING_DAY_LABELS.map((label, dow) => `<option value="${dow}"${row.day_of_week === dow ? ' selected' : ''}>${label}曜日</option>`).join('')}
@@ -3091,7 +3064,7 @@ function renderStaffingList() {
 }
 
 function addStaffingRow() {
-    staffingDraft.push({
+    state.staffingDraft.push({
         day_of_week: 1,
         start_time: '09:00',
         end_time: '17:00',
@@ -3102,26 +3075,26 @@ function addStaffingRow() {
 }
 
 function removeStaffingRow(index) {
-    if (index < 0 || index >= staffingDraft.length) return;
-    staffingDraft.splice(index, 1);
+    if (index < 0 || index >= state.staffingDraft.length) return;
+    state.staffingDraft.splice(index, 1);
     renderStaffingList();
     setDirty('staffing');
 }
 
 function updateStaffingField(index, field, value) {
-    if (!staffingDraft[index]) return;
+    if (!state.staffingDraft[index]) return;
     if (field === 'day_of_week' || field === 'required_count') {
-        staffingDraft[index][field] = Number(value);
+        state.staffingDraft[index][field] = Number(value);
     } else {
-        staffingDraft[index][field] = value;
+        state.staffingDraft[index][field] = value;
     }
     setDirty('staffing');
 }
 
 async function saveStaffingRequirements() {
     // クライアント側で軽くバリデーション（API 側でも検証されるが、UX 改善）
-    for (let i = 0; i < staffingDraft.length; i++) {
-        const r = staffingDraft[i];
+    for (let i = 0; i < state.staffingDraft.length; i++) {
+        const r = state.staffingDraft[i];
         if (!r.start_time || !r.end_time) {
             showToast(`${i + 1} 行目: 時刻を入力してください`, 'warning');
             return;
@@ -3136,8 +3109,8 @@ async function saveStaffingRequirements() {
         }
     }
     try {
-        const data = await api.put('/api/admin/staffing-requirements', { items: staffingDraft });
-        staffingDraft = (data || []).map(d => ({...d}));
+        const data = await api.put('/api/admin/staffing-requirements', { items: state.staffingDraft });
+        state.staffingDraft = (data || []).map(d => ({...d}));
         renderStaffingList();
         setClean('staffing');
         showToast('必要人数設定を保存しました', 'success');
@@ -3148,16 +3121,11 @@ async function saveStaffingRequirements() {
 
 // --- Workflow Settings (approval process) — Phase A' ---
 
-let workflowState = {
-    approval_required: false,
-    owner_count: 0,
-    pending_schedules_count: 0,
-};
 
 async function loadWorkflowSettings() {
     try {
         const data = await api.get('/api/admin/settings/workflow');
-        workflowState = {
+        state.workflowState = {
             approval_required: !!data.approval_required,
             owner_count: data.owner_count ?? 0,
             pending_schedules_count: data.pending_schedules_count ?? 0,
@@ -3174,7 +3142,7 @@ function renderWorkflowSettings() {
     // Sync checkbox to server-known state. Only called on load/save, not on user click.
     const toggle = document.getElementById('workflow-approval-required');
     if (!toggle) return;
-    toggle.checked = workflowState.approval_required;
+    toggle.checked = state.workflowState.approval_required;
     updateWorkflowWarning();
 }
 
@@ -3185,14 +3153,14 @@ function updateWorkflowWarning() {
     const warning = document.getElementById('workflow-owner-warning');
     if (!toggle || !warning) return;
     const wantsApproval = toggle.checked;
-    const needWarn = wantsApproval && workflowState.owner_count < 1;
+    const needWarn = wantsApproval && state.workflowState.owner_count < 1;
     warning.style.display = needWarn ? '' : 'none';
 }
 
 function renderOwnerInviteCard() {
     const card = document.getElementById('owner-invite-card');
     if (!card) return;
-    const show = workflowState.approval_required && workflowState.owner_count < 1;
+    const show = state.workflowState.approval_required && state.workflowState.owner_count < 1;
     card.style.display = show ? '' : 'none';
 }
 
@@ -3202,7 +3170,7 @@ async function saveWorkflowSettings() {
         const result = await api.put('/api/admin/settings/workflow', {
             approval_required: enabled,
         });
-        workflowState = {
+        state.workflowState = {
             approval_required: !!result.approval_required,
             owner_count: result.owner_count ?? 0,
             pending_schedules_count: result.pending_schedules_count ?? 0,
@@ -3212,14 +3180,14 @@ async function saveWorkflowSettings() {
         setClean('workflow');
         showToast('承認プロセス設定を保存しました', 'success');
         // Refresh schedule UI if a period is currently loaded
-        if (currentPeriod) {
-            loadScheduleForPeriod(currentPeriod.id);
+        if (state.currentPeriod) {
+            loadScheduleForPeriod(state.currentPeriod.id);
         }
     } catch (e) {
         const msg = e.message || '保存に失敗しました';
         // Revert toggle state on failure
         const toggle = document.getElementById('workflow-approval-required');
-        if (toggle) toggle.checked = workflowState.approval_required;
+        if (toggle) toggle.checked = state.workflowState.approval_required;
         showToast(msg, 'error');
     }
 }
