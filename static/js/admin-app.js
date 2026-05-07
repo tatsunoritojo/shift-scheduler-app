@@ -7,6 +7,17 @@ import { showConfirmDialog } from './modules/ui-dialogs.js';
 import { setLoading, withLoading } from './modules/btn-loading.js';
 import { isAllDayEvent, getEventsForDate as _getEventsForDate, formatSubmittedAt } from './modules/event-utils.js';
 import { WEEKDAY_NAMES } from './modules/date-constants.js';
+import {
+    switchTab,
+    registerTabHook,
+    setTabBadge,
+    setTabBadgeDot,
+    openManualAndScroll,
+    goToAddException,
+    goToExceptionsList,
+    goToOpeningHours,
+    generatePeriodName,
+} from './admin/tabs.js';
 
 /** Format a local Date to YYYY-MM-DD without UTC conversion. */
 const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -274,25 +285,6 @@ function refreshPreviewIfVisible() {
     if (lastPreviewRange) {
         renderImportPreview(lastPreviewRange.start, lastPreviewRange.end);
     }
-}
-
-function openManualAndScroll(sectionId) {
-    const details = document.getElementById('manual-settings-details');
-    if (details) {
-        details.open = true;
-        setTimeout(() => {
-            const target = document.getElementById(sectionId);
-            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-    }
-}
-
-function goToAddException() { openManualAndScroll('section-add-exception'); }
-function goToExceptionsList() { openManualAndScroll('section-exceptions-list'); }
-function goToOpeningHours() { openManualAndScroll('section-opening-hours'); }
-
-function generatePeriodName(startStr, endStr) {
-    return `${startStr}〜${endStr} 自習室シフト`;
 }
 
 function goToCreatePeriod() {
@@ -1131,6 +1123,13 @@ async function init() {
     setupStaticHandlers();
     setupDelegatedHandlers();
     initDirtyTrackers();
+    // タブ切替時の副作用（旧 switchTab 内のタブ別分岐）をフックとして登録
+    registerTabHook('builder', () => {
+        loadBuilderPeriodSelect();
+        loadChangeLog();
+        loadVacancies();
+    });
+    registerTabHook('members', () => loadMembersTab());
     try {
         currentUser = await getCurrentUser();
         document.getElementById('user-name').textContent = currentUser.display_name || currentUser.email;
@@ -1176,41 +1175,6 @@ async function init() {
     } catch (e) {
         console.error('Init error:', e);
     }
-}
-
-// --- Tab badges ---
-function setTabBadge(tabName, count) {
-    const el = document.getElementById(`badge-${tabName}`);
-    if (!el) return;
-    if (count > 0) {
-        el.textContent = String(count);
-        el.hidden = false;
-    } else {
-        el.textContent = '';
-        el.hidden = true;
-    }
-}
-
-function setTabBadgeDot(tabName, show) {
-    const el = document.getElementById(`badge-${tabName}`);
-    if (!el) return;
-    el.textContent = '';
-    el.hidden = !show;
-}
-
-// --- Tab switching ---
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(`tab-${tabName}`).classList.add('active');
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-    if (tabName === 'builder') {
-        loadBuilderPeriodSelect();
-        loadChangeLog();
-        loadVacancies();
-    }
-    if (tabName === 'members') loadMembersTab();
 }
 
 // --- Opening Hours ---
