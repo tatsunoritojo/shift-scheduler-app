@@ -21,6 +21,20 @@ import {
 import { state } from './admin/state.js';
 import { loadVacancies, openVacancyDialog, cancelVacancy, loadChangeLog } from './admin/vacancy.js';
 import { openShareModal, closeShareModal, shareDownloadPng, shareDownloadPdf, shareCopyMessage } from './admin/share.js';
+import { setDirty, setClean, initDirtyTrackers } from './admin/dirty-tracker.js';
+import {
+    loadSyncStatus,
+    showSyncLogs,
+    loadSyncSettings,
+    saveSyncKeyword,
+    showSetupWizard,
+    hideSetupWizard,
+    wizardConnect,
+    wizardBack,
+    wizardSave,
+    wizardSkip,
+    showSyncKeywordCard,
+} from './admin/sync.js';
 
 /** Format a local Date to YYYY-MM-DD without UTC conversion. */
 const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -29,59 +43,6 @@ const toLocalDateStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 // 編集すると後勝ちで上書きが発生しうる。将来的には PUT 時に expected_version
 // (Phase A'-1 の SCHEDULE_VERSION_MISMATCH と同じパターン) を導入予定。
 
-// --- Dirty tracking for save buttons ---
-// A save button starts as btn-outline (white with blue border). When the user
-// edits any tracked form, the button switches to btn-primary (solid blue) to
-// signal "click to persist changes". After a successful save or fresh load,
-// it returns to btn-outline.
-const dirtyTrackers = {};
-
-function registerDirtyTracker(name, scope, saveBtn) {
-    if (!scope || !saveBtn) return;
-    dirtyTrackers[name] = { scope, saveBtn };
-    setClean(name);
-    // Listen for form interactions within the scope.
-    scope.addEventListener('input', () => setDirty(name));
-    scope.addEventListener('change', () => setDirty(name));
-}
-
-function setDirty(name) {
-    const t = dirtyTrackers[name];
-    if (!t) return;
-    t.saveBtn.classList.remove('btn-outline');
-    t.saveBtn.classList.add('btn-primary');
-    t.saveBtn.dataset.dirty = 'true';
-}
-
-function setClean(name) {
-    const t = dirtyTrackers[name];
-    if (!t) return;
-    t.saveBtn.classList.remove('btn-primary');
-    t.saveBtn.classList.add('btn-outline');
-    t.saveBtn.dataset.dirty = 'false';
-}
-
-function initDirtyTrackers() {
-    // Each tracker pairs a scope element (usually a .card) with a save button.
-    const map = [
-        ['sync-keyword',      'sync-keyword-card',       'btn-save-sync-keyword'],
-        ['reminder',          null,                      'btn-save-reminder-settings'],
-        ['levels',            null,                      'btn-save-level-settings'],
-        ['overlap-check',     null,                      'btn-save-overlap-check'],
-        ['min-attendance',    null,                      'btn-save-min-attendance'],
-        ['staffing',          null,                      'btn-save-staffing'],
-        ['workflow',          null,                      'btn-save-workflow'],
-        ['opening-hours',     'section-opening-hours',   'btn-save-opening-hours'],
-        ['schedule',          'builder-content',         'btn-save-schedule'],
-    ];
-    for (const [name, scopeId, btnId] of map) {
-        const btn = document.getElementById(btnId);
-        if (!btn) continue;
-        // Fall back to the closest .card of the save button if no explicit scope id.
-        const scope = scopeId ? document.getElementById(scopeId) : btn.closest('.card');
-        registerDirtyTracker(name, scope, btn);
-    }
-}
 
 // Worker colors for timeline
 const WORKER_COLORS = [
@@ -89,94 +50,6 @@ const WORKER_COLORS = [
     '#06b6d4', '#f97316', '#78716c', '#64748b', '#84cc16',
 ];
 
-// --- Sync Status & Logs ---
-
-async function loadSyncStatus() {
-    const container = document.getElementById('sync-status');
-    if (!container) return null;
-    try {
-        const data = await api.get('/api/admin/opening-hours/sync/status');
-        if (data.last_sync) {
-            const s = data.last_sync;
-            const at = new Date(s.performed_at);
-            const dateStr = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
-            const typeLabel = s.operation_type === 'import' ? 'インポート' : 'エクスポート';
-            const rangeLabel = `${s.start_date} 〜 ${s.end_date}`;
-            container.innerHTML = `
-                <span class="sync-status-icon synced"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
-                <span class="sync-status-text">最終同期: <strong>${dateStr}</strong> ${typeLabel} ${rangeLabel}</span>
-                <button class="sync-status-link" data-action="showSyncLogs">履歴</button>
-            `;
-        } else {
-            container.innerHTML = `
-                <span class="sync-status-icon not-synced"><i data-lucide="minus" style="width:16px;height:16px;"></i></span>
-                <span class="sync-status-text">まだ同期されていません</span>
-                <button class="sync-status-link" data-action="showSyncLogs">履歴</button>
-            `;
-        }
-        if (window.lucide) lucide.createIcons();
-        return data;
-    } catch (e) {
-        container.innerHTML = '<span style="color:var(--color-neutral-400);font-size:0.9em;">ステータスを取得できませんでした</span>';
-        return null;
-    }
-}
-
-async function showSyncLogs() {
-    try {
-        const logs = await api.get('/api/admin/opening-hours/sync/logs');
-
-        const overlay = document.createElement('div');
-        overlay.className = 'confirm-dialog-overlay';
-
-        let tableRows = '';
-        if (!logs || logs.length === 0) {
-            tableRows = '<tr><td colspan="4" style="text-align:center;color:var(--color-neutral-400);padding:20px;">同期履歴はありません</td></tr>';
-        } else {
-            tableRows = logs.map(log => {
-                const at = new Date(log.performed_at);
-                const dateStr = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
-                const typeLabel = log.operation_type === 'import' ? 'インポート' : 'エクスポート';
-                const range = `${log.start_date} 〜 ${log.end_date}`;
-                const summary = log.result_summary || {};
-                const parts = [];
-                if (log.operation_type === 'import') {
-                    if (summary.imported) parts.push(`取込${summary.imported}`);
-                    if (summary.updated) parts.push(`更新${summary.updated}`);
-                    if (summary.skipped) parts.push(`skip${summary.skipped}`);
-                } else {
-                    if (summary.created) parts.push(`作成${summary.created}`);
-                    if (summary.updated) parts.push(`更新${summary.updated}`);
-                    if (summary.deleted) parts.push(`削除${summary.deleted}`);
-                    if (summary.skipped) parts.push(`skip${summary.skipped}`);
-                }
-                if (summary.errors && summary.errors.length > 0) parts.push(`err${summary.errors.length}`);
-                const summaryStr = parts.join(' / ') || '-';
-                return `<tr><td>${dateStr}</td><td><span class="badge ${log.operation_type === 'import' ? 'badge-calendar' : 'badge-manual'}">${typeLabel}</span></td><td>${range}</td><td>${summaryStr}</td></tr>`;
-            }).join('');
-        }
-
-        overlay.innerHTML = `
-            <div class="confirm-dialog" style="max-width:600px;">
-                <h3>同期履歴</h3>
-                <div style="max-height:400px;overflow-y:auto;">
-                    <table class="sync-log-table">
-                        <thead><tr><th>日時</th><th>種別</th><th>範囲</th><th>結果</th></tr></thead>
-                        <tbody>${tableRows}</tbody>
-                    </table>
-                </div>
-                <div class="confirm-dialog-actions">
-                    <button class="btn btn-outline" id="sync-logs-close">閉じる</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-        overlay.querySelector('#sync-logs-close').onclick = () => overlay.remove();
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    } catch (e) {
-        showToast('同期履歴の取得に失敗しました', 'error');
-    }
-}
 
 // --- Import Preview Calendar ---
 
@@ -979,130 +852,6 @@ async function removeMember(id, name) {
     );
 }
 
-// --- Sync Settings & Setup Wizard ---
-
-async function loadSyncSettings() {
-    try {
-        const data = await api.get('/api/admin/sync-settings');
-        state.syncKeyword = data.calendar_sync_keyword || '営業時間';
-        // Update keyword display in UI
-        const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
-        const keywordInput = document.getElementById('sync-keyword-input');
-        if (keywordInput) keywordInput.value = state.syncKeyword;
-        setClean('sync-keyword');
-        return data;
-    } catch (e) {
-        console.warn('Failed to load sync settings:', e);
-        return null;
-    }
-}
-
-async function saveSyncKeyword() {
-    const input = document.getElementById('sync-keyword-input');
-    if (!input) return;
-    const keyword = input.value.trim();
-    if (!keyword) {
-        showToast('キーワードを入力してください', 'warning');
-        return;
-    }
-    try {
-        await api.put('/api/admin/sync-settings', { calendar_sync_keyword: keyword });
-        state.syncKeyword = keyword;
-        const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
-        setClean('sync-keyword');
-        showToast('同期キーワードを保存しました', 'success');
-    } catch (e) {
-        showToast(`保存に失敗しました: ${e.message}`, 'error');
-    }
-}
-
-function showSetupWizard() {
-    const wizard = document.getElementById('setup-wizard');
-    if (wizard) wizard.style.display = '';
-}
-
-function hideSetupWizard() {
-    const wizard = document.getElementById('setup-wizard');
-    if (wizard) wizard.style.display = 'none';
-}
-
-async function wizardConnect() {
-    const keyword = document.getElementById('wizard-keyword').value.trim();
-    if (!keyword) {
-        showToast('キーワードを入力してください', 'warning');
-        return;
-    }
-    const resultEl = document.getElementById('wizard-calendar-result');
-    resultEl.innerHTML = '<span style="color:var(--color-neutral-400);">接続テスト中...</span>';
-    document.getElementById('wizard-step-1').style.display = 'none';
-    document.getElementById('wizard-step-2').style.display = '';
-
-    try {
-        const calendars = await api.get('/api/admin/calendars');
-        const calNames = calendars.map(c => c.summary || c.id).slice(0, 5).join('、');
-        resultEl.innerHTML = `
-            <div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
-                <strong>Googleカレンダーへの接続を確認しました</strong> — ${calendars.length}件のカレンダーにアクセスできます。<br>
-                <span style="font-size:0.85em;color:var(--color-neutral-500);">${calNames}</span>
-            </div>
-            <p class="mt-8" style="font-size:0.9em;">次のステップで、キーワード「<strong>${escapeHtml(keyword)}</strong>」に一致するイベントの取込を実行します。<br>
-            <span style="color:var(--color-neutral-400);font-size:0.9em;">※ 該当イベントが存在するかどうかは、インポート実行後に確認できます。</span></p>
-        `;
-    } catch (e) {
-        resultEl.innerHTML = `
-            <div style="padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;">
-                <strong>接続に失敗しました</strong><br>
-                <span style="font-size:0.85em;">${escapeHtml(e.message)}</span>
-            </div>
-            <p class="mt-8" style="font-size:0.9em;">再ログインが必要な場合があります。</p>
-        `;
-    }
-}
-
-function wizardBack() {
-    document.getElementById('wizard-step-1').style.display = '';
-    document.getElementById('wizard-step-2').style.display = 'none';
-}
-
-async function wizardSave() {
-    const keyword = document.getElementById('wizard-keyword').value.trim();
-    if (!keyword) return;
-
-    try {
-        await api.put('/api/admin/sync-settings', {
-            calendar_sync_keyword: keyword,
-            calendar_setup_dismissed: true,
-        });
-        state.syncKeyword = keyword;
-        const keywordLabel = document.getElementById('sync-keyword-label');
-        if (keywordLabel) keywordLabel.textContent = state.syncKeyword;
-        const keywordInput = document.getElementById('sync-keyword-input');
-        if (keywordInput) keywordInput.value = state.syncKeyword;
-        hideSetupWizard();
-        showSyncKeywordCard();
-        showToast('カレンダー連携を設定しました。インポートを開始します。', 'success');
-        // Auto-trigger import
-        document.getElementById('btn-import-hours').click();
-    } catch (e) {
-        showToast(`設定の保存に失敗しました: ${e.message}`, 'error');
-    }
-}
-
-async function wizardSkip() {
-    try {
-        await api.put('/api/admin/sync-settings', { calendar_setup_dismissed: true });
-    } catch (e) { /* ignore */ }
-    hideSetupWizard();
-    showSyncKeywordCard();
-    showToast('カレンダー連携設定をスキップしました。後から設定できます。', 'info');
-}
-
-function showSyncKeywordCard() {
-    const card = document.getElementById('sync-keyword-card');
-    if (card) card.style.display = '';
-}
 
 async function init() {
     setupStaticHandlers();
