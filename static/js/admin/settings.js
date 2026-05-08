@@ -22,6 +22,7 @@ import { showConfirmDialog } from '../modules/ui-dialogs.js';
 import { state } from './state.js';
 import { setDirty, setClean } from './dirty-tracker.js';
 import { loadInvitations } from './members.js';
+import { loadScheduleForPeriod } from './builder.js';
 
 // ---- Reminder Settings ----
 
@@ -428,10 +429,8 @@ export async function saveWorkflowSettings() {
         setClean('workflow');
         showToast('承認プロセス設定を保存しました', 'success');
         // Refresh schedule UI if a period is currently loaded
-        // NOTE: loadScheduleForPeriod は admin-app.js に未定義の pre-existing バグ。
-        //       PR10 builder 抽出時に修正予定。本リファクタでは挙動を保つため呼出は維持。
-        if (state.currentPeriod && typeof window.loadScheduleForPeriod === 'function') {
-            window.loadScheduleForPeriod(state.currentPeriod.id);
+        if (state.currentPeriod) {
+            loadScheduleForPeriod(state.currentPeriod.id);
         }
     } catch (e) {
         const msg = e.message || '保存に失敗しました';
