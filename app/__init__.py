@@ -73,6 +73,11 @@ def create_app(config_name=None):
     server_session.init_app(app)
     _patch_session_bytes_bug(app)
     limiter.init_app(app)
+
+    # Schema integrity guard (ADR-0002).
+    # Step 1: cache + /health/schema のみ。before_request 503 は未有効化。
+    from app.middleware.schema_guard import init_schema_guard
+    init_schema_guard(app)
     cors_origins = app.config.get('CORS_ALLOWED_ORIGINS')
     if cors_origins:
         cors.init_app(app, origins=cors_origins, supports_credentials=True)

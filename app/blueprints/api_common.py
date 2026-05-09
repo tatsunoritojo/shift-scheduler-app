@@ -16,6 +16,21 @@ def health():
     return jsonify({"status": "healthy", "version": "2.0.0"})
 
 
+@api_common_bp.route('/health/schema')
+def health_schema():
+    """ADR-0002 schema integrity health check.
+
+    起動時 cache のみを返す（per-request DB 参照禁止）。
+    Vercel Cron で 5 分おきに叩いて revision drift を監視する想定。
+
+    返却項目: expected_revision / actual_revision_cached / match /
+              check_failed / check_error / checked_at / cache_age_seconds /
+              guard_enabled
+    """
+    from app.middleware.schema_guard import get_schema_status
+    return jsonify(get_schema_status(current_app))
+
+
 @api_common_bp.route('/')
 def index():
     user_id = session.get('user_id')
