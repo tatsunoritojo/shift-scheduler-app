@@ -212,7 +212,7 @@ export function showSettingsDayPopup(dateStr) {
                 <button class="btn btn-primary" data-action="saveSettingsPopup" data-date="${dateStr}" data-exc-id="${exc ? exc.id : 'null'}">
                     <i data-lucide="save" style="width:15px;height:15px;"></i> ${exc ? '更新' : '例外として保存'}
                 </button>
-                ${exc ? `<button class="btn btn-danger" data-action="deleteSettingsPopup" data-exc-id="${exc.id}"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> 削除</button>` : ''}
+                ${exc ? `<button class="btn btn-destructive" data-action="deleteSettingsPopup" data-exc-id="${exc.id}"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> 削除</button>` : ''}
             </div>
         </div>
     `;
@@ -361,7 +361,7 @@ export async function loadExceptions(highlightRange) {
                         <td>${e.is_closed ? '休業' : `${e.start_time}-${e.end_time}`}</td>
                         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                         <td>${escapeHtml(e.reason)}</td>
-                        <td><button class="btn btn-danger" style="padding:4px 12px;font-size:0.85em;"
+                        <td><button class="btn btn-destructive" style="padding:4px 12px;font-size:0.85em;"
                             data-action="deleteException" data-id="${e.id}">削除</button></td>
                     </tr>`;
                 }).join('')}

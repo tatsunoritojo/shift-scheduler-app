@@ -35,7 +35,7 @@ export async function loadVacancies() {
                     <span style="color:${statusColor[v.status] || '#666'};font-size:0.82em;margin-left:8px;font-weight:600;">${statusLabel[v.status] || v.status}</span>
                     ${v.accepted_by_name ? `<span style="color:#22c55e;font-size:0.82em;margin-left:4px;">→ ${escapeHtml(v.accepted_by_name)}</span>` : ''}
                 </div>
-                ${v.status === 'open' || v.status === 'notified' ? `<button class="btn btn-outline btn-sm" data-action="cancelVacancy" data-id="${v.id}" title="キャンセル"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}
+                ${v.status === 'open' || v.status === 'notified' ? `<button class="btn btn-state-warning btn-sm" data-action="cancelVacancy" data-id="${v.id}" title="キャンセル"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}
             </div>
         `).join('');
         if (window.lucide) lucide.createIcons();
@@ -78,7 +78,7 @@ export async function openVacancyDialog(entryId) {
                     `).join('')}
                 </div>
                 <div class="confirm-dialog-actions">
-                    <button class="btn btn-outline" id="vacancy-dialog-cancel">キャンセル</button>
+                    <button class="btn btn-secondary" id="vacancy-dialog-cancel">キャンセル</button>
                     <button class="btn btn-primary" id="vacancy-dialog-send">通知を送信</button>
                 </div>
             </div>
@@ -121,7 +121,7 @@ export async function cancelVacancy(id) {
     showConfirmDialog(
         '欠員補充リクエストをキャンセルしますか？',
         'キャンセルすると、候補者への通知は無効になります。',
-        'btn-danger',
+        'btn-state-warning',
         'キャンセルする',
         async () => {
             try {

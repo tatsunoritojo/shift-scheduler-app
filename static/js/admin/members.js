@@ -105,7 +105,7 @@ export async function generateInviteCode() {
         showConfirmDialog(
             '招待コードを再生成しますか？',
             '現在のコードは無効になり、既存の招待リンクやQRコードが使えなくなります。',
-            'btn-warning',
+            'btn-state-warning',
             '再生成する',
             async () => {
                 try { await doGenerate(); }
@@ -183,7 +183,7 @@ export async function loadInvitations() {
                 <td>${ROLE_LABELS[t.role] || t.role}</td>
                 <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
                 <td style="font-size:0.85em;">${expires}</td>
-                <td>${valid && !t.used_at ? `<button class="btn btn-outline btn-sm" data-action="revokeInvitation" data-id="${t.id}" title="取消"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+                <td>${valid && !t.used_at ? `<button class="btn btn-state-warning btn-sm" data-action="revokeInvitation" data-id="${t.id}" title="取消"><i data-lucide="x" style="width:13px;height:13px;"></i></button>` : ''}</td>
             </tr>`;
         }).join('');
         container.innerHTML = `<table class="data-table" style="width:100%;font-size:0.9em;">
@@ -220,7 +220,7 @@ export async function revokeInvitation(id) {
     showConfirmDialog(
         '招待を取り消しますか？',
         '取り消すと、このリンクは使えなくなります。',
-        'btn-danger',
+        'btn-state-warning',
         '取り消す',
         async () => {
             try {
@@ -275,7 +275,7 @@ export async function loadMembers() {
                 ${countCell}
                 ${hoursCell}
                 <td style="font-size:0.85em;">${joined}</td>
-                <td>${!isSelf ? `<button class="btn btn-outline btn-sm" data-action="removeMember" data-id="${m.id}" data-name="${escapeHtml(m.user_name || m.user_email || '')}" title="除外"><i data-lucide="user-x" style="width:13px;height:13px;"></i></button>` : ''}</td>
+                <td>${!isSelf ? `<button class="btn btn-state-warning btn-sm" data-action="removeMember" data-id="${m.id}" data-name="${escapeHtml(m.user_name || m.user_email || '')}" title="除外"><i data-lucide="user-x" style="width:13px;height:13px;"></i></button>` : ''}</td>
             </tr>`;
         }).join('');
         const headerCells = ['<th>名前</th>', '<th>メール</th>', '<th>ロール</th>'];
@@ -354,7 +354,7 @@ export async function removeMember(id, name) {
     showConfirmDialog(
         `${name || 'このメンバー'} を除外しますか？`,
         `除外すると、このユーザーは組織にアクセスできなくなります。${impactNote}`,
-        'btn-danger',
+        'btn-state-warning',
         '除外する',
         async () => {
             try {

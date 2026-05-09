@@ -100,7 +100,7 @@ export async function showSyncLogs() {
                     </table>
                 </div>
                 <div class="confirm-dialog-actions">
-                    <button class="btn btn-outline" id="sync-logs-close">閉じる</button>
+                    <button class="btn btn-secondary" id="sync-logs-close">閉じる</button>
                 </div>
             </div>
         `;

@@ -1,9 +1,9 @@
 /**
  * 保存ボタンの dirty 追跡ユーティリティ.
  *
- * 各保存ボタンは btn-outline (白枠) 状態で開始する。ユーザーが追跡対象フォーム
+ * 各保存ボタンは btn-secondary (白枠) 状態で開始する。ユーザーが追跡対象フォーム
  * を編集すると btn-primary (青) に切替し「保存待ち」を視覚化する。保存成功時や
- * 初回ロード時には btn-outline に戻る。
+ * 初回ロード時には btn-secondary に戻る。
  *
  * 旧 admin-app.js では module-private な dirtyTrackers Map を使っていた。
  * リファクタリングで sync / settings 等の保存系モジュールが setClean / setDirty
@@ -32,17 +32,17 @@ export function registerDirtyTracker(name, scope, saveBtn) {
 export function setDirty(name) {
     const t = dirtyTrackers[name];
     if (!t) return;
-    t.saveBtn.classList.remove('btn-outline');
+    t.saveBtn.classList.remove('btn-secondary');
     t.saveBtn.classList.add('btn-primary');
     t.saveBtn.dataset.dirty = 'true';
 }
 
-/** 保存ボタンを clean (btn-outline) に戻す。 */
+/** 保存ボタンを clean (btn-secondary) に戻す。 */
 export function setClean(name) {
     const t = dirtyTrackers[name];
     if (!t) return;
     t.saveBtn.classList.remove('btn-primary');
-    t.saveBtn.classList.add('btn-outline');
+    t.saveBtn.classList.add('btn-secondary');
     t.saveBtn.dataset.dirty = 'false';
 }
 

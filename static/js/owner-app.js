@@ -173,7 +173,7 @@ async function approveSchedule() {
     showConfirmDialog(
         'このスケジュールを承認しますか？',
         '承認すると、管理者がシフトを確定してGoogleカレンダーに同期できるようになります。',
-        'btn-success',
+        'btn-primary',
         '承認する',
         async () => {
             try {
@@ -199,7 +199,7 @@ async function rejectSchedule() {
     showConfirmDialog(
         'このスケジュールを差戻しますか？',
         `理由「${escapeHtml(comment)}」で差戻します。管理者がスケジュールを修正して再申請できます。`,
-        'btn-danger',
+        'btn-state-warning',
         '差戻す',
         async () => {
             try {

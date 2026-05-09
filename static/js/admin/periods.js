@@ -78,8 +78,8 @@ function renderPeriodRow(p, statusLabels) {
                 <td>${p.start_date} 〜 ${p.end_date}</td>
                 <td>${statusBadge}</td>
                 <td>
-                    <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="unarchivePeriod" data-id="${p.id}" title="アーカイブを解除して通常表示に戻します"><i data-lucide="archive-restore" style="width:13px;height:13px;"></i> 復元</button>
-                    <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;color:var(--color-danger-600,#dc2626);border-color:var(--color-danger-300,#fca5a5);" data-action="deletePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="シフト期間と関連データを完全に削除します"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> 完全削除</button>
+                    <button class="btn btn-state-positive btn-sm" data-action="unarchivePeriod" data-id="${p.id}" title="アーカイブを解除して通常表示に戻します"><i data-lucide="archive-restore" style="width:13px;height:13px;"></i> 復元</button>
+                    <button class="btn btn-destructive btn-sm" data-action="deletePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="シフト期間と関連データを完全に削除します"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> 完全削除</button>
                 </td>
             </tr>
         `;
@@ -92,12 +92,12 @@ function renderPeriodRow(p, statusLabels) {
             <td>${p.start_date} 〜 ${p.end_date}</td>
             <td>${statusBadge}</td>
             <td>
-                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="editPeriodAnnouncement" data-period-id="${p.id}" title="募集文面を編集（メールに含まれる本文）"><i data-lucide="message-square" style="width:13px;height:13px;"></i> 文面</button>
-                ${p.status === 'draft' ? `<button class="btn btn-primary" style="padding:4px 12px;font-size:0.85em;" data-action="publishPeriod" data-period-id="${p.id}">募集開始</button>` : ''}
-                ${p.status === 'open' ? `<button class="btn btn-warning" style="padding:4px 12px;font-size:0.85em;" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
-                ${p.status === 'open' ? `<button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
-                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
-                <button class="btn btn-outline" style="padding:4px 12px;font-size:0.85em;" data-action="archivePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="一覧から非表示にします（後で復元・完全削除が可能）"><i data-lucide="archive" style="width:13px;height:13px;"></i> アーカイブ</button>
+                <button class="btn btn-secondary btn-sm" data-action="editPeriodAnnouncement" data-period-id="${p.id}" title="募集文面を編集（メールに含まれる本文）"><i data-lucide="message-square" style="width:13px;height:13px;"></i> 文面</button>
+                ${p.status === 'draft' ? `<button class="btn btn-primary btn-sm" data-action="publishPeriod" data-period-id="${p.id}">募集開始</button>` : ''}
+                ${p.status === 'open' ? `<button class="btn btn-state-warning btn-sm" data-action="updatePeriodStatus" data-id="${p.id}" data-status="closed">締切</button>` : ''}
+                ${p.status === 'open' ? `<button class="btn btn-secondary btn-sm" data-action="sendPeriodReminder" data-period-id="${p.id}" title="未提出者にリマインド送信"><i data-lucide="bell" style="width:13px;height:13px;"></i> リマインド</button>` : ''}
+                <button class="btn btn-secondary btn-sm" data-action="openShareModal" data-period-id="${p.id}" title="募集案内をPNG/PDFで保存"><i data-lucide="download" style="width:13px;height:13px;"></i> 案内DL</button>
+                <button class="btn btn-state-warning btn-sm" data-action="archivePeriod" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="一覧から非表示にします（後で復元・完全削除が可能）"><i data-lucide="archive" style="width:13px;height:13px;"></i> アーカイブ</button>
             </td>
         </tr>
     `;
@@ -165,7 +165,7 @@ export async function deletePeriod(periodId, periodName) {
     showConfirmDialog(
         `「${periodName}」を完全に削除しますか？`,
         lines.join('<br>'),
-        'btn-danger',
+        'btn-destructive',
         '完全に削除する',
         async () => {
             try {
