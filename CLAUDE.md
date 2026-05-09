@@ -20,7 +20,53 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 - ✉️ 投げる依頼書: `docs/lp-redesign-v2/phase-2a-3-fix-request.md` — 「プロンプト本文（ここから下をコピペ）」セクションをそのまま ClaudeDesign に渡せばよい状態
 - 📜 前セッション履歴: `docs/lp-redesign-v2/phase-2a-fix-request.md` — Phase 2a-2 修正依頼の履歴（既反映済）
 - 🧭 fact 判定根拠: `docs/sequence-diagrams/02-worker-monthly-flow.md`（Worker UI Free/Busy 連動の正確な経路を追記済、PR #25）
-- ⚠️ 既存問題（無関係）: `tests/test_reminder.py::TestSubmissionReminders::test_auto_submission_reminders` は日付固定（2026-04-30）で常時失敗。LP 対応とは無関係なので別 PR で修正する
+- ⚠️ 既存問題（無関係）: `tests/test_reminder.py::TestSubmissionReminders::test_auto_submission_reminders` は日付固定（2026-04-30）で常時失敗。LP 対応とは無関係なので別 PR で修正する → **2026-05-09 解消** (PR #38、真因は時刻依存 flake)
+
+## Schema Governance
+
+### 現在地
+- Schema Governance 着手完了。
+- 本番障害は復旧済み。
+- production DB head は `d4310c2b47c0`。
+- `/health/schema` は本番で `match=true` を返却中。
+- ADR 0001 / 0002 は Accepted。
+- ADR 0002 Step 1 は実装・deploy 済み。
+  - 起動時 revision cache
+  - `/health/schema`
+  - 503 遮断はまだ未有効化（Step 2 待ち）
+
+### 次アクション
+1. ADR 0001 Phase 1
+   - GitHub Actions で migration workflow 実装
+   - migration 成功後のみ deploy
+   - `_run_auto_migration` を runtime から削除
+2. Vercel Cron
+   - `/health/schema` を 5 分おきに polling
+   - mismatch / check_failed を監視対象化
+3. ADR 0002 Step 2
+   - `/api/admin/*` への 503 遮断を有効化
+   - ただし Step 1 の観測ログを一定期間見てから
+4. P1 タスク
+   - `User.role` / `User.organization_id` の認可キャッシュ見直し
+   - CHECK 制約
+   - CI の Postgres 化
+   - index 確度高 3 本
+
+### 参照ファイル
+- `docs/decisions/0001-replace-cold-start-auto-migration-with-cicd.md`
+- `docs/decisions/0002-schema-mismatch-fail-fast-middleware.md`
+- `app/middleware/schema_guard.py`
+- `app/blueprints/api_common.py`
+- `app/__init__.py`
+
+### 未解決
+- ADR 0001 Phase 1 は未実装
+- ADR 0002 Step 2 の 503 遮断は未有効化
+- `/health/schema` の監視は手動確認止まり
+- P1 の DB 負債整理は未着手
+
+### 最終更新
+- 2026-05-09
 
 ## アクティブな対応事項（次セッション着手用）
 
