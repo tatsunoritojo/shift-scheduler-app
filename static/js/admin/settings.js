@@ -93,9 +93,9 @@ export function renderLevelSettings() {
             <div class="level-tier-row">
                 <span class="tier-label"><strong>${escapeHtml(t.label)}</strong> <span style="color:var(--color-neutral-400);font-size:0.85em;">(${escapeHtml(t.key)})</span></span>
                 <span class="tier-count">${t.member_count}名</span>
-                <button class="btn btn-outline btn-sm" data-action="moveLevelTierUp" data-key="${escapeHtml(t.key)}" ${i === 0 ? 'disabled' : ''} title="上へ"><i data-lucide="chevron-up" style="width:12px;height:12px;"></i></button>
-                <button class="btn btn-outline btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === state.levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
-                <button class="btn btn-outline btn-sm" data-action="removeLevelTier" data-key="${escapeHtml(t.key)}" data-label="${escapeHtml(t.label)}" data-count="${t.member_count}" title="削除"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-secondary btn-sm" data-action="moveLevelTierUp" data-key="${escapeHtml(t.key)}" ${i === 0 ? 'disabled' : ''} title="上へ"><i data-lucide="chevron-up" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-secondary btn-sm" data-action="moveLevelTierDown" data-key="${escapeHtml(t.key)}" ${i === state.levelSystemState.tiers.length - 1 ? 'disabled' : ''} title="下へ"><i data-lucide="chevron-down" style="width:12px;height:12px;"></i></button>
+                <button class="btn btn-destructive btn-sm" data-action="removeLevelTier" data-key="${escapeHtml(t.key)}" data-label="${escapeHtml(t.label)}" data-count="${t.member_count}" title="削除"><i data-lucide="trash-2" style="width:12px;height:12px;"></i></button>
             </div>
         `).join('');
     }
@@ -138,7 +138,7 @@ export function removeLevelTier(key, label, memberCount) {
         showConfirmDialog(
             `「${label}」を削除しますか？`,
             `現在 ${memberCount}名のメンバーがこのレベルに割り当てられています。削除するとそのメンバーのレベルは未設定になります。`,
-            'btn-danger', '削除する', proceed,
+            'btn-destructive', '削除する', proceed,
         );
     } else {
         proceed();
@@ -307,7 +307,7 @@ export function renderStaffingList() {
             <input type="time" class="form-control form-control-sm" value="${row.start_time}" data-action="updateStaffingField" data-index="${i}" data-field="start_time" aria-label="${i+1}行目 開始時刻">
             <input type="time" class="form-control form-control-sm" value="${row.end_time}" data-action="updateStaffingField" data-index="${i}" data-field="end_time" aria-label="${i+1}行目 終了時刻">
             <input type="number" min="0" max="999" class="form-control form-control-sm" value="${row.required_count}" data-action="updateStaffingField" data-index="${i}" data-field="required_count" aria-label="${i+1}行目 必要人数">
-            <button class="btn btn-outline" data-action="removeStaffingRow" data-index="${i}" title="この時間帯を削除" aria-label="${i+1}行目を削除" style="padding:4px 8px;"><i data-lucide="x" style="width:13px;height:13px;"></i></button>
+            <button class="btn btn-destructive btn-sm" data-action="removeStaffingRow" data-index="${i}" title="この時間帯を削除" aria-label="${i+1}行目を削除"><i data-lucide="x" style="width:13px;height:13px;"></i></button>
         </div>
     `).join('');
     if (window.lucide) lucide.createIcons();

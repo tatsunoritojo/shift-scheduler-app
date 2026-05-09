@@ -94,7 +94,7 @@
             '<div class="error-box">' +
             '<div class="error-box-title">' + info.title + '</div>' +
             '<div class="error-box-message">' + info.message + '</div>' +
-            '<a href="/" class="btn btn-outline" style="text-decoration:none;">トップページへ</a>' +
+            '<a href="/" class="btn btn-secondary" style="text-decoration:none;">トップページへ</a>' +
             '</div>';
         container.style.display = '';
         container.classList.add('fade-in');

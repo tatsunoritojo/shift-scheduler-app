@@ -451,7 +451,7 @@ function createWorkerCard(worker, dateStr, idx) {
                 <span class="time-separator">〜</span>
                 <input type="time" class="form-control popup-time-input" value="${aEnd}"
                     id="assigned-end-${worker.user_id}" data-action="applyWorkerTime" data-user-id="${worker.user_id}" data-date="${dateStr}">
-                ${worker.entry_id ? `<button class="btn btn-outline btn-sm" data-action="openVacancyDialog" data-entry-id="${worker.entry_id}" title="欠員補充" style="margin-left:4px;padding:2px 6px;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i></button>` : ''}
+                ${worker.entry_id ? `<button class="btn btn-state-warning btn-sm" data-action="openVacancyDialog" data-entry-id="${worker.entry_id}" title="欠員補充" style="margin-left:4px;padding:2px 6px;"><i data-lucide="user-minus" style="width:12px;height:12px;"></i></button>` : ''}
             </div>
         `;
     }
@@ -802,7 +802,7 @@ export async function submitForApproval() {
     showConfirmDialog(
         '承認申請を送信しますか？',
         `現在のスケジュール（${state.scheduleEntries.length}件のシフト）を事業主に承認申請します。申請後も事業主が差戻した場合は再編集できます。`,
-        'btn-warning',
+        'btn-state-warning',
         '承認申請を送信',
         async () => {
             try {
@@ -823,7 +823,7 @@ export async function confirmSchedule() {
     showConfirmDialog(
         'シフトを確定してGoogleカレンダーに同期しますか？',
         '確定すると各スタッフのGoogleカレンダーにシフトが登録されます。この操作は取り消せません。',
-        'btn-success',
+        'btn-primary',
         '確定・同期する',
         async () => {
             try {

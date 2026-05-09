@@ -66,7 +66,7 @@ function renderCalcSettingsPanel() {
             </div>
             <div class="calc-settings-actions">
                 <button class="btn btn-primary btn-sm" data-action="applyCalcSettings">適用</button>
-                <button class="btn btn-outline btn-sm" data-action="resetCalcSettings">デフォルトに戻す</button>
+                <button class="btn btn-secondary btn-sm" data-action="resetCalcSettings">デフォルトに戻す</button>
             </div>
         </div>
     `;
@@ -156,7 +156,7 @@ async function unlinkCalendar(linkId) {
     showConfirmDialog(
         'カレンダー連携を解除しますか？',
         'この参照用カレンダーの連携を解除します。再度連携することもできます。',
-        'btn-danger',
+        'btn-state-warning',
         '解除する',
         async () => {
             try {
@@ -359,7 +359,7 @@ function renderCalendarSelector() {
     }
 
     // Add link button
-    html += '<div style="margin-top:8px;"><a href="/auth/google/link-calendar" class="btn btn-outline btn-sm"><i data-lucide="plus" style="width:14px;height:14px;"></i> 参照用カレンダーを追加</a></div>';
+    html += '<div style="margin-top:8px;"><a href="/auth/google/link-calendar" class="btn btn-secondary btn-sm"><i data-lucide="plus" style="width:14px;height:14px;"></i> 参照用カレンダーを追加</a></div>';
 
     container.innerHTML = html;
     if (window.lucide) lucide.createIcons();
@@ -713,7 +713,7 @@ function showDayPopup(dateStr, data, cellElement) {
             </div>
             <div class="day-popup-time-actions">
                 <button class="btn btn-primary btn-sm" data-action="applyCustomTime" data-date="${dateStr}">適用</button>
-                <button class="btn btn-outline btn-sm" data-action="resetCustomTime" data-date="${dateStr}">リセット</button>
+                <button class="btn btn-secondary btn-sm" data-action="resetCustomTime" data-date="${dateStr}">リセット</button>
             </div>
             ${data.is_custom_time ? '<div class="day-popup-custom-badge">カスタム時間設定中</div>' : ''}
             ${data.auto_calculated_start
@@ -1051,7 +1051,7 @@ async function submitAvailability() {
     showConfirmDialog(
         title,
         message,
-        'btn-success',
+        'btn-primary',
         btnLabel,
         async () => {
             const slots = Object.entries(slotData)

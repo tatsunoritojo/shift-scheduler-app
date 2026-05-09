@@ -138,10 +138,10 @@ function renderUsers(users) {
             <td><span class="status-dot ${u.is_active ? 'status-dot-active' : 'status-dot-inactive'}"></span>${u.is_active ? '有効' : '無効'}</td>
             <td>${formatDate(u.created_at)}</td>
             <td class="table-actions">
-                <button class="btn btn-outline btn-xs" onclick="masterApp.editUser(${u.id})">編集</button>
+                <button class="btn btn-secondary btn-xs" onclick="masterApp.editUser(${u.id})">編集</button>
                 ${u.is_active
-                    ? `<button class="btn btn-danger btn-xs" onclick="masterApp.deactivateUser(${u.id})">無効化</button>`
-                    : `<button class="btn btn-success btn-xs" onclick="masterApp.activateUser(${u.id})">有効化</button>`}
+                    ? `<button class="btn btn-state-warning btn-xs" onclick="masterApp.deactivateUser(${u.id})">無効化</button>`
+                    : `<button class="btn btn-state-positive btn-xs" onclick="masterApp.activateUser(${u.id})">有効化</button>`}
             </td>
         </tr>
     `).join('');
@@ -164,7 +164,7 @@ async function loadOrganizations() {
                 <td><span class="status-dot ${o.is_active ? 'status-dot-active' : 'status-dot-inactive'}"></span>${o.is_active ? '有効' : '無効'}</td>
                 <td>${formatDate(o.created_at)}</td>
                 <td class="table-actions">
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.editOrg(${o.id})">編集</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.editOrg(${o.id})">編集</button>
                 </td>
             </tr>
         `).join('');
@@ -193,7 +193,7 @@ function renderMembers(members) {
             <td><span class="status-dot ${m.is_active ? 'status-dot-active' : 'status-dot-inactive'}"></span>${m.is_active ? '有効' : '無効'}</td>
             <td>${formatDate(m.joined_at)}</td>
             <td class="table-actions">
-                <button class="btn btn-outline btn-xs" onclick="masterApp.editMember(${m.id})">編集</button>
+                <button class="btn btn-secondary btn-xs" onclick="masterApp.editMember(${m.id})">編集</button>
             </td>
         </tr>
     `).join('');
@@ -218,8 +218,8 @@ async function loadPeriods() {
                 <td>${p.submissions_count}</td>
                 <td>${p.schedule_status ? `<span class="badge badge-${p.schedule_status}">${escapeHtml(p.schedule_status)}</span>` : '-'}</td>
                 <td class="table-actions">
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.overridePeriodStatus(${p.id}, '${escapeHtml(p.status)}')">状態変更</button>
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.showCompliance(${p.id})">提出状況</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.overridePeriodStatus(${p.id}, '${escapeHtml(p.status)}')">状態変更</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.showCompliance(${p.id})">提出状況</button>
                 </td>
             </tr>
         `).join('');
@@ -247,9 +247,9 @@ async function loadSchedules() {
                 <td><span class="sync-indicator"><span class="${syncClass}">${s.synced_count}/${s.entries_count}</span> (${syncPct}%)</span></td>
                 <td>${formatDate(s.created_at)}</td>
                 <td class="table-actions">
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.overrideScheduleStatus(${s.id}, '${escapeHtml(s.status)}')">状態変更</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.overrideScheduleStatus(${s.id}, '${escapeHtml(s.status)}')">状態変更</button>
                     ${s.status === 'confirmed' && s.synced_count < s.entries_count ? `<button class="btn btn-primary btn-xs" onclick="masterApp.resyncSchedule(${s.id})">再同期</button>` : ''}
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.showSyncStatus(${s.id})">同期詳細</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.showSyncStatus(${s.id})">同期詳細</button>
                 </td>
             </tr>`;
         }).join('');
@@ -275,7 +275,7 @@ async function loadTasks() {
                 <td class="cell-truncate" title="${escapeHtml(t.error_message || '')}">${escapeHtml(t.error_message || '-')}</td>
                 <td>${formatDateTime(t.created_at)}</td>
                 <td class="table-actions">
-                    <button class="btn btn-outline btn-xs" onclick="masterApp.showTaskDetail(${t.id})">詳細</button>
+                    <button class="btn btn-secondary btn-xs" onclick="masterApp.showTaskDetail(${t.id})">詳細</button>
                     ${['dead', 'failed'].includes(t.status) ? `<button class="btn btn-primary btn-xs" onclick="masterApp.retryTask(${t.id})">リトライ</button>` : ''}
                 </td>
             </tr>
@@ -329,8 +329,8 @@ async function runHealthCheck() {
                         <div class="health-card-desc">${c.desc}</div>
                     </div>
                     <div class="health-card-count ${count > 0 ? 'bad' : 'ok'}">${count}</div>
-                    ${count > 0 && c.fixable ? `<button class="btn btn-danger btn-sm" onclick="masterApp.healthFix('${c.key}')">修正</button>` : ''}
-                    ${count > 0 && data.items ? `<button class="btn btn-outline btn-sm" onclick='masterApp.showHealthDetail(${JSON.stringify(JSON.stringify(data.items))})'>詳細</button>` : ''}
+                    ${count > 0 && c.fixable ? `<button class="btn btn-state-warning btn-sm" onclick="masterApp.healthFix('${c.key}')">修正</button>` : ''}
+                    ${count > 0 && data.items ? `<button class="btn btn-secondary btn-sm" onclick='masterApp.showHealthDetail(${JSON.stringify(JSON.stringify(data.items))})'>詳細</button>` : ''}
                 </div>
             `;
         }).join('');
@@ -358,7 +358,7 @@ async function loadAuditLogs() {
                 <td>${escapeHtml(l.resource_type || '')} ${l.resource_id ? '#' + l.resource_id : ''}</td>
                 <td><span class="badge badge-${l.status === 'SUCCESS' ? 'completed' : 'failed'}">${escapeHtml(l.status)}</span></td>
                 <td>
-                    ${(l.old_values || l.new_values) ? `<button class="btn btn-outline btn-xs" onclick='masterApp.showAuditDetail(${JSON.stringify(JSON.stringify({old: l.old_values, new: l.new_values}))})'>詳細</button>` : '-'}
+                    ${(l.old_values || l.new_values) ? `<button class="btn btn-secondary btn-xs" onclick='masterApp.showAuditDetail(${JSON.stringify(JSON.stringify({old: l.old_values, new: l.new_values}))})'>詳細</button>` : '-'}
                 </td>
             </tr>
         `).join('');
@@ -437,7 +437,7 @@ function showEditModal(title, fields, onSave) {
         }
         return `<div class="edit-modal-field"><label>${escapeHtml(f.label)}</label><input type="text" class="form-control" data-field="${f.key}" value="${escapeHtml(f.value || '')}"></div>`;
     }).join('');
-    overlay.innerHTML = `<div class="modal"><h3>${escapeHtml(title)}</h3>${fieldsHtml}<div class="modal-actions"><button class="btn btn-outline" id="edit-cancel">キャンセル</button><button class="btn btn-primary" id="edit-save">保存</button></div></div>`;
+    overlay.innerHTML = `<div class="modal"><h3>${escapeHtml(title)}</h3>${fieldsHtml}<div class="modal-actions"><button class="btn btn-secondary" id="edit-cancel">キャンセル</button><button class="btn btn-primary" id="edit-save">保存</button></div></div>`;
     document.body.appendChild(overlay);
     overlay.querySelector('#edit-cancel').onclick = () => overlay.remove();
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
@@ -455,7 +455,7 @@ function showEditModal(title, fields, onSave) {
 function showDetailModal(title, content) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.innerHTML = `<div class="modal" style="max-width:600px;">${content}<div class="modal-actions"><button class="btn btn-outline" id="detail-close">閉じる</button></div></div>`;
+    overlay.innerHTML = `<div class="modal" style="max-width:600px;">${content}<div class="modal-actions"><button class="btn btn-secondary" id="detail-close">閉じる</button></div></div>`;
     document.body.appendChild(overlay);
     overlay.querySelector('#detail-close').onclick = () => overlay.remove();
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
@@ -480,7 +480,7 @@ window.masterApp = {
 
     async deactivateUser(id) {
         const user = usersData.find(u => u.id === id);
-        showConfirmDialog('ユーザー無効化', `${user?.display_name || user?.email} を無効化しますか？`, 'btn-danger', '無効化', async () => {
+        showConfirmDialog('ユーザー無効化', `${user?.display_name || user?.email} を無効化しますか？`, 'btn-state-warning', '無効化', async () => {
             try { await api.delete(`/api/master/users/${id}`); showToast('無効化しました', 'success'); await loadUsers(); loadStats(); } catch (e) { showToast('失敗: ' + e.message, 'error'); }
         });
     },
@@ -610,7 +610,7 @@ window.masterApp = {
                     ${c.missing.map(m => `
                         <div class="compliance-user">
                             <span>${escapeHtml(m.user_name || m.email)} ${m.draft_exists ? '<span class="badge badge-draft">下書きあり</span>' : ''}</span>
-                            <button class="btn btn-danger btn-xs" data-proxy-user="${m.user_id}">代理提出（全日不可）</button>
+                            <button class="btn btn-state-warning btn-xs" data-proxy-user="${m.user_id}">代理提出（全日不可）</button>
                         </div>
                     `).join('')}
                 </div>` : ''}
@@ -624,7 +624,7 @@ window.masterApp = {
             overlay.querySelectorAll('[data-proxy-user]').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const userId = parseInt(btn.dataset.proxyUser);
-                    showConfirmDialog('代理提出', 'このワーカーを全日不可として代理提出しますか？', 'btn-danger', '代理提出', async () => {
+                    showConfirmDialog('代理提出', 'このワーカーを全日不可として代理提出しますか？', 'btn-state-warning', '代理提出', async () => {
                         try {
                             await api.post(`/api/master/periods/${periodId}/submit-for-user`, { user_id: userId });
                             showToast('代理提出しました', 'success');
@@ -640,7 +640,7 @@ window.masterApp = {
 
     // --- Scenario 6: Health fix ---
     async healthFix(fixType) {
-        showConfirmDialog('修正の実行', `「${fixType}」の自動修正を実行しますか？`, 'btn-danger', '修正', async () => {
+        showConfirmDialog('修正の実行', `「${fixType}」の自動修正を実行しますか？`, 'btn-state-warning', '修正', async () => {
             try {
                 const res = await api.post('/api/master/health-check/fix', { fix_type: fixType });
                 showToast(`${res.fixed} 件を修正しました`, 'success');

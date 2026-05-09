@@ -68,14 +68,14 @@
                         </div>
                         <div class="flex gap-8">
                             <button class="btn btn-primary" id="btn-wizard-connect"><i data-lucide="plug" style="width:15px;height:15px;"></i> カレンダー接続テスト</button>
-                            <button class="btn btn-outline" id="btn-wizard-skip">スキップ（後で設定する）</button>
+                            <button class="btn btn-secondary" id="btn-wizard-skip">スキップ（後で設定する）</button>
                         </div>
                     </div>
                     <div id="wizard-step-2" style="display:none;">
                         <div id="wizard-calendar-result" class="mb-16"></div>
                         <div class="flex gap-8">
                             <button class="btn btn-primary" id="btn-wizard-save"><i data-lucide="check" style="width:15px;height:15px;"></i> 保存してインポート開始</button>
-                            <button class="btn btn-outline" id="btn-wizard-back">戻る</button>
+                            <button class="btn btn-secondary" id="btn-wizard-back">戻る</button>
                         </div>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                             <label>キーワード</label>
                             <input type="text" id="sync-keyword-input" class="form-control" placeholder="営業時間" style="width:200px;">
                         </div>
-                        <button class="btn btn-outline" id="btn-save-sync-keyword" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                        <button class="btn btn-secondary" id="btn-save-sync-keyword" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                     </div>
                 </div>
 
@@ -113,7 +113,7 @@
                             <label>終了日</label>
                             <input type="date" id="sync-end-date" class="form-control" style="width:auto;">
                         </div>
-                        <button class="btn btn-outline" id="btn-import-hours"><i data-lucide="download" style="width:15px;height:15px;"></i> インポート（カレンダー→例外リスト）</button>
+                        <button class="btn btn-primary" id="btn-import-hours"><i data-lucide="download" style="width:15px;height:15px;"></i> インポート（カレンダー→例外リスト）</button>
                         <button class="btn btn-primary" id="btn-export-hours"><i data-lucide="upload" style="width:15px;height:15px;"></i> エクスポート（設定→カレンダー）</button>
                     </div>
                     <div id="sync-result" style="display:none;" class="mt-8"></div>
@@ -129,9 +129,9 @@
                     </div>
                     <div id="import-preview-actions" style="display:none;flex-wrap:wrap;" class="flex gap-8 mt-16">
                         <button class="btn btn-primary" id="btn-go-create-period"><i data-lucide="arrow-right" style="width:15px;height:15px;"></i> OK → シフト期間を作成</button>
-                        <button class="btn btn-outline" id="btn-go-add-exception"><i data-lucide="plus" style="width:15px;height:15px;"></i> シフトを追加</button>
-                        <button class="btn btn-outline" id="btn-go-exceptions-list"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
-                        <button class="btn btn-outline" id="btn-go-opening-hours"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
+                        <button class="btn btn-secondary" id="btn-go-add-exception"><i data-lucide="plus" style="width:15px;height:15px;"></i> シフトを追加</button>
+                        <button class="btn btn-secondary" id="btn-go-exceptions-list"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> シフトを削除</button>
+                        <button class="btn btn-secondary" id="btn-go-opening-hours"><i data-lucide="clock" style="width:15px;height:15px;"></i> 時間を調整</button>
                     </div>
                 </div>
 
@@ -159,7 +159,7 @@
                             <input type="time" id="reminder-time-shift" class="form-control" value="21:00" style="width:auto;">
                         </div>
                     </div>
-                    <button class="btn btn-outline" id="btn-save-reminder-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
+                    <button class="btn btn-secondary" id="btn-save-reminder-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> リマインド設定を保存</button>
                 </div>
 
                 <!-- Level System Card -->
@@ -198,10 +198,10 @@
                                 <input type="text" id="level-new-label" class="form-control" placeholder="シニア" style="width:140px;">
                                 <div class="field-hint">画面に表示される名前</div>
                             </div>
-                            <button class="btn btn-outline" id="btn-add-level-tier"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
+                            <button class="btn btn-secondary" id="btn-add-level-tier"><i data-lucide="plus" style="width:15px;height:15px;"></i> 追加</button>
                         </div>
                     </div>
-                    <button class="btn btn-outline" id="btn-save-level-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> レベル設定を保存</button>
+                    <button class="btn btn-secondary" id="btn-save-level-settings" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> レベル設定を保存</button>
                 </div>
 
                 <!-- Overlap Check Card -->
@@ -220,7 +220,7 @@
                         <input type="checkbox" id="overlap-check-enabled">
                         <span>同レベル重複を警告する</span>
                     </label>
-                    <button class="btn btn-outline" id="btn-save-overlap-check" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 重複チェック設定を保存</button>
+                    <button class="btn btn-secondary" id="btn-save-overlap-check" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 重複チェック設定を保存</button>
                 </div>
 
                 <!-- Min Attendance Card -->
@@ -283,7 +283,7 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn btn-outline" id="btn-save-min-attendance" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
+                    <button class="btn btn-secondary" id="btn-save-min-attendance" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 最低出勤設定を保存</button>
                 </div>
 
                 <!-- Staffing Requirements Settings Card -->
@@ -305,8 +305,8 @@
                         <p style="color:var(--color-neutral-500);font-size:0.9em;">読み込み中...</p>
                     </div>
                     <div class="flex gap-8" style="flex-wrap:wrap;">
-                        <button class="btn btn-outline" data-action="addStaffingRow"><i data-lucide="plus" style="width:14px;height:14px;"></i> 時間帯を追加</button>
-                        <button class="btn btn-outline" id="btn-save-staffing" data-dirty-save data-action="saveStaffingRequirements"><i data-lucide="save" style="width:15px;height:15px;"></i> 必要人数設定を保存</button>
+                        <button class="btn btn-secondary" data-action="addStaffingRow"><i data-lucide="plus" style="width:14px;height:14px;"></i> 時間帯を追加</button>
+                        <button class="btn btn-secondary" id="btn-save-staffing" data-dirty-save data-action="saveStaffingRequirements"><i data-lucide="save" style="width:15px;height:15px;"></i> 必要人数設定を保存</button>
                     </div>
                 </div>
 
@@ -329,13 +329,13 @@
                     <div id="workflow-owner-warning" class="mb-16" style="display:none;background:var(--color-danger-50);border-left:3px solid var(--color-danger-500);padding:12px;border-radius:6px;">
                         <strong style="color:var(--color-danger-700);">⚠️ 事業主が未設定です</strong>
                         <p class="mb-8" style="margin-top:4px;font-size:0.9em;">承認プロセスを有効にするには、事業主を1名以上招待する必要があります。</p>
-                        <button class="btn btn-outline btn-sm" id="btn-goto-owner-invite">メンバー管理タブへ</button>
+                        <button class="btn btn-secondary btn-sm" id="btn-goto-owner-invite">メンバー管理タブへ</button>
                     </div>
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
                         <input type="checkbox" id="workflow-approval-required">
                         <span>承認プロセスを有効にする</span>
                     </label>
-                    <button class="btn btn-outline" id="btn-save-workflow" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 承認プロセス設定を保存</button>
+                    <button class="btn btn-secondary" id="btn-save-workflow" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 承認プロセス設定を保存</button>
                 </div>
 
                 <!-- Manual Settings (collapsed) -->
@@ -346,7 +346,7 @@
                             <h3>曜日別の営業時間</h3>
                             <p class="mb-16" style="color:#666;font-size:0.9em;">曜日ごとの営業時間を設定します。ここで設定した時間がシフトの基本枠になります。</p>
                             <div id="opening-hours-grid"></div>
-                            <button class="btn btn-outline mt-16" id="btn-save-opening-hours" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                            <button class="btn btn-secondary mt-16" id="btn-save-opening-hours" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
                         </div>
 
                         <div class="card mb-24" id="section-add-exception">
@@ -454,7 +454,7 @@
                             <div class="flex gap-8 mb-16" style="align-items:center;flex-wrap:wrap;">
                                 <input type="text" id="invite-url-display" class="form-control" readonly style="flex:1;min-width:200px;">
                                 <button class="btn btn-primary" id="btn-copy-invite-url"><i data-lucide="copy" style="width:15px;height:15px;"></i> コピー</button>
-                                <button class="btn btn-outline" id="btn-regenerate-invite-code"><i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> 再生成</button>
+                                <button class="btn btn-state-warning" id="btn-regenerate-invite-code"><i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> 再生成</button>
                             </div>
                             <div class="flex gap-16 mb-16" style="align-items:flex-start;flex-wrap:wrap;">
                                 <div id="invite-qr-code" style="background:#fff;padding:8px;border-radius:8px;border:1px solid var(--color-neutral-200);cursor:pointer;" title="タップで拡大表示"></div>
@@ -512,7 +512,7 @@
                 <div class="card mb-16">
                     <div class="flex" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                         <h3 style="margin:0;">シフト構築</h3>
-                        <button class="btn btn-outline" id="btn-goto-archived-periods" style="padding:6px 12px;font-size:0.85em;" title="アーカイブ済のシフト期間を一覧表示します">
+                        <button class="btn btn-secondary" id="btn-goto-archived-periods" style="padding:6px 12px;font-size:0.85em;" title="アーカイブ済のシフト期間を一覧表示します">
                             <i data-lucide="archive" style="width:14px;height:14px;"></i> アーカイブ済を見る
                         </button>
                     </div>
@@ -534,9 +534,9 @@
                                 <div class="flex-between mb-16">
                                     <h3>スケジュール</h3>
                                     <div class="flex gap-8">
-                                        <button class="btn btn-outline" id="btn-save-schedule" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
-                                        <button class="btn btn-warning" id="btn-submit-approval"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
-                                        <button class="btn btn-success" id="confirm-btn" style="display:none;"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
+                                        <button class="btn btn-secondary" id="btn-save-schedule" data-dirty-save><i data-lucide="save" style="width:15px;height:15px;"></i> 保存</button>
+                                        <button class="btn btn-state-warning" id="btn-submit-approval"><i data-lucide="send" style="width:15px;height:15px;"></i> 承認申請</button>
+                                        <button class="btn btn-primary" id="confirm-btn" style="display:none;"><i data-lucide="calendar-check" style="width:15px;height:15px;"></i> 確定・カレンダー同期</button>
                                     </div>
                                 </div>
                                 <p class="help-text mb-8">「保存」で下書き保存、「承認申請」で事業主に確認を依頼、承認後に「確定・カレンダー同期」でGoogleカレンダーに反映します。</p>
@@ -559,7 +559,7 @@
                             <div class="card">
                                 <div class="flex-between mb-8">
                                     <h3 style="margin-bottom:0;">提出状況</h3>
-                                    <button class="btn btn-outline btn-sm" id="btn-refresh-builder" title="最新の提出データを再読み込み"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i></button>
+                                    <button class="btn btn-secondary btn-sm" id="btn-refresh-builder" title="最新の提出データを再読み込み"><i data-lucide="refresh-cw" style="width:13px;height:13px;"></i></button>
                                 </div>
                                 <p class="help-text mb-8">アルバイトは期間中に何度でも再提出できます。日時は最終提出時刻です。</p>
                                 <div id="submissions-summary"></div>
@@ -602,8 +602,8 @@
                 <div id="share-export-target" class="share-card"></div>
                 <div class="share-modal-actions">
                     <button class="btn btn-primary" type="button" data-action="shareDownloadPng"><i data-lucide="image" style="width:15px;height:15px;"></i> PNGで保存</button>
-                    <button class="btn btn-primary" type="button" data-action="shareDownloadPdf"><i data-lucide="file-text" style="width:15px;height:15px;"></i> PDFで保存</button>
-                    <button class="btn btn-outline" type="button" data-action="shareCopyMessage"><i data-lucide="clipboard" style="width:15px;height:15px;"></i> メッセージをコピー</button>
+                    <button class="btn btn-secondary" type="button" data-action="shareDownloadPdf"><i data-lucide="file-text" style="width:15px;height:15px;"></i> PDFで保存</button>
+                    <button class="btn btn-secondary" type="button" data-action="shareCopyMessage"><i data-lucide="clipboard" style="width:15px;height:15px;"></i> メッセージをコピー</button>
                 </div>
                 <div class="share-template-section">
                     <h4>貼り付け用メッセージ</h4>
@@ -633,7 +633,7 @@
                 </div>
                 <div class="share-modal-actions">
                     <button class="btn btn-primary" type="button" data-action="saveAnnouncement">保存</button>
-                    <button class="btn btn-outline" type="button" data-action="closeAnnouncementEditor">キャンセル</button>
+                    <button class="btn btn-secondary" type="button" data-action="closeAnnouncementEditor">キャンセル</button>
                 </div>
             </div>
         </div>
