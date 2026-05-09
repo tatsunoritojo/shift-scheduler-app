@@ -138,8 +138,11 @@ class TestSubmissionReminders:
     @patch("app.services.notification_service._enqueue_or_send", return_value=True)
     def test_auto_submission_reminders(self, mock_send, app, admin_user, org, worker_user, db_session):
         """Test the cron-triggered auto reminder check."""
-        # Set org trigger to 0 days before (trigger immediately)
+        # Set org trigger to 0 days before at 00:00 UTC (trigger always in past).
+        # Without explicit reminder_time_deadline, the default '09:00' leaks through and
+        # the test becomes flaky on CI runs before 09:00 UTC (trigger_dt > now → no send).
         org.set_setting("reminder_days_before_deadline", 0)
+        org.set_setting("reminder_time_deadline", "00:00")
         period = ShiftPeriod(
             organization_id=org.id,
             name="Auto Period",
