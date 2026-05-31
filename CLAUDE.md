@@ -32,26 +32,43 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 
 ## OAuth Verification 本番公開対応
 
-**最終更新: 2026-05-31** — Phase 1 バッチ1 + 外部設定（ドメイン移行 + GCP）完了、Phase 2 コード変更は次セッションで着手
+**最終更新: 2026-05-31** — Phase 2（コード + env 切替）完了、本番ドメインを `shifree.com` へ切替済み・OAuth E2E 成功。次は domain redirect または Testing → In production の判断
 
 テストモードの OAuth consent screen では calendar スコープ使用時 refresh token が **7日で失効** する公式仕様（https://developers.google.com/identity/protocols/oauth2 — Refresh token expiration）。これが種さん等の `CREDENTIALS_EXPIRED` の真因。根本解決として OAuth consent screen を Production 化し、sensitive scope の verification 申請へ進む。
 
 ### 現在地
-- Phase 1 バッチ1: 完了（ブランチ `feature/oauth-verification-phase1-batch1`、コミット `53f2fe9`、push 済み、PR 未作成）
-  - 公開文書（privacy/terms/landing）整備、`scripts/db_monitor.py` 新設、`tmp_prod_inspect.py` 削除
-- ドメイン移行: 完了 — **採用ドメインは `shifree.com`**（Cloudflare Registrar で取得、$10.46/year、apex メイン、www は 307 リダイレクト、`shifree.vercel.app` は fallback として残置）
-  - 当初 B案 `shifree.tatsunoritojo.com` で進めたが対外印象の懸念で白紙化、C案（独自ドメイン）に転換
-- 外部設定: 完了 — Vercel / Cloudflare DNS / Search Console / GCP OAuth 同意画面 Branding / GCP OAuth Client ID Redirect URIs
-- 公開ステータス: まだ **Testing**（Step M-1 で In production へ）
-- Phase 2 コード変更: 未実施（次セッション着手）
+- 本番ドメイン: **`https://shifree.com`**（production 稼働中）
+- OAuth ログイン: `shifree.com` 起点で **E2E 成功**（callback / state エラーなし、`redirect_uri` に改行 `%0A` 混入なしを確認）
+- PR #43: main に **squash merge 済み**（squash commit `e3b778fd11c3ed230770f1cb13032bbfac8defa5`）
+  - 内容: Phase 1 バッチ1（公開文書整備 + `scripts/db_monitor.py`）+ Phase 2 コード（`BASE_URL` env 配線、公開URL を `shifree.com` 化）
+- 最新 production deploy: id `dpl_D9zbe66T4oS4oCeaJvhXq3n63PuN` / state READY / commit `e3b778f`
+- Vercel env（最終状態、`vercel env ls` 確認済み）:
+  - `GOOGLE_REDIRECT_URI`: Production=`https://shifree.com/auth/google/callback` / Preview・Development=`https://shifree.vercel.app/auth/google/callback`
+  - `CORS_ALLOWED_ORIGINS`: Production=`https://shifree.com` / Preview・Development=`https://shifree.vercel.app`
+  - `BASE_URL`: Production=`https://shifree.com`（Preview/Dev には元から無し）
+- OAuth consent screen: まだ **Testing**（In production 未実施）
+- OAuth verification submission: 未実施
+- Vercel domain redirect（`shifree.vercel.app` → `shifree.com`）: 未実施
+- `shifree.vercel.app` は段階移行用に残置（Vercel domain / GCP Redirect URI / Authorized domains いずれも残置）
+
+### 注意・教訓（今回の失敗から）
+- **Vercel env を CLI 投入するときは `printf '%s'` を使う**。`echo` は末尾改行を値に混入させ、`GOOGLE_REDIRECT_URI` に `%0A` が入って `redirect_uri_mismatch` を起こす（今回是正済み）
+- `vercel env rm NAME production` は、全環境同値で束ねられた変数を削除すると **Preview / Development も巻き込んで消す**。production だけ変えたつもりでも他環境が脱落する
+- Preview env は CLI 非対話実行で Git branch 指定（`git_branch_required`）に詰まる。**Preview の復元は Dashboard 手動が確実**（今回そうした）
+- production 切替後、旧 `shifree.vercel.app` 起点ログインはクロスドメイン state 不一致で**失敗する想定**（`SESSION_COOKIE_DOMAIN` 未設定でホスト別スコープのため）。旧ドメイン入口は domain redirect で `shifree.com` へ寄せて解消する
+
+### 残タスク
+1. reminder リンク生成先が `shifree.com` になることの確認
+2. `shifree.vercel.app` → `shifree.com` の domain redirect 設計・実施（旧ドメイン起点ログインの救済）
+3. 旧 `shifree.vercel.app` の最終整理（Vercel domain / GCP Redirect URI / Authorized domains）
+4. **Testing → In production**（refresh token 7日失効の本丸解消）
+5. OAuth verification submission（scope justification / デモ動画シナリオ / sensitive scope 審査）
+6. Preview / Development を将来 `shifree.com` に寄せるか判断（今回は案1で `shifree.vercel.app` のまま保留）
 
 ### 次セッション着手用ポインタ
-- 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1 バッチ1 + ドメイン移行 + GCP 設定の累積記録）
-- 次の起点: **Step L（Vercel 環境変数 `GOOGLE_REDIRECT_URI` / CORS 関連の現状確認）** から再開
-- 続いて Phase 2 コード変更: `landing.html` の canonical/OGP/Twitter URL を `shifree.com` に更新、`shifree.vercel.app` ハードコードを Grep、`app/config.py` 確認
-- 新ドメインで E2E 動作確認（ログイン → callback → callback-link）を経てから Testing → In production を判断
-- 暫定運用策の Worker マイシフト表示（要望1）は Phase 2 後半で設計予定
-- `shifree.vercel.app` の Vercel / Redirect URI / Authorized domains からの最終削除は新ドメイン動作確認後
+- 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1〜2 + env 切替 + 失敗教訓の累積記録）
+- 次回開始順: ①`git status` → ②本 OAuth セクション → ③handoff note → ④reminder リンク生成先が `shifree.com` か確認 → ⑤domain redirect を行うか / Testing → In production へ進むか判断
+- 作業ツリーの無関係差分（OAuth 作業に混ぜない）: `docs/incident-2026-04-26-handoff.md` / `docs/archive-from-shift-keisan-app/` / `docs/business/`
 
 ## Schema Governance
 
