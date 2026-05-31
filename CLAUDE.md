@@ -30,6 +30,29 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 - 🧭 fact 判定根拠: `docs/sequence-diagrams/02-worker-monthly-flow.md`（Worker UI Free/Busy 連動の正確な経路を追記済、PR #25）
 - ⚠️ 既存問題（無関係）: `tests/test_reminder.py::TestSubmissionReminders::test_auto_submission_reminders` は日付固定（2026-04-30）で常時失敗。LP 対応とは無関係なので別 PR で修正する → **2026-05-09 解消** (PR #38、真因は時刻依存 flake)
 
+## OAuth Verification 本番公開対応
+
+**最終更新: 2026-05-31** — Phase 1 バッチ1 + 外部設定（ドメイン移行 + GCP）完了、Phase 2 コード変更は次セッションで着手
+
+テストモードの OAuth consent screen では calendar スコープ使用時 refresh token が **7日で失効** する公式仕様（https://developers.google.com/identity/protocols/oauth2 — Refresh token expiration）。これが種さん等の `CREDENTIALS_EXPIRED` の真因。根本解決として OAuth consent screen を Production 化し、sensitive scope の verification 申請へ進む。
+
+### 現在地
+- Phase 1 バッチ1: 完了（ブランチ `feature/oauth-verification-phase1-batch1`、コミット `53f2fe9`、push 済み、PR 未作成）
+  - 公開文書（privacy/terms/landing）整備、`scripts/db_monitor.py` 新設、`tmp_prod_inspect.py` 削除
+- ドメイン移行: 完了 — **採用ドメインは `shifree.com`**（Cloudflare Registrar で取得、$10.46/year、apex メイン、www は 307 リダイレクト、`shifree.vercel.app` は fallback として残置）
+  - 当初 B案 `shifree.tatsunoritojo.com` で進めたが対外印象の懸念で白紙化、C案（独自ドメイン）に転換
+- 外部設定: 完了 — Vercel / Cloudflare DNS / Search Console / GCP OAuth 同意画面 Branding / GCP OAuth Client ID Redirect URIs
+- 公開ステータス: まだ **Testing**（Step M-1 で In production へ）
+- Phase 2 コード変更: 未実施（次セッション着手）
+
+### 次セッション着手用ポインタ
+- 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1 バッチ1 + ドメイン移行 + GCP 設定の累積記録）
+- 次の起点: **Step L（Vercel 環境変数 `GOOGLE_REDIRECT_URI` / CORS 関連の現状確認）** から再開
+- 続いて Phase 2 コード変更: `landing.html` の canonical/OGP/Twitter URL を `shifree.com` に更新、`shifree.vercel.app` ハードコードを Grep、`app/config.py` 確認
+- 新ドメインで E2E 動作確認（ログイン → callback → callback-link）を経てから Testing → In production を判断
+- 暫定運用策の Worker マイシフト表示（要望1）は Phase 2 後半で設計予定
+- `shifree.vercel.app` の Vercel / Redirect URI / Authorized domains からの最終削除は新ドメイン動作確認後
+
 ## Schema Governance
 
 ### 現在地
