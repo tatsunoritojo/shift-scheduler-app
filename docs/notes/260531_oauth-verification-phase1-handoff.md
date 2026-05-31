@@ -117,3 +117,43 @@ OAuth 2.0 Client ID（`shift-scheduler-app`, client ID 先頭 `739906304418-m6bv
 - 優先1: scripts/db_monitor.py（完了）
 - 優先2: Worker マイシフト表示（Phase 2 の後半で設計）
 - 優先3: Admin 同期失敗バナー（Phase 2 のさらに後）
+
+## Phase 2 + env 切替（2026-05-31 追記・完了）
+
+Step L 以降を当日に実施。本番ドメインを `shifree.com` へ切替えて OAuth E2E まで成立させた。
+
+### 完了したこと
+- Phase 2 コード変更（コミット `7aa39a8`）: `config.py` に `BASE_URL` env 配線、`reminder_service.py` の fallback を `shifree.com` 化、`landing.html`（canonical/OGP/Twitter/JSON-LD）/ `sitemap.xml` / `robots.txt` / `README.md` の公開URLを `shifree.com` 化
+- PR #43 を main に **squash merge**（squash commit `e3b778fd11c3ed230770f1cb13032bbfac8defa5`）→ Vercel production 自動デプロイ
+- Vercel production env を `shifree.com` 系へ切替（CLI `vercel env`、`printf '%s'` で投入）
+  - `GOOGLE_REDIRECT_URI=https://shifree.com/auth/google/callback`
+  - `CORS_ALLOWED_ORIGINS=https://shifree.com`
+  - `BASE_URL=https://shifree.com`
+- 本番再デプロイ（CLI `vercel --prod`）→ 最新 deploy id `dpl_D9zbe66T4oS4oCeaJvhXq3n63PuN` / state READY / commit `e3b778f`
+- `shifree.com` 起点の **OAuth E2E 成功**（callback 着地・state エラーなし）
+- 自動検証: `/lp` `/privacy` `/terms` が 200、OAuth 開始の `redirect_uri` に改行 `%0A` 混入なし
+- Preview / Development の env を復元（Preview は Dashboard 手動）
+  - `GOOGLE_REDIRECT_URI`（Preview/Dev）= `https://shifree.vercel.app/auth/google/callback`
+  - `CORS_ALLOWED_ORIGINS`（Preview/Dev）= `https://shifree.vercel.app`
+- `vercel env ls` で3環境の最終スコープ確認済み
+
+### 失敗と是正（次回のための教訓）
+- `echo "..." | vercel env add` は **末尾改行を値に混入**させ、`GOOGLE_REDIRECT_URI` に `%0A` が付いて `redirect_uri_mismatch` 必至だった → `printf '%s'` で再投入・再デプロイして是正
+- `vercel env rm GOOGLE_REDIRECT_URI production` が、全環境同値で束ねられた変数を削除し **Preview / Development まで巻き込んで消失** させた → 後から復元
+- Preview env は CLI 非対話実行で `git_branch_required` に詰まり、`--value ... --yes` でも「全 Preview ブランチ」指定が通らない → **Dashboard 手動で All Preview Branches 指定**して復元（Sensitive は OFF）
+
+### Preview/Dev の値方針（判断の記録）
+- Preview デプロイは動的 URL で配信されるため、`shifree.com` でも `shifree.vercel.app` でも Preview 上の OAuth は実質成立しない（パリティ用の値）
+- 当初計画どおり **案1（`shifree.vercel.app`）** で復元。将来 vercel.app を畳む段階で Preview/Dev もまとめて見直す
+
+### 残タスク（次セッション）
+1. reminder リンク生成先が `shifree.com` になることの確認
+2. `shifree.vercel.app` → `shifree.com` の domain redirect 設計・実施（旧ドメイン起点ログインの救済）
+3. 旧 `shifree.vercel.app` の最終整理（Vercel domain / GCP Redirect URI / Authorized domains）
+4. Testing → In production（refresh token 7日失効の本丸解消）
+5. OAuth verification submission（scope justification / デモ動画シナリオ / sensitive scope 審査）
+6. Preview / Development を将来 `shifree.com` に寄せるか判断
+
+### 注意
+- production 切替後、旧 `shifree.vercel.app` 起点ログインはクロスドメイン state 不一致で失敗する想定（`SESSION_COOKIE_DOMAIN` 未設定でホスト別スコープ）。domain redirect で `shifree.com` へ寄せて解消する
+- 作業ツリーの無関係差分（OAuth 作業に混ぜない）: `docs/incident-2026-04-26-handoff.md` / `docs/archive-from-shift-keisan-app/` / `docs/business/`
