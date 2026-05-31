@@ -43,6 +43,9 @@ class BaseConfig:
         self.ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
         self.OWNER_EMAIL = os.environ.get('OWNER_EMAIL', '')
 
+        # 公開URL基準（メール内リンク等で使用）。本番は Vercel env、未設定時は新ドメインへフォールバック
+        self.BASE_URL = os.environ.get('BASE_URL', 'https://shifree.com')
+
         # CORS: allowed origins (comma-separated)
         cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
         self.CORS_ALLOWED_ORIGINS = [o.strip() for o in cors_origins.split(',') if o.strip()] if cors_origins else None

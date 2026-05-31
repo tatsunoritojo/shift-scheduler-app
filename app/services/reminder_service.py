@@ -117,7 +117,7 @@ def _send_submission_reminders_for_period(period, org):
     )
 
     deadline_str = period.submission_deadline.strftime('%Y年%m月%d日 %H:%M') if period.submission_deadline else ''
-    base_url = current_app.config.get('BASE_URL', 'https://shifree.vercel.app')
+    base_url = current_app.config.get('BASE_URL', 'https://shifree.com')
     submit_url = f'{base_url}/worker'
 
     for worker in workers:

@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: /
 
-Sitemap: https://shifree.vercel.app/static/sitemap.xml
+Sitemap: https://shifree.com/static/sitemap.xml

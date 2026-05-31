@@ -11,7 +11,7 @@
 ![Flask](https://img.shields.io/badge/Flask-3.1.1-000)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-[ランディングページ](https://shifree.vercel.app/lp) ・ [アプリを使う](https://shifree.vercel.app)
+[ランディングページ](https://shifree.com/lp) ・ [アプリを使う](https://shifree.com)
 
 </div>
 
