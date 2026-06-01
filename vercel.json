@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "shifree.vercel.app"
+        }
+      ],
+      "destination": "https://shifree.com/:path*",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ],
