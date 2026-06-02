@@ -32,7 +32,7 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 
 ## OAuth Verification 本番公開対応
 
-**最終更新: 2026-06-01** — domain redirect（`shifree.vercel.app`→`shifree.com`、307）を本番反映・curl 実測パス。次は Testing → In production（GCP 操作の Red）
+**最終更新: 2026-06-02** — OAuth consent screen を **In production** へ変更完了。refresh token 7日失効問題は解消見込み（経過観察: 2026-06-09）。次は OAuth verification submission
 
 テストモードの OAuth consent screen では calendar スコープ使用時 refresh token が **7日で失効** する公式仕様（https://developers.google.com/identity/protocols/oauth2 — Refresh token expiration）。これが種さん等の `CREDENTIALS_EXPIRED` の真因。根本解決として OAuth consent screen を Production 化し、sensitive scope の verification 申請へ進む。
 
@@ -61,8 +61,11 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
   - `CORS_ALLOWED_ORIGINS`: Production=`https://shifree.com` / Preview・Development=`https://shifree.vercel.app`
   - `BASE_URL`: Production=`https://shifree.com`（Preview/Dev には元から無し）
 - reminder リンク調査（2026-06-01）: 自動リマインダー（cron、`reminder_service.py:120-121`）は `BASE_URL` 由来で **shifree.com 確定**。admin 起点リンク3経路（`api_admin.py:506` 手動リマインド / `:1160` 招待 / `:1338` 欠員）は `request.host_url` 由来＝admin のアクセスドメイン依存だが、domain redirect で入口が寄るため実質 shifree.com に揃う。旧ドメインのハードコードはコード・メールテンプレートに無し
-- OAuth consent screen: まだ **Testing**（In production 未実施）
-- OAuth verification submission: 未実施
+- **OAuth consent screen: In production**（2026-06-02 に Testing → In production へ変更完了）
+  - GCC 実施前確認: App name `shifree` / User type External / sensitive scopes 3件（`calendar.events` / `calendar.events.readonly` / `calendar.readonly`）/ restricted なし / OAuth user cap 15/100
+  - Publish App 後 E2E: `shifree.com` 起点ログイン成功（`tatsunoritojo@gmail.com`）/ refresh token 保存確認（user_id=5, updated 2026-06-02 02:40 UTC）/ domain redirect 継続動作
+  - 未確認アプリ警告: **表示あり**（sensitive scope の verification 未完了のため。verification 完了後に自動消去）
+- OAuth verification submission: 未実施（In production 化の次ステップ）
 - `shifree.vercel.app` は段階移行用に残置（Vercel domain / GCP Redirect URI / Authorized domains いずれも残置。ただし入口は 307 で shifree.com へ寄る）
 
 ### 注意・教訓（今回の失敗から）
@@ -72,17 +75,20 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 - production 切替後、旧 `shifree.vercel.app` 起点ログインはクロスドメイン state 不一致で**失敗する想定**（`SESSION_COOKIE_DOMAIN` 未設定でホスト別スコープのため）。旧ドメイン入口は domain redirect で `shifree.com` へ寄せて解消する
 
 ### 残タスク
-1. **Testing → In production**（refresh token 7日失効の本丸解消。GCP 操作の Red）
-2. OAuth verification submission（scope justification / デモ動画シナリオ / sensitive scope 審査）
-3. `api_admin.py` の `request.host_url` → `BASE_URL` 統一（追加の防御的修正候補。domain redirect で実害は低下済みだが、admin が旧ドメインを使っても確実に shifree.com リンクを生成するため）
-4. 旧 `shifree.vercel.app` の最終整理（Vercel domain / GCP Redirect URI / Authorized domains。In production・verification 安定後）
-5. Preview / Development を将来 `shifree.com` に寄せるか判断（今回は案1で `shifree.vercel.app` のまま保留）
-6. cron `/api/cron/process-tasks` が引き続き正常実行されること（次回 09:00 UTC 発火を deployment logs / cron 履歴で観測。`/api/` redirect 除外は `/api/index` の 404 で確認済み）
+1. **経過観察: 2026-06-09 頃に refresh token が失効しないことを確認**（In production 化で 7日失効は解消されたはずだが、実測で裏取りする）
+2. Worker の Calendar Free/Busy 取得確認 / Admin の Calendar sync（イベント書き込み）確認
+3. **OAuth verification submission**（scope justification / デモ動画シナリオ / sensitive scope 審査。目安 10営業日）
+4. 未確認アプリ警告の解消（verification 完了後に自動消去）
+5. `api_admin.py` の `request.host_url` → `BASE_URL` 統一（防御的修正候補。domain redirect で実害は低下済み）
+6. `www.googleapis.com` が Authorized domains に残っている件の整理（由来不明、verification 申請時に指摘される可能性）
+7. 旧 `shifree.vercel.app` の最終整理（Vercel domain / GCP Redirect URI / Authorized domains。verification 安定後）
+8. Preview / Development を将来 `shifree.com` に寄せるか判断（現状 `shifree.vercel.app` のまま保留）
+9. cron `/api/cron/process-tasks` の継続正常実行を観測
 
 ### 次セッション着手用ポインタ
-- 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1〜2 + env 切替 + domain redirect + 失敗教訓の累積記録）
-- 次回開始順: ①`git status` → ②本 OAuth セクション → ③handoff note → ④**Testing → In production の事前設計**
-- Testing → In production の事前設計で整理すべき点: GCP Console 操作手順 / 影響範囲 / ロールバック可否 / 既存ユーザーの再認可要否 / 未確認アプリ警告（unverified app）の扱い → 整理後、実施 go をもらってから GCP 操作
+- 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1〜2 + env 切替 + domain redirect + In production + 失敗教訓の累積記録）
+- 次回開始順: ①`git status` → ②本 OAuth セクション → ③handoff note → ④**経過観察項目の確認**（refresh token 失効チェック、cron 正常実行）→ ⑤OAuth verification submission の準備
+- 経過観察の基準日: **2026-06-09**（In production 化から 7日後）。user_id=5 の token が失効せず Calendar sync が動作するかを確認
 - 作業ツリーの無関係差分（OAuth 作業に混ぜない）: `docs/incident-2026-04-26-handoff.md` / `docs/archive-from-shift-keisan-app/` / `docs/business/`
 
 ## Schema Governance
