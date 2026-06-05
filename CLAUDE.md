@@ -74,6 +74,22 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 - Preview env は CLI 非対話実行で Git branch 指定（`git_branch_required`）に詰まる。**Preview の復元は Dashboard 手動が確実**（今回そうした）
 - production 切替後、旧 `shifree.vercel.app` 起点ログインはクロスドメイン state 不一致で**失敗する想定**（`SESSION_COOKIE_DOMAIN` 未設定でホスト別スコープのため）。旧ドメイン入口は domain redirect で `shifree.com` へ寄せて解消する
 
+### legacy scope 救済（OAUTHLIB_RELAX_TOKEN_SCOPE）
+
+**2026-06-02 追加。理由: PR #48 後の legacy scope 付与アカウント救済のため。**
+
+- 障害: PR #48（`3424cec`）で `calendar.events.readonly` を要求 scope から削除したが、テスト期にログイン済みのアカウントは Google 側に旧 scope 付与が残存。`login()` の `include_granted_scopes='true'`（`auth.py:120`）により、token 応答 scope が要求 scope（5）より多くなり、oauthlib が `flow.fetch_token` で scope mismatch を**例外**にして `LOGIN_FAILED: Token fetch failed`（500）→ ユーザーには「認証に失敗しました」表示。
+- 確証: `onedrop202507@gmail.com` を `myaccount.google.com/permissions` で revoke → 再ログイン成功、の対照実験で機序確定（原因分類 F）。
+- 恒久対策: **Vercel Production env に `OAUTHLIB_RELAX_TOKEN_SCOPE=1` を追加**（Production のみ。Preview/Dev には入れない）。oauthlib が scope mismatch を raise せず warning に降格 → fetch_token 成功。これで legacy アカウント全員が revoke なしでログイン可能。
+- 副作用（許容済み）: legacy ユーザーは `user_tokens.scopes` に `calendar.events.readonly` が残り得る。API 呼び出しの Credentials は `config.GOOGLE_SCOPES_WRITE`（5 scope、`auth_service.py:343`）から再構築されるため**機能影響なし**。要求 scope は 5 のまま（verification 整合 OK）。再 consent で自然に 5 へ収束。
+- 適用: env 追加後、現 Production deployment を Redeploy（`dpl_5ogTaiYJMycUdoHT3ZxKZEt9S1mP` → `dpl_GUxyPYNPerAW9tKpU5o4rUVxt6Q2`、shifree.com alias 済み、READY）。
+- rollback: `vercel env rm OAUTHLIB_RELAX_TOKEN_SCOPE production` → Redeploy。可逆（外すと legacy が再び 500 に戻るのみ）。
+- 将来のクリーンアップ候補: `login()` から `include_granted_scopes='true'` を外す案（superset を合算させない根本対策。ただし挙動変更のため別 PR で評価）。
+- **E2E 実証済み（2026-06-02）**: 影響アカウントは **14件**（Onedrop パイロットスタッフ `onedrop.*` + `tatsunoritojo` id=5。全員が legacy 6-scope grant を保有）。うち **id=5 / id=6 が revoke せず RELAX 有効 deployment（`dpl_GUxyPYNPerAW9tKpU5o4rUVxt6Q2`）でログイン成功**（`LOGIN_SUCCESS` 12:20 / 12:24 UTC）。同 deployment で `LOGIN_FAILED: Token fetch failed` の新規発生ゼロ。OAuth 要求 scope は 5 のまま（curl 実測）。→ **残り12名も RELAX で自動救済、revoke 依頼不要**。
+- 補足: `onedrop202507`（id=4）は revoke 済みのため保存 scope が 5 に再保存され、影響リストから外れている（仮説の裏取り）。
+- **未確認**: Calendar 一覧取得 / Calendar sync（イベント書き込み）の機能テスト（OAuth 残タスク 2 と同一）。`user_tokens.scopes` は legacy ユーザーで 6 のまま残る想定（機能影響なし）。
+- **GCC Data Access からの `calendar.events.readonly` 削除は未実施**。ログインは実証済みなので技術的には削除可（RELAX が mismatch を吸収）。推奨順序は「Calendar 機能テスト → GCC 削除 → verification submission」。
+
 ### 残タスク
 1. **経過観察: 2026-06-09 頃に refresh token が失効しないことを確認**（In production 化で 7日失効は解消されたはずだが、実測で裏取りする）
 2. Worker の Calendar Free/Busy 取得確認 / Admin の Calendar sync（イベント書き込み）確認
@@ -87,7 +103,10 @@ LP Phase 2a の Scene 1-6 で発見した実装乖離を埋める作業群。詳
 
 ### 次セッション着手用ポインタ
 - 詳細 handoff: `docs/notes/260531_oauth-verification-phase1-handoff.md`（Phase 1〜2 + env 切替 + domain redirect + In production + 失敗教訓の累積記録）
-- 次回開始順: ①`git status` → ②本 OAuth セクション → ③handoff note → ④**経過観察項目の確認**（refresh token 失効チェック、cron 正常実行）→ ⑤OAuth verification submission の準備
+- 次回開始順: ①`git status` → ②本 OAuth セクション（特に「legacy scope 救済」サブセクション）→ ③**Calendar 機能テストの結果確認**（最優先・下記）→ ④判定6項目クリアなら GCC Data Access から `calendar.events.readonly` 削除手順を設計 → ⑤OAuth verification submission の準備
+- **最優先の次アクション（2026-06-02 時点）**: Calendar 一覧取得 / Calendar sync の手動 E2E。東城さんが `shifree.com` で操作 → 操作 UTC 時刻を控える → Vercel ログ（deployment `dpl_GUxyPYNPerAW9tKpU5o4rUVxt6Q2`）で照合。照合する文字列は `Google Calendar API error:` / `Calendar event fetch error:` / `Credential error for user` / `CREDENTIALS_EXPIRED` / `CALENDAR_PERMISSION_DENIED` / `CALENDAR_API_ERROR` / `LOGIN_FAILED`（いずれも「出ない」+ Calendar 系が 2xx なら合格。成功時の専用ログは無いので絶対の不在で判定）。根拠: `app/services/calendar_service.py:24,46,73,89,101-110` / `app/blueprints/api_calendar.py:61,70,37`
+- 判定基準6項目（全クリアで GCC 削除可）: legacy ログイン復旧済✓ / `LOGIN_FAILED` 新規ゼロ✓ / 要求 scope 5✓ / Calendar 一覧取得正常（未） / Calendar sync・イベント作成正常（未） / コードが events.readonly 非要求✓。残るは Calendar 機能2項目のみ。
+- 最終 handoff 未固定: Calendar テスト + GCC 削除まで終わったら CLAUDE.md と `docs/notes/260602_oauth-verification-preparation.md` をまとめて更新し PR 化する方針（ユーザー指示）。
 - 経過観察の基準日: **2026-06-09**（In production 化から 7日後）。user_id=5 の token が失効せず Calendar sync が動作するかを確認
 - 作業ツリーの無関係差分（OAuth 作業に混ぜない）: `docs/incident-2026-04-26-handoff.md` / `docs/archive-from-shift-keisan-app/` / `docs/business/`
 
