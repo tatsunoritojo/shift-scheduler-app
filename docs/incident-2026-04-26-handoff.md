@@ -45,7 +45,7 @@ PR #16 (シフト期間アーカイブ機能) → migration 未適用で本番 5
 ## 検証済み事項（重複作業を避けるため）
 
 ### Neon test branch (`migration-test` ブランチ) での検証
-- 接続文字列 (rotation 前): `postgresql://neondb_owner:npg_S4RldJFKUnc6@ep-morning-darkness-ai7fednh.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require` (direct)
+- 接続文字列 (rotation 前): `<REDACTED: 旧Neon接続文字列（ローテーション済み）。実値は Vercel 環境変数 / シークレットマネージャを参照>` (direct)
 - pooled 版: `ep-morning-darkness-ai7fednh-pooler.c-4...` (上記の host に `-pooler` suffix)
 - このブランチは parent=main、自動削除日時は 2026-04-27 12:33 (GMT+9)
 - **修正版 `api/index.py` をローカルから実行 (env: pooled DATABASE_URL + unpooled DATABASE_URL_UNPOOLED) → migration 成功を確認済み**
