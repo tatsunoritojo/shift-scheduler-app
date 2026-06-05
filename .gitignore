@@ -88,3 +88,9 @@ docs/lp-redesign-v2/*.jpg
 # Claude Code ローカル状態
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# Playwright MCP の作業生成物
+.playwright-mcp/
+
+# 旧プロジェクトから保管した .env（機密。リポジトリに載せない）
+docs/archive-from-shift-keisan-app/dotenv-preserved
