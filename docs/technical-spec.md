@@ -8,7 +8,7 @@
 ## 1. ディレクトリ構成
 
 ```
-shift-scheduler-app/
+shifree/
 ├── api/index.py                  # Vercel エントリポイント (cold start で migrate)
 ├── wsgi.py                       # ローカル開発エントリポイント
 ├── app/

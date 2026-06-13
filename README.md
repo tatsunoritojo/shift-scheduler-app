@@ -253,7 +253,7 @@ sequenceDiagram
 ## リポジトリ構成
 
 ```
-shift-scheduler-app/
+shifree/
 ├── api/
 │   └── index.py                          # Vercel エントリポイント (create_app() ラップ)
 ├── app/                                  # Flask アプリケーション本体
@@ -374,8 +374,8 @@ shift-scheduler-app/
 ### ローカル開発
 
 ```bash
-git clone https://github.com/tatsunoritojo/shift-scheduler-app.git
-cd shift-scheduler-app
+git clone https://github.com/tatsunoritojo/shifree.git
+cd shifree
 pip install -r requirements.txt
 ```
 

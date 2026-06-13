@@ -1,6 +1,6 @@
-# shift-scheduler-app
+# Shifree（旧 shift-scheduler-app）
 
-マルチテナント対応シフト管理システム（Flask + Vanilla JS）
+マルチテナント対応シフト管理システム（Flask + Vanilla JS）。本番ドメイン: `shifree.com`
 デプロイ先: Vercel (サーバーレス)
 
 ## ドキュメント整備履歴
