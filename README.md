@@ -2,6 +2,13 @@
 
 # シフリー (Shifree)
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Google-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Google">
+</p>
+
 **Googleカレンダーと連携し、シフトの提出・作成・承認・確定までを完結する Web アプリケーション**
 
 希望提出 / シフト構築 / 承認ワークフロー / カレンダー自動同期 / 欠員補充 / 多店舗運用
